@@ -197,6 +197,182 @@ class MinIOClient:
         except S3Error as e:
             logger.error(f"❌ 生成预签名URL失败: {e}")
             raise Exception(f"生成下载链接失败: {str(e)}")
+    
+    # 🆕 补充来自 mold_cost-main 的方法
+    
+    def get_file_stream(self, object_name: str, bucket: Optional[str] = None):
+        """
+        获取文件流（用于大文件）
+        
+        Args:
+            object_name: 对象名称/路径
+            bucket: bucket名称
+        
+        Returns:
+            文件流对象
+        """
+        try:
+            bucket = bucket or self.bucket_files
+            return self.client.get_object(bucket, object_name)
+        except S3Error as e:
+            logger.error(f"❌ 获取文件流失败 [{object_name}]: {e}")
+            return None
+    
+    def download_file(self, object_name: str, local_path: str, bucket: Optional[str] = None) -> bool:
+        """
+        下载文件到本地
+        
+        Args:
+            object_name: MinIO 中的文件路径
+            local_path: 本地保存路径
+            bucket: bucket名称
+        
+        Returns:
+            是否成功
+        """
+        try:
+            bucket = bucket or self.bucket_files
+            self.client.fget_object(bucket, object_name, local_path)
+            logger.info(f"✅ 文件已下载: {local_path}")
+            return True
+        except S3Error as e:
+            logger.error(f"❌ 下载文件失败 [{object_name}]: {e}")
+            return False
+    
+    def upload_file_from_path(self, object_name: str, local_path: str, content_type: str = None, bucket: Optional[str] = None) -> bool:
+        """
+        上传本地文件到 MinIO
+        
+        Args:
+            object_name: MinIO 中的目标路径
+            local_path: 本地文件路径
+            content_type: 文件类型
+            bucket: bucket名称
+        
+        Returns:
+            是否成功
+        """
+        try:
+            import os
+            bucket = bucket or self.bucket_files
+            file_size = os.path.getsize(local_path)
+            self.client.fput_object(
+                bucket,
+                object_name,
+                local_path,
+                content_type=content_type
+            )
+            logger.info(f"✅ 文件已上传: {object_name} ({file_size} bytes)")
+            return True
+        except S3Error as e:
+            logger.error(f"❌ 上传文件失败 [{object_name}]: {e}")
+            return False
+    
+    def upload_bytes(self, object_name: str, file_content: bytes, content_type: str = None, bucket: Optional[str] = None) -> bool:
+        """
+        上传字节内容到 MinIO
+        
+        Args:
+            object_name: MinIO 中的目标路径
+            file_content: 文件内容（字节）
+            content_type: 文件类型
+            bucket: bucket名称
+        
+        Returns:
+            是否成功
+        """
+        try:
+            import io
+            bucket = bucket or self.bucket_files
+            file_stream = io.BytesIO(file_content)
+            file_size = len(file_content)
+            self.client.put_object(
+                bucket,
+                object_name,
+                file_stream,
+                length=file_size,
+                content_type=content_type
+            )
+            logger.info(f"✅ 内容已上传: {object_name} ({file_size} bytes)")
+            return True
+        except S3Error as e:
+            logger.error(f"❌ 上传内容失败 [{object_name}]: {e}")
+            return False
+    
+    def file_exists(self, object_name: str, bucket: Optional[str] = None) -> bool:
+        """
+        检查文件是否存在
+        
+        Args:
+            object_name: MinIO 中的文件路径
+            bucket: bucket名称
+        
+        Returns:
+            是否存在
+        """
+        try:
+            bucket = bucket or self.bucket_files
+            self.client.stat_object(bucket, object_name)
+            return True
+        except S3Error:
+            return False
+    
+    def get_file_info(self, object_name: str, bucket: Optional[str] = None) -> Optional[dict]:
+        """
+        获取文件信息
+        
+        Args:
+            object_name: MinIO 中的文件路径
+            bucket: bucket名称
+        
+        Returns:
+            文件信息字典
+        """
+        try:
+            bucket = bucket or self.bucket_files
+            stat = self.client.stat_object(bucket, object_name)
+            return {
+                "size": stat.size,
+                "last_modified": stat.last_modified,
+                "content_type": stat.content_type,
+                "etag": stat.etag,
+                "bucket": bucket,
+                "object_name": object_name
+            }
+        except S3Error as e:
+            logger.error(f"❌ 获取文件信息失败 [{object_name}]: {e}")
+            return None
+    
+    def list_files(self, prefix: str = "", recursive: bool = False, bucket: Optional[str] = None) -> list:
+        """
+        列出文件
+        
+        Args:
+            prefix: 前缀过滤
+            recursive: 是否递归
+            bucket: bucket名称
+        
+        Returns:
+            文件列表
+        """
+        try:
+            bucket = bucket or self.bucket_files
+            objects = self.client.list_objects(
+                bucket,
+                prefix=prefix,
+                recursive=recursive
+            )
+            return [
+                {
+                    "object_name": obj.object_name,
+                    "size": obj.size,
+                    "last_modified": obj.last_modified
+                }
+                for obj in objects
+            ]
+        except S3Error as e:
+            logger.error(f"❌ 列出文件失败: {e}")
+            return []
 
 
 # 全局MinIO客户端实例
