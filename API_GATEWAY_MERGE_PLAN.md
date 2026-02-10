@@ -237,9 +237,9 @@ api_gateway/
 
 #### 3.2 对比合并共同文件
 - [x] `__init__.py` - 合并导出 ✅ 2026-02-10
-- [ ] `jobs.py` - 对比合并
-- [ ] `phase2.py` - 对比合并
-- [ ] `recalculations.py` - 对比合并
+- [x] `jobs.py` - 对比合并，补充 mold_cost-main 的路由 ✅ 2026-02-10
+- [x] `phase2.py` - 对比合并（两版本相同）✅ 2026-02-10
+- [x] `recalculations.py` - 对比合并，补充实现 ✅ 2026-02-10
 
 #### 3.3 保留 mold_cost_ 独有路由（添加头信息）
 - [ ] `chat_router.py`

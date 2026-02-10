@@ -1,6 +1,17 @@
 """
 第二期功能API路由（预留接口）
 负责人：待定
+
+合并信息：
+- 合并日期：2026-02-10
+- 源文件：mold_cost_/api_gateway/routers/phase2.py (与 mold_cost-main 版本相同)
+- 合并策略：保留原文件（两个版本完全相同）
+- 主要功能：
+  1. 线割改精铣（2D转3D）
+  2. 单个子图3D传入NC
+  3. 板料线生成
+  4. 多工艺并行处理
+- 说明：第二期功能预留接口，暂未实现
 """
 from fastapi import APIRouter
 from pydantic import BaseModel
