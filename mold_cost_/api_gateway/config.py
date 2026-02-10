@@ -1,6 +1,16 @@
 """
 配置管理模块
 从环境变量读取配置
+
+合并信息：
+- 合并日期：2026-02-10
+- 源文件：mold_cost_/api_gateway/config.py
+- 合并策略：保留原文件（mold_cost-main 无此文件）
+- 主要功能：
+  1. 统一管理所有配置项
+  2. 从环境变量读取配置
+  3. 提供配置单例访问
+  4. 支持数据库、Redis、RabbitMQ、MinIO、JWT等配置
 """
 import os
 from typing import List

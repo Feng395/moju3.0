@@ -2,6 +2,16 @@
 认证鉴权模块
 负责人：ZZH
 
+合并信息：
+- 合并日期：2026-02-10
+- 源文件：mold_cost_/api_gateway/auth.py
+- 合并策略：保留 mold_cost_ 版本（功能更完整）
+- 主要功能：
+  1. 基于JWT的认证鉴权
+  2. 创建和验证访问令牌
+  3. 获取当前用户信息
+  4. 支持可选认证和开发模式
+
 基于JWT_GUIDE.md标准实现
 """
 from fastapi import Depends, HTTPException, status

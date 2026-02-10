@@ -1,6 +1,15 @@
 """
 API Gateway - 主入口
 负责人：ZZH
+
+合并信息：
+- 合并日期：2026-02-10
+- 源文件：mold_cost_/api_gateway/main.py + mold_cost-main/api_gateway/main.py
+- 合并策略：使用 mold_cost_ 为基础，补充 mold_cost-main 的路由
+- 主要改动：
+  1. 保留 mold_cost_ 的完整架构（生命周期管理、日志、中间件）
+  2. 补充 mold_cost-main 的路由（features, pricing, reports）
+  3. 统一路由注册和端点信息
 """
 import logging
 import os
@@ -152,6 +161,12 @@ app.include_router(review_router.router)  # 审核系统路由
 app.include_router(chat_router.router)    # SSE 流式聊天路由
 app.include_router(file_router.router)    # 文件管理路由
 
+# 🆕 补充 mold_cost-main 的路由
+from .routers import features, pricing, reports
+app.include_router(features.router)  # 特征识别路由
+app.include_router(pricing.router)   # 价格计算路由
+app.include_router(reports.router)   # 报表导出路由
+
 
 @app.get("/")
 async def root():
@@ -159,7 +174,20 @@ async def root():
     return {
         "message": "Mold Cost System API Gateway",
         "version": "1.0.0",
-        "status": "running"
+        "status": "running",
+        "endpoints": {
+            "jobs": "/api/v1/jobs",
+            "features": "/api/features",
+            "pricing": "/api/pricing",
+            "reports": "/api/v1/reports",
+            "interactions": "/api/interactions",
+            "reviews": "/api/reviews",
+            "chat": "/api/chat",
+            "files": "/api/files",
+            "websocket": "/ws/{job_id}",
+            "docs": "/docs",
+            "health": "/health"
+        }
     }
 
 

@@ -206,27 +206,27 @@ api_gateway/
 ## 📝 合并执行清单
 
 ### 阶段 1：准备工作
-- [ ] 创建备份：`cp -r mold_cost_/api_gateway mold_cost_/api_gateway_backup`
-- [ ] 阅读本合并计划
-- [ ] 确认所有文件对比结果
+- [x] 创建备份：`cp -r mold_cost_/api_gateway mold_cost_/api_gateway_backup` ✅ 2026-02-10
+- [x] 阅读本合并计划 ✅ 2026-02-10
+- [x] 确认所有文件对比结果 ✅ 2026-02-10
 
 ### 阶段 2：根目录文件合并
 
 #### 2.1 保留 mold_cost_ 版本（添加头信息）
-- [ ] `auth.py` - 保留（功能更完整）
-- [ ] `config.py` - 保留（独有文件）
-- [ ] `README.md` - 保留（独有文件）
-- [ ] `websocket.py` - 保留（功能更完整）
+- [x] `auth.py` - 保留（功能更完整）✅ 2026-02-10
+- [x] `config.py` - 保留（独有文件）✅ 2026-02-10
+- [x] `README.md` - 保留（独有文件）
+- [x] `websocket.py` - 保留（功能更完整）✅ 2026-02-10
 
 #### 2.2 检查 database.py
-- [ ] 对比 mold_cost-main/api_gateway/database.py 和 shared/database.py
-- [ ] 如果有独特功能，需要合并到 shared/database.py
+- [x] 对比 mold_cost-main/api_gateway/database.py 和 shared/database.py ✅ 2026-02-10
+- [x] 结论：功能不同，shared/database.py 已足够，不需要复制 ✅ 2026-02-10
 
 #### 2.3 合并 main.py（重点）
-- [ ] 读取两个版本的 main.py
-- [ ] 合并路由注册
-- [ ] 补充 mold_cost-main 的路由（features, pricing, reports）
-- [ ] 添加合并头信息
+- [x] 读取两个版本的 main.py ✅ 2026-02-10
+- [x] 合并路由注册 ✅ 2026-02-10
+- [x] 补充 mold_cost-main 的路由（features, pricing, reports）✅ 2026-02-10
+- [x] 添加合并头信息 ✅ 2026-02-10
 
 ### 阶段 3：routers/ 目录合并
 

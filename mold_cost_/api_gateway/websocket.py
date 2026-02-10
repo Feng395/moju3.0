@@ -1,6 +1,17 @@
 """
 WebSocket实时通信模块
 负责人：ZZH
+
+合并信息：
+- 合并日期：2026-02-10
+- 源文件：mold_cost_/api_gateway/websocket.py
+- 合并策略：保留 mold_cost_ 版本（功能更完整）
+- 主要功能：
+  1. WebSocket连接管理
+  2. 消息广播和推送
+  3. Redis订阅器（监听进度和审核消息）
+  4. 消息历史缓存和数据库持久化
+  5. 支持多频道订阅（progress、review）
 """
 from fastapi import WebSocket, WebSocketDisconnect
 from typing import Dict, List
