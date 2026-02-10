@@ -113,6 +113,11 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     RELOAD: bool = True
     
+    # 账户系统配置（新增）
+    MAX_FAILED_LOGIN_ATTEMPTS: int = 5  # 最大登录失败次数
+    PASSWORD_HASH_ROUNDS: int = 12  # bcrypt加密轮数
+    CHAT_SESSION_TIMEOUT: int = 3600  # 会话超时时间（秒）
+    
     class Config:
         env_file = ".env"
         case_sensitive = True
