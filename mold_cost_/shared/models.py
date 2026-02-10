@@ -1,4 +1,16 @@
 """
+=== 文件合并信息 ===
+合并日期: 2026-02-10
+源文件: mold_cost_/shared/models.py (使用 mold_cost_ 版本为基础)
+合并策略: 使用 mold_cost_ 版本（更完整，更符合实际数据库结构）
+主要改动:
+  1. 保留 mold_cost_ 的完整表定义（包含所有业务表）
+  2. 保留 mold_cost_ 的时区处理（now_shanghai）
+  3. 保留 mold_cost_ 的实际数据库字段类型（VARCHAR 而非 JSONB）
+  4. 补充 mold_cost-main 的关系定义（Job.subgraphs）
+说明: 数据库模型定义，包含所有业务表和审计表
+=====================
+
 数据库模型
 负责人:人员A
 """
@@ -77,6 +89,9 @@ class Job(Base):
     # 其他
     error_message = Column(Text)
     meta_data = Column("metadata", JSONB)
+    
+    # 关系定义（来自 mold_cost-main）
+    subgraphs = relationship("Subgraph", back_populates="job", lazy="select")
 
 class Subgraph(Base):
     """子图?- 存储业务数据和成本数?"""""
@@ -168,6 +183,9 @@ class Subgraph(Base):
     created_at = Column(TIMESTAMP, nullable=False, default=now_shanghai)
     updated_at = Column(TIMESTAMP, nullable=False, default=now_shanghai, onupdate=now_shanghai)
     meta_data = Column("metadata", JSONB)
+    
+    # 关系定义（来自 mold_cost-main）
+    job = relationship("Job", back_populates="subgraphs")
 
 class Feature(Base):
     """特征表- 存储从CAD提取的原始特征数据,支持历史版本"""
