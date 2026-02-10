@@ -1,0 +1,451 @@
+{
+  "info": {
+    "name": "模具成本核算系统API",
+    "description": "模具成本核算系统的完整API接口集合",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://192.168.0.14:8000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "认证接口",
+      "item": [
+        {
+          "name": "用户登录",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.success && jsonData.token) {",
+                  "        pm.collectionVariables.set('token', jsonData.token);",
+                  "        console.log('Token已保存:', jsonData.token);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "login"]
+            }
+          }
+        },
+        {
+          "name": "Token验证",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/verify-token",
+              "host": ["{{base_url}}"],
+              "path": ["api", "verify-token"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "工艺规则接口",
+      "item": [
+        {
+          "name": "创建工艺规则",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"R001\",\n  \"version_id\": \"v1.0\",\n  \"feature_type\": \"WIRE\",\n  \"name\": \"线割规则1\",\n  \"description\": \"这是一个线割规则\",\n  \"priority\": 10,\n  \"is_active\": true,\n  \"conditions\": \"length > 100\",\n  \"output_params\": \"speed=100\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/process-rules",
+              "host": ["{{base_url}}"],
+              "path": ["api", "process-rules"]
+            }
+          }
+        },
+        {
+          "name": "获取单个规则",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/process-rules/R001",
+              "host": ["{{base_url}}"],
+              "path": ["api", "process-rules", "R001"]
+            }
+          }
+        },
+        {
+          "name": "获取规则列表",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/process-rules?page=1&page_size=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "process-rules"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "page_size",
+                  "value": "20"
+                },
+                {
+                  "key": "version_id",
+                  "value": "v1.0",
+                  "disabled": true
+                },
+                {
+                  "key": "feature_type",
+                  "value": "WIRE",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "更新规则",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"更新后的规则名称\",\n  \"priority\": 20\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/process-rules/R001",
+              "host": ["{{base_url}}"],
+              "path": ["api", "process-rules", "R001"]
+            }
+          }
+        },
+        {
+          "name": "删除规则",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/process-rules/R001",
+              "host": ["{{base_url}}"],
+              "path": ["api", "process-rules", "R001"]
+            }
+          }
+        },
+        {
+          "name": "批量删除规则",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\"R001\", \"R002\", \"R003\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/process-rules/batch-delete",
+              "host": ["{{base_url}}"],
+              "path": ["api", "process-rules", "batch-delete"]
+            }
+          }
+        },
+        {
+          "name": "按版本类型查询",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/process-rules/by-version-type?version_id=v1.0&feature_type=WIRE",
+              "host": ["{{base_url}}"],
+              "path": ["api", "process-rules", "by-version-type"],
+              "query": [
+                {
+                  "key": "version_id",
+                  "value": "v1.0"
+                },
+                {
+                  "key": "feature_type",
+                  "value": "WIRE"
+                },
+                {
+                  "key": "active_only",
+                  "value": "true",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "价格项接口",
+      "item": [
+        {
+          "name": "创建价格项",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"P001\",\n  \"category\": \"wire\",\n  \"sub_category\": \"perforation\",\n  \"price\": \"0.1\",\n  \"unit\": \"元/mm\",\n  \"note\": \"测试价格项\",\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/price-items",
+              "host": ["{{base_url}}"],
+              "path": ["api", "price-items"]
+            }
+          }
+        },
+        {
+          "name": "获取单个价格项",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/price-items/P001",
+              "host": ["{{base_url}}"],
+              "path": ["api", "price-items", "P001"]
+            }
+          }
+        },
+        {
+          "name": "获取价格项列表",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/price-items?page=1&page_size=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "price-items"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "page_size",
+                  "value": "20"
+                },
+                {
+                  "key": "category",
+                  "value": "wire",
+                  "disabled": true
+                },
+                {
+                  "key": "sub_category",
+                  "value": "perforation",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "更新价格项",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": \"0.2\",\n  \"note\": \"更新后的备注\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/price-items/P001",
+              "host": ["{{base_url}}"],
+              "path": ["api", "price-items", "P001"]
+            }
+          }
+        },
+        {
+          "name": "删除价格项",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/price-items/P001",
+              "host": ["{{base_url}}"],
+              "path": ["api", "price-items", "P001"]
+            }
+          }
+        },
+        {
+          "name": "批量删除价格项",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\"P001\", \"P002\", \"P003\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/price-items/batch-delete",
+              "host": ["{{base_url}}"],
+              "path": ["api", "price-items", "batch-delete"]
+            }
+          }
+        },
+        {
+          "name": "按版本类别查询",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/price-items/by-version-category?version_id=v1.0&category=wire",
+              "host": ["{{base_url}}"],
+              "path": ["api", "price-items", "by-version-category"],
+              "query": [
+                {
+                  "key": "version_id",
+                  "value": "v1.0"
+                },
+                {
+                  "key": "category",
+                  "value": "wire"
+                },
+                {
+                  "key": "active_only",
+                  "value": "true",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

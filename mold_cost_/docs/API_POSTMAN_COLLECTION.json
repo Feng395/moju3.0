@@ -1,0 +1,87 @@
+{
+  "info": {
+    "name": "模具成本核算系统 API",
+    "description": "API Gateway接口测试集合",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "健康检查",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        },
+        "description": "检查服务是否正常运行"
+      }
+    },
+    {
+      "name": "文件上传",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// 保存job_id到环境变量",
+              "if (pm.response.code === 200) {",
+              "    const jsonData = pm.response.json();",
+              "    pm.collectionVariables.set('job_id', jsonData.job_id);",
+              "    console.log('Job ID:', jsonData.job_id);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "dwg_file",
+              "type": "file",
+              "src": "/path/to/your/file.dwg",
+              "description": "DWG文件"
+            },
+            {
+              "key": "prt_file",
+              "type": "file",
+              "src": "/path/to/your/file.prt",
+              "description": "PRT文件"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/jobs/upload",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "jobs", "upload"]
+        },
+        "description": "上传DWG和PRT文件，返回job_id"
+      }
+    },
+    {
+      "name": "获取消息历史",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/ws/{{job_id}}/history",
+          "host": ["{{base_url}}"],
+          "path": ["ws", "{{job_id}}", "history"]
+        },
+        "description": "获取任务的历史消息（最近10条）"
+      }
+    }
+  ]
+}

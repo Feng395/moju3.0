@@ -1,0 +1,248 @@
+{
+  "info": {
+    "name": "MinIO 预签名 URL API",
+    "description": "MinIO 文件预签名 URL 生成接口测试集合",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "生成预签名URL - 基本请求",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"file_path\": \"dxf/2026/01/9ba97078-a7bf-4472-a977-564dca64cee7/LP-02.dxf\",\n  \"expires_in\": 3600\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/files/presigned-url",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "files", "presigned-url"]
+        },
+        "description": "生成1小时有效期的预签名URL"
+      },
+      "response": []
+    },
+    {
+      "name": "生成预签名URL - 自定义文件名",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"file_path\": \"dxf/2026/01/9ba97078-a7bf-4472-a977-564dca64cee7/LP-02.dxf\",\n  \"expires_in\": 7200,\n  \"download_filename\": \"我的图纸.dxf\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/files/presigned-url",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "files", "presigned-url"]
+        },
+        "description": "生成带自定义下载文件名的预签名URL"
+      },
+      "response": []
+    },
+    {
+      "name": "生成预签名URL - 最短过期时间",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"file_path\": \"dxf/2026/01/9ba97078-a7bf-4472-a977-564dca64cee7/LP-02.dxf\",\n  \"expires_in\": 60\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/files/presigned-url",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "files", "presigned-url"]
+        },
+        "description": "测试最短过期时间（60秒）"
+      },
+      "response": []
+    },
+    {
+      "name": "生成预签名URL - 最长过期时间",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"file_path\": \"dxf/2026/01/9ba97078-a7bf-4472-a977-564dca64cee7/LP-02.dxf\",\n  \"expires_in\": 604800\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/files/presigned-url",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "files", "presigned-url"]
+        },
+        "description": "测试最长过期时间（7天 = 604800秒）"
+      },
+      "response": []
+    },
+    {
+      "name": "生成预签名URL - 指定Bucket",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"file_path\": \"dxf/2026/01/9ba97078-a7bf-4472-a977-564dca64cee7/LP-02.dxf\",\n  \"expires_in\": 3600,\n  \"bucket_name\": \"files\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/files/presigned-url",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "files", "presigned-url"]
+        },
+        "description": "指定特定的Bucket名称"
+      },
+      "response": []
+    },
+    {
+      "name": "测试参数验证 - 过期时间过短",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"file_path\": \"dxf/2026/01/9ba97078-a7bf-4472-a977-564dca64cee7/LP-02.dxf\",\n  \"expires_in\": 30\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/files/presigned-url",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "files", "presigned-url"]
+        },
+        "description": "应该返回422错误（过期时间少于60秒）"
+      },
+      "response": []
+    },
+    {
+      "name": "测试安全验证 - 路径遍历攻击",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"file_path\": \"../../../etc/passwd\",\n  \"expires_in\": 3600\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/files/presigned-url",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "files", "presigned-url"]
+        },
+        "description": "应该返回422错误（路径包含非法字符）"
+      },
+      "response": []
+    },
+    {
+      "name": "测试JWT认证 - 无Token",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"file_path\": \"dxf/2026/01/9ba97078-a7bf-4472-a977-564dca64cee7/LP-02.dxf\",\n  \"expires_in\": 3600\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/files/presigned-url",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "files", "presigned-url"]
+        },
+        "description": "应该返回403错误（未提供Token）"
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8211",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "your_jwt_token_here",
+      "type": "string"
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+# Web框架
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+python-multipart==0.0.6  # 文件上传支持
+
+# 数据库
+sqlalchemy[asyncio]==2.0.25
+asyncpg==0.29.0
+alembic==1.13.1  # 数据库迁移
+
+# 消息队列
+aio-pika==9.3.1  # RabbitMQ异步客户端
+
+# 对象存储
+minio==7.2.3
+
+# 认证（按照JWT_GUIDE.md标准）
+PyJWT==2.8.0  # JWT标准库（推荐）
+passlib[bcrypt]==1.7.4  # 密码哈希
+
+# 加密（预留）
+cryptography==42.0.0
+
+# 配置管理
+python-dotenv==1.0.0
+pydantic==2.5.3
+pydantic-settings==2.1.0
+
+# 日志
+python-json-logger==2.0.7
+
+# HTTP客户端
+httpx==0.26.0
+aiohttp==3.9.1
+
+# 工具库
+python-dateutil==2.8.2
+
+# Redis（缓存 + PubSub）
+# 注意：aioredis 已废弃，功能已合并到 redis.asyncio
+# hiredis 是可选的 C 扩展，提供 10x 性能提升
+redis[hiredis]==5.3.1  # 稳定版本，生产环境可用
+
+# 测试
+pytest==7.4.4
+pytest-asyncio==0.23.3
+pytest-cov==4.1.0
+httpx==0.26.0  # 测试HTTP客户端
+
+# 代码质量
+black==23.12.1
+flake8==7.0.0
+mypy==1.8.0
+
+# AI框架（Agent编排）
+# 用于 InteractionAgent V2 的 LangGraph 实现
+langchain>=1.0,<2.0
+langgraph>=1.0,<2.0
+langchain-openai>=0.1.0,<1.0
+openai>=1.0,<2.0

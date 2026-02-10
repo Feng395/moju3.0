@@ -1,0 +1,387 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+body {
+  background-color: #ffffff;
+  color: #374151;
+  line-height: 1.6;
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* 拖拽上传区域悬停效果 */
+.upload-area:hover {
+  border-color: #10a37f !important;
+  background: #f0fdf4 !important;
+}
+
+.upload-area.dragover {
+  border-color: #10a37f !important;
+  background: #f0fdf4 !important;
+  transform: scale(1.02);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .ant-space-item {
+    width: 100% !important;
+  }
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 脉冲动画 - 用于核算按钮 */
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.35);
+  }
+  50% {
+    box-shadow: 0 6px 30px rgba(102, 126, 234, 0.5);
+  }
+}
+
+/* 旋转脉冲动画 - 用于加载图标 */
+@keyframes spinPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+/* 背景波动动画 */
+@keyframes floatBubble {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(10px, -10px) scale(1.05);
+  }
+  66% {
+    transform: translate(-10px, 10px) scale(0.95);
+  }
+}
+
+.message-item {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* 加载动画 */
+.loading-dots {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.loading-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #9ca3af;
+  animation: loading 1.4s ease-in-out infinite both;
+}
+
+.loading-dots span:nth-child(1) { animation-delay: -0.32s; }
+.loading-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes loading {
+  0%, 80%, 100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1);
+  }
+}
+
+/* Ant Design 组件自定义样式 */
+.ant-layout {
+  width: 100%;
+  background: #ffffff !important;
+}
+
+.ant-layout-sider {
+  background: #fafafa !important;
+  border-right: 1px solid #f0f0f0 !important;
+}
+
+.ant-menu {
+  background: transparent !important;
+  border-right: none !important;
+}
+
+.ant-card {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px 0 rgba(0, 0, 0, 0.02) !important;
+}
+
+.ant-progress-line {
+  margin: 0 !important;
+}
+
+.ant-table-thead > tr > th {
+  background: #fafafa !important;
+  font-weight: 600 !important;
+}
+
+/* 聊天输入框样式 - Gemini风格 */
+.gemini-input-container {
+  position: relative;
+  /* 使用 GPU 加速和性能优化 */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  /* 隔离输入区域，防止外部影响 */
+  contain: layout style paint;
+}
+
+.gemini-input-container:hover {
+  border-color: #d1d5db !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+}
+
+.gemini-input-container:focus-within {
+  border-color: #10a37f !important;
+  box-shadow: 0 4px 16px rgba(16, 163, 127, 0.12) !important;
+}
+
+.gemini-input-container .ant-input {
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  background: transparent !important;
+  font-size: 16px !important;
+  line-height: 24px !important;
+  /* 优化输入性能 */
+  transform: translateZ(0);
+  will-change: contents;
+}
+
+.gemini-input-container .ant-input:focus {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.gemini-input-container .ant-input::placeholder {
+  color: #9ca3af !important;
+  font-size: 16px !important;
+}
+
+/* 输入框按钮样式 */
+.input-action-btn:hover {
+  background: rgba(0, 0, 0, 0.04) !important;
+  color: #374151 !important;
+}
+
+.send-btn:hover {
+  transform: scale(1.05);
+}
+
+.send-btn:disabled {
+  background: transparent !important;
+  color: #d1d5db !important;
+  transform: none !important;
+}
+
+/* 快捷按钮样式 */
+.ant-btn-text:hover {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border-color: #d1d5db !important;
+}
+
+.ant-input:focus,
+.ant-input-focused {
+  border-color: #10a37f !important;
+  box-shadow: 0 0 0 2px rgba(16, 163, 127, 0.1) !important;
+}
+
+.ant-btn-primary {
+  background: #10a37f !important;
+  border-color: #10a37f !important;
+}
+
+.ant-btn-primary:hover {
+  background: #0d8f6b !important;
+  border-color: #0d8f6b !important;
+}
+
+.ant-select:not(.ant-select-disabled):hover .ant-select-selector {
+  border-color: #10a37f !important;
+}
+
+.ant-select-focused .ant-select-selector {
+  border-color: #10a37f !important;
+  box-shadow: 0 0 0 2px rgba(16, 163, 127, 0.1) !important;
+}
+
+.ant-steps-item-finish .ant-steps-item-icon {
+  background-color: #10a37f !important;
+  border-color: #10a37f !important;
+}
+
+.ant-steps-item-process .ant-steps-item-icon {
+  background-color: #10a37f !important;
+  border-color: #10a37f !important;
+}
+
+.ant-alert-info {
+  border-color: #bfdbfe !important;
+  background-color: #eff6ff !important;
+}
+
+.ant-alert-warning {
+  border-color: #fed7aa !important;
+  background-color: #fffbeb !important;
+}
+
+.ant-alert-error {
+  border-color: #fecaca !important;
+  background-color: #fef2f2 !important;
+}
+/* 用户信息区域样式 */
+.user-info-container:hover {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+.user-avatar-collapsed:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* 暗色主题适配 */
+[data-theme='dark'] .user-info-container:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+/* 最近任务列表样式 */
+.recent-task-item {
+  transition: all 0.2s ease;
+}
+
+.recent-task-item:hover .task-actions {
+  opacity: 1;
+}
+
+.task-actions {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.task-title-editing {
+  background: rgba(24, 144, 255, 0.1) !important;
+  border: 1px solid #1890ff !important;
+}
+
+.task-title-editing:focus {
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important;
+}
+
+/* 任务操作按钮样式 */
+.task-more-button {
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+
+.task-more-button:hover {
+  opacity: 1 !important;
+}
+
+/* 欢迎卡片AI头像动画 */
+@keyframes welcomeAvatarFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes welcomeAvatarGlow {
+  0%, 100% {
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.25);
+  }
+  50% {
+    box-shadow: 0 8px 35px rgba(102, 126, 234, 0.45);
+  }
+}
+
+@keyframes welcomeAvatarPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+.welcome-avatar-container {
+  animation: welcomeAvatarFloat 3.5s ease-in-out infinite;
+}
+
+.welcome-avatar-container:hover {
+  animation: welcomeAvatarFloat 3.5s ease-in-out infinite, 
+             welcomeAvatarGlow 2s ease-in-out infinite,
+             welcomeAvatarPulse 1.5s ease-in-out infinite;
+}
+
+/* Markdown 表格样式 */
+.markdown-table {
+  overflow: hidden; /* 确保圆角正确显示 */
+}
+
+.markdown-table th,
+.markdown-table td {
+  border-right: 1px solid #d9d9d9;
+  border-bottom: 1px solid #d9d9d9;
+}
+
+.markdown-table th:last-child,
+.markdown-table td:last-child {
+  border-right: none;
+}
+
+.markdown-table tr:last-child td {
+  border-bottom: none;
+}

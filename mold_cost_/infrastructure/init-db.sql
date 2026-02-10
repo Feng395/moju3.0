@@ -1,0 +1,1180 @@
+-- 数据库初始化脚本
+-- 负责人：人员A
+
+-- 启用扩展
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- ============================================
+-- 用户与权限表
+-- ============================================
+
+-- 创建users表
+CREATE TABLE IF NOT EXISTS users (
+    user_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    email VARCHAR(100) UNIQUE,
+    real_name VARCHAR(50),
+    
+    -- 角色和部门
+    role VARCHAR(20) NOT NULL DEFAULT 'operator',
+    department VARCHAR(50),
+    
+    -- 状态
+    is_active BOOLEAN DEFAULT true,
+    is_locked BOOLEAN DEFAULT false,
+    failed_login_attempts INTEGER DEFAULT 0,
+    
+    -- 时间戳
+    last_login_at TIMESTAMP,
+    last_login_ip VARCHAR(50),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    created_by UUID REFERENCES users(user_id),
+    
+    -- 扩展字段
+    metadata JSONB,
+    
+    CONSTRAINT chk_role CHECK (role IN ('admin', 'operator', 'viewer'))
+);
+
+-- 创建索引
+CREATE INDEX idx_users_username ON users(username);
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_role ON users(role);
+CREATE INDEX idx_users_department ON users(department);
+CREATE INDEX idx_users_is_active ON users(is_active);
+
+-- 创建login_logs表（登录日志）
+CREATE TABLE IF NOT EXISTS login_logs (
+    log_id BIGSERIAL PRIMARY KEY,
+    user_id UUID REFERENCES users(user_id),
+    username VARCHAR(50) NOT NULL,
+    login_type VARCHAR(20) NOT NULL, -- login/logout/token_refresh
+    status VARCHAR(20) NOT NULL, -- success/failed
+    ip_address VARCHAR(50),
+    user_agent VARCHAR(255),
+    failure_reason VARCHAR(255),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- 创建索引
+CREATE INDEX idx_login_logs_user_id ON login_logs(user_id);
+CREATE INDEX idx_login_logs_created_at ON login_logs(created_at DESC);
+
+-- 插入初始管理员账号（密码：admin123）
+INSERT INTO users (username, password_hash, email, real_name, role)
+VALUES ('admin', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYzS7eFSe96', 
+        'admin@example.com', '系统管理员', 'admin')
+ON CONFLICT (username) DO NOTHING;
+
+-- ============================================
+-- 业务表
+-- ============================================
+
+-- 创建jobs表
+CREATE TABLE IF NOT EXISTS jobs (
+    job_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(user_id),
+    
+    -- DWG文件信息
+    dwg_file_id VARCHAR(100),
+    dwg_file_name VARCHAR(255),
+    dwg_file_path VARCHAR(500),
+    dwg_file_size BIGINT,
+    
+    -- PRT文件信息
+    prt_file_id VARCHAR(100),
+    prt_file_name VARCHAR(255),
+    prt_file_path VARCHAR(500),
+    prt_file_size BIGINT,
+    
+    -- 任务状态
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    current_stage VARCHAR(50),
+    progress INTEGER DEFAULT 0,
+    total_subgraphs INTEGER DEFAULT 0,
+    
+    -- 成本汇总
+    total_cost DECIMAL(12,2),
+    currency VARCHAR(10) DEFAULT 'CNY',
+    processes_used TEXT[],
+    material_cost DECIMAL(12,2),
+    heat_treatment_cost DECIMAL(12,2),
+    fast_wire_cost DECIMAL(12,2),
+    mid_wire_cost DECIMAL(12,2),
+    slow_wire_cost DECIMAL(12,2),
+    nc_cost DECIMAL(12,2),
+    grinding_cost DECIMAL(12,2),
+    edm_cost DECIMAL(12,2),
+    processing_cost_total DECIMAL(12,2),
+    
+    -- 版本锁定（快照模式）
+    price_version_locked VARCHAR(20),
+    process_version_locked VARCHAR(20),
+    snapshot_created_at TIMESTAMP,
+    
+    -- 报表
+    report_id VARCHAR(100),
+    
+    -- 时间戳
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    completed_at TIMESTAMP,
+    archived_at TIMESTAMP,
+    
+    -- 其他
+    error_message TEXT,
+    metadata JSONB,
+    
+    CONSTRAINT chk_at_least_one_file CHECK (
+        dwg_file_id IS NOT NULL OR prt_file_id IS NOT NULL
+    )
+);
+
+-- 创建索引
+CREATE INDEX idx_jobs_user_id ON jobs(user_id);
+CREATE INDEX idx_jobs_status ON jobs(status);
+CREATE INDEX idx_jobs_created_at ON jobs(created_at DESC);
+
+-- 创建subgraphs表
+CREATE TABLE IF NOT EXISTS subgraphs (
+    subgraph_id VARCHAR(50) PRIMARY KEY,
+    job_id UUID NOT NULL REFERENCES jobs(job_id),
+    
+    -- 基本信息
+    part_name VARCHAR(100),
+    part_code VARCHAR(100),
+    material VARCHAR(50),
+    subgraph_file_url VARCHAR(500),
+    
+    -- 业务数据
+    weight_kg DECIMAL(10,3),
+    
+    -- 材料和热处理
+    material_unit_price DECIMAL(10,2),
+    material_cost DECIMAL(12,2),
+    heat_treatment_unit_price DECIMAL(10,2),
+    heat_treatment_cost DECIMAL(12,2),
+    
+    -- 工艺说明
+    process_description VARCHAR(200),
+    
+    -- 加工时间
+    nc_roughing_time DECIMAL(10,2),
+    nc_milling_time DECIMAL(10,2),
+    drilling_time DECIMAL(10,2),
+    milling_machine_time DECIMAL(10,2),
+    large_grinding_time DECIMAL(10,2),
+    small_grinding_count INTEGER,
+    edm_time DECIMAL(10,2),
+    engraving_time DECIMAL(10,2),
+    
+    -- 线割长度
+    slow_wire_length DECIMAL(12,3),
+    slow_wire_side_length DECIMAL(12,3),
+    mid_wire_length DECIMAL(12,3),
+    fast_wire_length DECIMAL(12,3),
+    
+    -- 单独项
+    separate_item VARCHAR(200),
+    
+    -- 费用
+    total_cost DECIMAL(12,2),
+    wire_process_note TEXT,
+    nc_roughing_cost DECIMAL(12,2),
+    nc_milling_cost DECIMAL(12,2),
+    drilling_cost DECIMAL(12,2),
+    milling_machine_cost DECIMAL(12,2),
+    large_grinding_cost DECIMAL(12,2),
+    small_grinding_cost DECIMAL(12,2),
+    slow_wire_cost DECIMAL(12,2),
+    slow_wire_side_cost DECIMAL(12,2),
+    mid_wire_cost DECIMAL(12,2),
+    fast_wire_cost DECIMAL(12,2),
+    edm_cost DECIMAL(12,2),
+    engraving_cost DECIMAL(12,2),
+    separate_item_cost DECIMAL(12,2),
+    processing_cost_total DECIMAL(12,2),
+    
+    -- 工艺决策
+    applied_snapshot_ids TEXT[],
+    rule_reason TEXT,
+    override_by_user BOOLEAN DEFAULT false,
+    cost_calculation_method VARCHAR(20),
+    
+    -- 扩展功能
+    has_sheet_line BOOLEAN DEFAULT false,
+    sheet_area_mm2 DECIMAL(12,3),
+    sheet_perimeter_mm DECIMAL(12,3),
+    sheet_line_data JSONB,
+    has_single_nc_calc BOOLEAN DEFAULT false,
+    single_prt_file VARCHAR(500),
+    process_changed BOOLEAN DEFAULT false,
+    original_process VARCHAR(20),
+    prt_3d_file VARCHAR(500),
+    
+    -- 重算
+    recalc_count INTEGER DEFAULT 0,
+    last_recalc_at TIMESTAMP,
+    last_recalc_by VARCHAR(50),
+    
+    -- 状态
+    status VARCHAR(20) DEFAULT 'pending',
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    metadata JSONB
+);
+
+CREATE INDEX idx_subgraphs_job_id ON subgraphs(job_id);
+CREATE INDEX idx_subgraphs_status ON subgraphs(status);
+
+-- 创建features表（特征表）
+CREATE TABLE IF NOT EXISTS features (
+    feature_id BIGSERIAL PRIMARY KEY,
+    subgraph_id VARCHAR(50) NOT NULL REFERENCES subgraphs(subgraph_id),
+    job_id UUID NOT NULL REFERENCES jobs(job_id),
+    version INTEGER NOT NULL DEFAULT 1,
+    
+    -- 几何特征（从CAD提取）
+    length_mm DECIMAL(10,2),
+    width_mm DECIMAL(10,2),
+    thickness_mm DECIMAL(10,3),
+    quantity INTEGER DEFAULT 1,
+    heat_treatment VARCHAR(100),
+    volume_mm3 DECIMAL(15,3),
+    calculated_weight_kg DECIMAL(10,3),
+    
+    -- 三个视图的线割长度
+    top_view_wire_length DECIMAL(10,3),
+    front_view_wire_length DECIMAL(10,3),
+    side_view_wire_length DECIMAL(10,3),
+    
+    -- 加工特征
+    has_auto_material BOOLEAN DEFAULT false,
+    needs_heat_treatment BOOLEAN DEFAULT false,
+    boring_length_mm DECIMAL(10,3),
+    
+    -- 加工说明（JSON格式）
+    processing_instructions JSONB,
+    
+    -- 识别信息
+    is_complete BOOLEAN DEFAULT false,
+    missing_params TEXT[],
+    
+    -- 异常情况
+    abnormal_situation JSONB,
+    
+    -- 元数据
+    created_by VARCHAR(50),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    metadata JSONB
+);
+
+-- 创建索引
+CREATE INDEX idx_features_subgraph_id ON features(subgraph_id);
+CREATE INDEX idx_features_job_id ON features(job_id);
+CREATE INDEX idx_features_version ON features(subgraph_id, version DESC);
+CREATE INDEX idx_features_processing_instructions ON features USING GIN(processing_instructions);
+CREATE INDEX idx_features_abnormal_situation ON features USING GIN(abnormal_situation);
+
+-- 创建唯一约束
+CREATE UNIQUE INDEX idx_features_subgraph_version ON features(subgraph_id, version);
+
+-- 创建price_items表
+CREATE TABLE IF NOT EXISTS price_items (
+    id VARCHAR(50) PRIMARY KEY,
+    version_id VARCHAR(20) NOT NULL,
+    feature_type VARCHAR(20) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    unit_price DECIMAL(10,4) NOT NULL,
+    unit VARCHAR(20) NOT NULL,
+    param_conditions JSONB,
+    priority INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_price_items_version_feature ON price_items(version_id, feature_type, is_active);
+
+-- 创建process_rules表
+CREATE TABLE IF NOT EXISTS process_rules (
+    id VARCHAR(50) PRIMARY KEY,
+    version_id VARCHAR(20) NOT NULL,
+    feature_type VARCHAR(20) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    conditions JSONB NOT NULL,
+    output_params JSONB NOT NULL,
+    priority INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_process_rules_version_feature ON process_rules(version_id, feature_type, is_active);
+
+-- ============================================
+-- 快照表（每个任务一份）
+-- ============================================
+
+-- 创建job_price_snapshots表（任务价格快照）
+CREATE TABLE IF NOT EXISTS job_price_snapshots (
+    snapshot_id BIGSERIAL PRIMARY KEY,
+    job_id UUID NOT NULL REFERENCES jobs(job_id),
+    
+    -- 从price_items复制的字段
+    original_price_id VARCHAR(50),
+    version_id VARCHAR(20) NOT NULL,
+    feature_type VARCHAR(20) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    unit_price DECIMAL(10,4) NOT NULL,
+    unit VARCHAR(20) NOT NULL,
+    param_conditions JSONB,
+    priority INTEGER DEFAULT 0,
+    
+    -- 快照特有字段
+    is_modified BOOLEAN DEFAULT false,
+    modified_by VARCHAR(50),
+    modified_at TIMESTAMP,
+    modification_reason TEXT,
+    
+    -- 审计字段
+    snapshot_created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    metadata JSONB
+);
+
+-- 创建索引
+CREATE INDEX idx_job_price_snapshots_job_id ON job_price_snapshots(job_id);
+CREATE INDEX idx_job_price_snapshots_feature_type ON job_price_snapshots(feature_type);
+CREATE INDEX idx_job_price_snapshots_is_modified ON job_price_snapshots(is_modified);
+CREATE INDEX idx_job_price_snapshots_job_feature ON job_price_snapshots(job_id, feature_type);
+
+-- 创建job_process_snapshots表（任务工艺快照）
+CREATE TABLE IF NOT EXISTS job_process_snapshots (
+    snapshot_id BIGSERIAL PRIMARY KEY,
+    job_id UUID NOT NULL REFERENCES jobs(job_id),
+    
+    -- 从process_rules复制的字段
+    original_rule_id VARCHAR(50),
+    version_id VARCHAR(20) NOT NULL,
+    feature_type VARCHAR(20) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    conditions JSONB NOT NULL,
+    output_params JSONB NOT NULL,
+    priority INTEGER DEFAULT 0,
+    
+    -- 快照特有字段
+    is_modified BOOLEAN DEFAULT false,
+    modified_by VARCHAR(50),
+    modified_at TIMESTAMP,
+    modification_reason TEXT,
+    
+    -- 审计字段
+    snapshot_created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    metadata JSONB
+);
+
+-- 创建索引
+CREATE INDEX idx_job_process_snapshots_job_id ON job_process_snapshots(job_id);
+CREATE INDEX idx_job_process_snapshots_feature_type ON job_process_snapshots(feature_type);
+CREATE INDEX idx_job_process_snapshots_is_modified ON job_process_snapshots(is_modified);
+CREATE INDEX idx_job_process_snapshots_job_feature ON job_process_snapshots(job_id, feature_type);
+
+-- ============================================
+-- 交互与日志表
+-- ============================================
+
+-- 创建user_interactions表（用户交互表）
+CREATE TABLE IF NOT EXISTS user_interactions (
+    interaction_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    job_id UUID NOT NULL REFERENCES jobs(job_id),
+    card_id VARCHAR(100) NOT NULL,
+    card_type VARCHAR(50) NOT NULL,
+    card_data JSONB NOT NULL,
+    user_response JSONB,
+    action VARCHAR(50),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    responded_at TIMESTAMP,
+    status VARCHAR(20) DEFAULT 'pending'
+);
+
+-- 创建索引
+CREATE INDEX idx_user_interactions_job_id ON user_interactions(job_id);
+CREATE INDEX idx_user_interactions_status ON user_interactions(status);
+CREATE INDEX idx_user_interactions_created_at ON user_interactions(created_at DESC);
+
+-- 创建operation_logs表（操作日志表）
+CREATE TABLE IF NOT EXISTS operation_logs (
+    log_id BIGSERIAL PRIMARY KEY,
+    job_id UUID REFERENCES jobs(job_id),
+    subgraph_id VARCHAR(50),
+    agent VARCHAR(50) NOT NULL,
+    action VARCHAR(100) NOT NULL,
+    input_data JSONB,
+    output_data JSONB,
+    status VARCHAR(20) NOT NULL,
+    duration_ms INTEGER,
+    error_message TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- 创建索引
+CREATE INDEX idx_operation_logs_job_id ON operation_logs(job_id);
+CREATE INDEX idx_operation_logs_agent ON operation_logs(agent);
+CREATE INDEX idx_operation_logs_created_at ON operation_logs(created_at DESC);
+CREATE INDEX idx_operation_logs_job_created ON operation_logs(job_id, created_at);
+
+-- 创建audit_logs表（审计日志表）
+CREATE TABLE IF NOT EXISTS audit_logs (
+    audit_id BIGSERIAL PRIMARY KEY,
+    user_id UUID REFERENCES users(user_id),
+    action VARCHAR(100) NOT NULL,
+    resource_type VARCHAR(50) NOT NULL,
+    resource_id VARCHAR(100) NOT NULL,
+    changes JSONB,
+    ip_address VARCHAR(50),
+    user_agent VARCHAR(255),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- 创建索引
+CREATE INDEX idx_audit_logs_user_id ON audit_logs(user_id);
+CREATE INDEX idx_audit_logs_resource ON audit_logs(resource_type, resource_id);
+CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at DESC);
+
+-- ============================================
+-- 报表与归档表
+-- ============================================
+
+-- 创建reports表（报表表）
+CREATE TABLE IF NOT EXISTS reports (
+    report_id VARCHAR(100) PRIMARY KEY,
+    job_id UUID NOT NULL REFERENCES jobs(job_id),
+    file_type VARCHAR(10) NOT NULL,
+    file_path VARCHAR(500) NOT NULL,
+    file_size BIGINT NOT NULL,
+    download_url VARCHAR(1000),
+    url_expires_at TIMESTAMP,
+    checksum VARCHAR(64),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- 创建索引
+CREATE INDEX idx_reports_job_id ON reports(job_id);
+CREATE INDEX idx_reports_created_at ON reports(created_at DESC);
+
+-- 创建report_summary表（报表汇总表）
+CREATE TABLE IF NOT EXISTS report_summary (
+    summary_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    report_id VARCHAR(100) NOT NULL,
+    job_id UUID NOT NULL REFERENCES jobs(job_id),
+    
+    -- 材料和热处理合计
+    total_material_cost DECIMAL(12,2),
+    total_heat_treatment_cost DECIMAL(12,2),
+    
+    -- 加工费合计
+    total_nc_roughing_cost DECIMAL(12,2),
+    total_nc_milling_cost DECIMAL(12,2),
+    total_drilling_cost DECIMAL(12,2),
+    total_milling_machine_cost DECIMAL(12,2),
+    total_large_grinding_cost DECIMAL(12,2),
+    total_small_grinding_cost DECIMAL(12,2),
+    total_slow_wire_cost DECIMAL(12,2),
+    total_slow_wire_side_cost DECIMAL(12,2),
+    total_mid_wire_cost DECIMAL(12,2),
+    total_fast_wire_cost DECIMAL(12,2),
+    total_edm_cost DECIMAL(12,2),
+    total_engraving_cost DECIMAL(12,2),
+    total_separate_item_cost DECIMAL(12,2),
+    total_processing_cost DECIMAL(12,2),
+    
+    -- 总计
+    grand_total DECIMAL(12,2),
+    management_fee DECIMAL(12,2),
+    final_total DECIMAL(12,2),
+    
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- 创建索引
+CREATE INDEX idx_report_summary_report_id ON report_summary(report_id);
+CREATE INDEX idx_report_summary_job_id ON report_summary(job_id);
+
+-- 创建archives表（归档表）
+CREATE TABLE IF NOT EXISTS archives (
+    archive_id VARCHAR(100) PRIMARY KEY,
+    job_id UUID NOT NULL REFERENCES jobs(job_id),
+    archive_path VARCHAR(500) NOT NULL,
+    file_size BIGINT NOT NULL,
+    checksum VARCHAR(64) NOT NULL,
+    archived_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMP
+);
+
+-- 创建索引
+CREATE INDEX idx_archives_job_id ON archives(job_id);
+CREATE INDEX idx_archives_archived_at ON archives(archived_at DESC);
+
+-- ============================================
+-- 重算与变更表
+-- ============================================
+
+-- 创建batch_recalculations表（批量重算表）
+CREATE TABLE IF NOT EXISTS batch_recalculations (
+    batch_recalc_id VARCHAR(100) PRIMARY KEY,
+    job_id UUID NOT NULL REFERENCES jobs(job_id),
+    subgraph_ids TEXT[] NOT NULL,
+    reason TEXT NOT NULL,
+    total_count INTEGER NOT NULL,
+    completed_count INTEGER DEFAULT 0,
+    failed_count INTEGER DEFAULT 0,
+    old_total_cost DECIMAL(12,2),
+    new_total_cost DECIMAL(12,2),
+    cost_diff DECIMAL(12,2),
+    status VARCHAR(20) DEFAULT 'pending',
+    created_by VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    completed_at TIMESTAMP
+);
+
+-- 创建索引
+CREATE INDEX idx_batch_recalculations_job_id ON batch_recalculations(job_id);
+CREATE INDEX idx_batch_recalculations_status ON batch_recalculations(status);
+CREATE INDEX idx_batch_recalculations_created_at ON batch_recalculations(created_at DESC);
+
+-- 创建recalculations表（重算记录表）
+CREATE TABLE IF NOT EXISTS recalculations (
+    recalc_id VARCHAR(100) PRIMARY KEY,
+    job_id UUID NOT NULL REFERENCES jobs(job_id),
+    subgraph_id VARCHAR(50) NOT NULL,
+    batch_recalc_id VARCHAR(100) REFERENCES batch_recalculations(batch_recalc_id),
+    reason TEXT NOT NULL,
+    modifications JSONB,
+    old_cost DECIMAL(12,2),
+    new_cost DECIMAL(12,2),
+    cost_diff DECIMAL(12,2),
+    status VARCHAR(20) DEFAULT 'pending',
+    created_by VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    completed_at TIMESTAMP
+);
+
+-- 创建索引
+CREATE INDEX idx_recalculations_job_id ON recalculations(job_id);
+CREATE INDEX idx_recalculations_subgraph_id ON recalculations(subgraph_id);
+CREATE INDEX idx_recalculations_batch_id ON recalculations(batch_recalc_id);
+CREATE INDEX idx_recalculations_status ON recalculations(status);
+
+-- 创建process_changes表（工艺变更表）
+CREATE TABLE IF NOT EXISTS process_changes (
+    change_id VARCHAR(100) PRIMARY KEY,
+    job_id UUID NOT NULL REFERENCES jobs(job_id),
+    subgraph_id VARCHAR(50) NOT NULL,
+    from_process VARCHAR(20),
+    to_process VARCHAR(20),
+    reason TEXT,
+    cost_impact DECIMAL(12,2),
+    extrusion_height DECIMAL(10,2),
+    created_by VARCHAR(50),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- 创建索引
+CREATE INDEX idx_process_changes_job_id ON process_changes(job_id);
+CREATE INDEX idx_process_changes_subgraph_id ON process_changes(subgraph_id);
+
+-- 创建nc_calculations表（NC计算记录表）
+CREATE TABLE IF NOT EXISTS nc_calculations (
+    calc_id VARCHAR(100) PRIMARY KEY,
+    job_id UUID NOT NULL REFERENCES jobs(job_id),
+    subgraph_id VARCHAR(50),
+    calc_type VARCHAR(20) NOT NULL,
+    prt_file VARCHAR(500) NOT NULL,
+    drilling_time DECIMAL(10,2),
+    roughing_time DECIMAL(10,2),
+    milling_time DECIMAL(10,2),
+    total_cost DECIMAL(12,2),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- 创建索引
+CREATE INDEX idx_nc_calculations_job_id ON nc_calculations(job_id);
+CREATE INDEX idx_nc_calculations_subgraph_id ON nc_calculations(subgraph_id);
+CREATE INDEX idx_nc_calculations_created_at ON nc_calculations(created_at DESC);
+
+-- 创建price_histories表（价格历史表）
+CREATE TABLE IF NOT EXISTS price_histories (
+    history_id BIGSERIAL PRIMARY KEY,
+    job_id UUID REFERENCES jobs(job_id),
+    subgraph_id VARCHAR(50),
+    old_params JSONB,
+    new_params JSONB,
+    old_cost DECIMAL(12,2),
+    new_cost DECIMAL(12,2),
+    change_type VARCHAR(50),
+    changed_by VARCHAR(50),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- 创建索引
+CREATE INDEX idx_price_histories_job_id ON price_histories(job_id);
+CREATE INDEX idx_price_histories_subgraph_id ON price_histories(subgraph_id);
+CREATE INDEX idx_price_histories_created_at ON price_histories(created_at DESC);
+
+-- ============================================
+-- 触发器函数
+-- ============================================
+
+-- 创建更新updated_at的触发器函数
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 为需要自动更新updated_at的表创建触发器
+CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_jobs_updated_at BEFORE UPDATE ON jobs
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_subgraphs_updated_at BEFORE UPDATE ON subgraphs
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_price_items_updated_at BEFORE UPDATE ON price_items
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_process_rules_updated_at BEFORE UPDATE ON process_rules
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================
+-- 视图
+-- ============================================
+
+-- 创建任务详情视图（包含用户信息）
+CREATE OR REPLACE VIEW v_job_details AS
+SELECT 
+    j.job_id,
+    j.user_id,
+    u.username,
+    u.real_name,
+    u.department,
+    j.dwg_file_name,
+    j.prt_file_name,
+    j.status,
+    j.current_stage,
+    j.progress,
+    j.total_subgraphs,
+    j.total_cost,
+    j.currency,
+    j.created_at,
+    j.updated_at,
+    j.completed_at
+FROM jobs j
+LEFT JOIN users u ON j.user_id = u.user_id;
+
+-- 创建子图汇总视图
+CREATE OR REPLACE VIEW v_subgraph_summary AS
+SELECT 
+    s.job_id,
+    COUNT(*) as total_subgraphs,
+    SUM(s.total_cost) as total_cost,
+    SUM(s.material_cost) as total_material_cost,
+    SUM(s.heat_treatment_cost) as total_heat_treatment_cost,
+    SUM(s.processing_cost_total) as total_processing_cost,
+    SUM(s.slow_wire_cost) as total_slow_wire_cost,
+    SUM(s.mid_wire_cost) as total_mid_wire_cost,
+    SUM(s.fast_wire_cost) as total_fast_wire_cost,
+    SUM(s.nc_roughing_cost + s.nc_milling_cost) as total_nc_cost
+FROM subgraphs s
+GROUP BY s.job_id;
+
+-- ============================================
+-- 注释
+-- ============================================
+
+COMMENT ON TABLE users IS '用户表，存储用户信息和权限';
+COMMENT ON TABLE jobs IS '任务表，存储任务的基本信息和状态';
+COMMENT ON TABLE subgraphs IS '子图表，存储每个子图的业务数据和成本信息';
+COMMENT ON TABLE features IS '特征表，存储从CAD提取的原始特征数据，支持历史版本';
+COMMENT ON TABLE price_items IS '价格项表（全局模板），支持版本管理';
+COMMENT ON TABLE process_rules IS '工艺规则表（全局模板），支持版本管理';
+COMMENT ON TABLE job_price_snapshots IS '任务价格快照表，每个任务创建时从price_items复制';
+COMMENT ON TABLE job_process_snapshots IS '任务工艺快照表，每个任务创建时从process_rules复制';
+COMMENT ON TABLE user_interactions IS '用户交互表，记录用户交互历史';
+COMMENT ON TABLE operation_logs IS '操作日志表，记录所有Agent操作';
+COMMENT ON TABLE audit_logs IS '审计日志表，记录所有数据变更';
+COMMENT ON TABLE reports IS '报表表，记录生成的报表文件';
+COMMENT ON TABLE report_summary IS '报表汇总表，存储报表的汇总信息';
+COMMENT ON TABLE archives IS '归档表，记录归档数据';
+COMMENT ON TABLE recalculations IS '重算记录表，记录单个子图重算';
+COMMENT ON TABLE batch_recalculations IS '批量重算表，记录批量重算任务';
+COMMENT ON TABLE process_changes IS '工艺变更表，记录工艺变更';
+COMMENT ON TABLE nc_calculations IS 'NC计算记录表，记录单独NC计算';
+COMMENT ON TABLE price_histories IS '价格历史表，记录价格变更历史';
+
+-- ============================================
+-- 完成提示
+-- ============================================
+
+DO $$
+BEGIN
+    RAISE NOTICE '数据库初始化完成！';
+    RAISE NOTICE '已创建17张核心表、多个索引、触发器和视图';
+    RAISE NOTICE '默认管理员账号: admin / admin123';
+END $$;
+
+-- ============================================
+-- 表注释
+-- ============================================
+
+COMMENT ON TABLE users IS '用户表，存储用户信息和权限';
+COMMENT ON TABLE login_logs IS '登录日志表，记录用户登录历史';
+COMMENT ON TABLE jobs IS '任务表，存储任务的基本信息和状态';
+COMMENT ON TABLE subgraphs IS '子图表，存储每个子图的业务数据和成本信息';
+COMMENT ON TABLE features IS '特征表，存储从CAD提取的原始特征数据，支持历史版本';
+COMMENT ON TABLE price_items IS '价格项表（全局模板），支持版本管理';
+COMMENT ON TABLE process_rules IS '工艺规则表（全局模板），支持版本管理';
+COMMENT ON TABLE job_price_snapshots IS '任务价格快照表，每个任务创建时从price_items复制';
+COMMENT ON TABLE job_process_snapshots IS '任务工艺快照表，每个任务创建时从process_rules复制';
+COMMENT ON TABLE user_interactions IS '用户交互表，记录用户交互历史';
+COMMENT ON TABLE operation_logs IS '操作日志表，记录所有Agent操作';
+COMMENT ON TABLE audit_logs IS '审计日志表，记录所有数据变更';
+COMMENT ON TABLE reports IS '报表表，记录生成的报表文件';
+COMMENT ON TABLE report_summary IS '报表汇总表，存储报表的汇总信息';
+COMMENT ON TABLE archives IS '归档表，记录归档数据';
+COMMENT ON TABLE recalculations IS '重算记录表，记录单个子图重算';
+COMMENT ON TABLE batch_recalculations IS '批量重算表，记录批量重算任务';
+COMMENT ON TABLE process_changes IS '工艺变更表，记录工艺变更';
+COMMENT ON TABLE nc_calculations IS 'NC计算记录表，记录单独NC计算';
+COMMENT ON TABLE price_histories IS '价格历史表，记录价格变更历史';
+
+-- ============================================
+-- users表字段注释
+-- ============================================
+
+COMMENT ON COLUMN users.user_id IS '用户唯一标识UUID';
+COMMENT ON COLUMN users.username IS '用户名，唯一，用于登录';
+COMMENT ON COLUMN users.password_hash IS '密码哈希值，使用bcrypt加密';
+COMMENT ON COLUMN users.email IS '用户邮箱，唯一';
+COMMENT ON COLUMN users.real_name IS '真实姓名';
+COMMENT ON COLUMN users.role IS '用户角色：admin-管理员, operator-操作员, viewer-查看者';
+COMMENT ON COLUMN users.department IS '所属部门';
+COMMENT ON COLUMN users.is_active IS '账号是否激活，false表示禁用';
+COMMENT ON COLUMN users.is_locked IS '账号是否锁定，连续登录失败会锁定';
+COMMENT ON COLUMN users.failed_login_attempts IS '连续登录失败次数';
+COMMENT ON COLUMN users.last_login_at IS '最后登录时间';
+COMMENT ON COLUMN users.last_login_ip IS '最后登录IP地址';
+COMMENT ON COLUMN users.created_at IS '账号创建时间';
+COMMENT ON COLUMN users.updated_at IS '账号更新时间';
+COMMENT ON COLUMN users.created_by IS '创建人用户ID';
+COMMENT ON COLUMN users.metadata IS '扩展元数据，JSON格式';
+
+-- ============================================
+-- login_logs表字段注释
+-- ============================================
+
+COMMENT ON COLUMN login_logs.log_id IS '日志ID，自增主键';
+COMMENT ON COLUMN login_logs.user_id IS '用户ID';
+COMMENT ON COLUMN login_logs.username IS '用户名';
+COMMENT ON COLUMN login_logs.login_type IS '登录类型：login-登录, logout-登出, token_refresh-令牌刷新';
+COMMENT ON COLUMN login_logs.status IS '状态：success-成功, failed-失败';
+COMMENT ON COLUMN login_logs.ip_address IS 'IP地址';
+COMMENT ON COLUMN login_logs.user_agent IS '用户代理字符串';
+COMMENT ON COLUMN login_logs.failure_reason IS '失败原因';
+COMMENT ON COLUMN login_logs.created_at IS '日志创建时间';
+
+-- ============================================
+-- jobs表字段注释
+-- ============================================
+
+COMMENT ON COLUMN jobs.job_id IS '任务唯一标识UUID';
+COMMENT ON COLUMN jobs.user_id IS '创建任务的用户ID';
+COMMENT ON COLUMN jobs.dwg_file_id IS 'DWG文件ID';
+COMMENT ON COLUMN jobs.dwg_file_name IS 'DWG文件名';
+COMMENT ON COLUMN jobs.dwg_file_path IS 'DWG文件在MinIO中的路径';
+COMMENT ON COLUMN jobs.dwg_file_size IS 'DWG文件大小（字节）';
+COMMENT ON COLUMN jobs.prt_file_id IS 'PRT文件ID';
+COMMENT ON COLUMN jobs.prt_file_name IS 'PRT文件名';
+COMMENT ON COLUMN jobs.prt_file_path IS 'PRT文件在MinIO中的路径';
+COMMENT ON COLUMN jobs.prt_file_size IS 'PRT文件大小（字节）';
+COMMENT ON COLUMN jobs.status IS '任务状态：pending-待处理, processing-处理中, need_user_input-等待用户输入, completed-已完成, failed-失败, archived-已归档';
+COMMENT ON COLUMN jobs.current_stage IS '当前执行阶段：initializing, cad_parsing, feature_recognition等';
+COMMENT ON COLUMN jobs.progress IS '任务进度百分比（0-100）';
+COMMENT ON COLUMN jobs.total_subgraphs IS '子图总数';
+COMMENT ON COLUMN jobs.total_cost IS '总成本（元）';
+COMMENT ON COLUMN jobs.currency IS '货币单位，默认CNY';
+COMMENT ON COLUMN jobs.processes_used IS '使用的工艺列表';
+COMMENT ON COLUMN jobs.material_cost IS '材料费合计（元）';
+COMMENT ON COLUMN jobs.heat_treatment_cost IS '热处理费合计（元）';
+COMMENT ON COLUMN jobs.fast_wire_cost IS '快丝线割费用合计（元）';
+COMMENT ON COLUMN jobs.mid_wire_cost IS '中丝线割费用合计（元）';
+COMMENT ON COLUMN jobs.slow_wire_cost IS '慢丝线割费用合计（元）';
+COMMENT ON COLUMN jobs.nc_cost IS 'NC加工费用合计（元）';
+COMMENT ON COLUMN jobs.grinding_cost IS '磨床加工费用合计（元）';
+COMMENT ON COLUMN jobs.edm_cost IS '放电加工费用合计（元）';
+COMMENT ON COLUMN jobs.processing_cost_total IS '加工费用总合计（元）';
+COMMENT ON COLUMN jobs.price_version_locked IS '锁定的价格版本号，如v1.0';
+COMMENT ON COLUMN jobs.process_version_locked IS '锁定的工艺版本号，如v1.0';
+COMMENT ON COLUMN jobs.snapshot_created_at IS '快照创建时间';
+COMMENT ON COLUMN jobs.report_id IS '生成的报表ID';
+COMMENT ON COLUMN jobs.created_at IS '任务创建时间';
+COMMENT ON COLUMN jobs.updated_at IS '任务更新时间';
+COMMENT ON COLUMN jobs.completed_at IS '任务完成时间';
+COMMENT ON COLUMN jobs.archived_at IS '任务归档时间';
+COMMENT ON COLUMN jobs.error_message IS '错误信息';
+COMMENT ON COLUMN jobs.metadata IS '扩展元数据，JSON格式';
+
+-- ============================================
+-- subgraphs表字段注释
+-- ============================================
+
+COMMENT ON COLUMN subgraphs.subgraph_id IS '子图唯一标识，如UP01、UP02';
+COMMENT ON COLUMN subgraphs.job_id IS '所属任务ID';
+COMMENT ON COLUMN subgraphs.part_name IS '零件名称（报表第2列）';
+COMMENT ON COLUMN subgraphs.part_code IS '零件编号（报表第3列）';
+COMMENT ON COLUMN subgraphs.material IS '材质，如45#（报表第4列）';
+COMMENT ON COLUMN subgraphs.subgraph_file_url IS '子图文件URL';
+COMMENT ON COLUMN subgraphs.weight_kg IS '实际重量/kg（报表第9列）';
+COMMENT ON COLUMN subgraphs.material_unit_price IS '材料单价（元/kg）';
+COMMENT ON COLUMN subgraphs.material_cost IS '材料费（元）';
+COMMENT ON COLUMN subgraphs.heat_treatment_unit_price IS '热处理单价（元）';
+COMMENT ON COLUMN subgraphs.heat_treatment_cost IS '热处理费（元）';
+COMMENT ON COLUMN subgraphs.process_description IS '工艺说明，如S-Z-WC-QC（报表第14列）';
+COMMENT ON COLUMN subgraphs.nc_roughing_time IS 'NC开粗时间（小时）（报表第15列）';
+COMMENT ON COLUMN subgraphs.nc_milling_time IS 'NC精铣时间（小时）（报表第16列）';
+COMMENT ON COLUMN subgraphs.drilling_time IS '钻床时间（小时）（报表第17列）';
+COMMENT ON COLUMN subgraphs.milling_machine_time IS '铣床时间（小时）（报表第18列）';
+COMMENT ON COLUMN subgraphs.large_grinding_time IS '大水磨时间（小时）（报表第19列）';
+COMMENT ON COLUMN subgraphs.small_grinding_count IS '小磨床数量（个）（报表第20列）';
+COMMENT ON COLUMN subgraphs.edm_time IS '放电时间（小时）（报表第25列）';
+COMMENT ON COLUMN subgraphs.engraving_time IS '雕刻时间（小时）（报表第26列）';
+COMMENT ON COLUMN subgraphs.slow_wire_length IS '慢丝长度（mm）（报表第21列）';
+COMMENT ON COLUMN subgraphs.slow_wire_side_length IS '慢丝侧割长度（mm）（报表第22列）';
+COMMENT ON COLUMN subgraphs.mid_wire_length IS '中丝长度（mm）（报表第23列）';
+COMMENT ON COLUMN subgraphs.fast_wire_length IS '快丝长度（mm）（报表第24列）';
+COMMENT ON COLUMN subgraphs.separate_item IS '单独项说明（报表第27列）';
+COMMENT ON COLUMN subgraphs.total_cost IS '费用总计（元）（报表第28列）';
+COMMENT ON COLUMN subgraphs.wire_process_note IS '线割工艺说明（报表第29列）';
+COMMENT ON COLUMN subgraphs.nc_roughing_cost IS 'NC开粗费用（元）（报表第30列）';
+COMMENT ON COLUMN subgraphs.nc_milling_cost IS 'NC精铣费用（元）（报表第31列）';
+COMMENT ON COLUMN subgraphs.drilling_cost IS '钻床费用（元）（报表第32列）';
+COMMENT ON COLUMN subgraphs.milling_machine_cost IS '铣床费用（元）（报表第33列）';
+COMMENT ON COLUMN subgraphs.large_grinding_cost IS '大磨床费用（元）（报表第34列）';
+COMMENT ON COLUMN subgraphs.small_grinding_cost IS '小磨床费用（元）（报表第35列）';
+COMMENT ON COLUMN subgraphs.slow_wire_cost IS '慢丝费用（元）（报表第36列）';
+COMMENT ON COLUMN subgraphs.slow_wire_side_cost IS '慢丝侧割费用（元）（报表第37列）';
+COMMENT ON COLUMN subgraphs.mid_wire_cost IS '中丝费用（元）（报表第38列）';
+COMMENT ON COLUMN subgraphs.fast_wire_cost IS '快丝费用（元）（报表第39列）';
+COMMENT ON COLUMN subgraphs.edm_cost IS '放电费用（元）（报表第40列）';
+COMMENT ON COLUMN subgraphs.engraving_cost IS '雕刻费用（元）（报表第41列）';
+COMMENT ON COLUMN subgraphs.separate_item_cost IS '单独计费（元）（报表第42列）';
+COMMENT ON COLUMN subgraphs.processing_cost_total IS '加工费合计（元）（报表第43列）';
+COMMENT ON COLUMN subgraphs.applied_snapshot_ids IS '应用的快照ID列表';
+COMMENT ON COLUMN subgraphs.rule_reason IS '工艺规则应用原因';
+COMMENT ON COLUMN subgraphs.override_by_user IS '是否被用户手动覆盖';
+COMMENT ON COLUMN subgraphs.cost_calculation_method IS '成本计算方法';
+COMMENT ON COLUMN subgraphs.has_sheet_line IS '是否有板料线（Phase 2功能）';
+COMMENT ON COLUMN subgraphs.sheet_area_mm2 IS '板料面积（平方毫米）';
+COMMENT ON COLUMN subgraphs.sheet_perimeter_mm IS '板料周长（毫米）';
+COMMENT ON COLUMN subgraphs.sheet_line_data IS '板料线数据，JSON格式';
+COMMENT ON COLUMN subgraphs.has_single_nc_calc IS '是否有单独NC计算';
+COMMENT ON COLUMN subgraphs.single_prt_file IS '单独的PRT文件路径';
+COMMENT ON COLUMN subgraphs.process_changed IS '工艺是否变更';
+COMMENT ON COLUMN subgraphs.original_process IS '原始工艺类型';
+COMMENT ON COLUMN subgraphs.prt_3d_file IS '3D PRT文件路径';
+COMMENT ON COLUMN subgraphs.recalc_count IS '重算次数';
+COMMENT ON COLUMN subgraphs.last_recalc_at IS '最后重算时间';
+COMMENT ON COLUMN subgraphs.last_recalc_by IS '最后重算人';
+COMMENT ON COLUMN subgraphs.status IS '子图状态';
+COMMENT ON COLUMN subgraphs.created_at IS '创建时间';
+COMMENT ON COLUMN subgraphs.updated_at IS '更新时间';
+COMMENT ON COLUMN subgraphs.metadata IS '扩展元数据，JSON格式';
+
+-- ============================================
+-- features表字段注释
+-- ============================================
+
+COMMENT ON COLUMN features.feature_id IS '特征唯一标识，自增主键';
+COMMENT ON COLUMN features.subgraph_id IS '所属子图ID';
+COMMENT ON COLUMN features.job_id IS '所属任务ID';
+COMMENT ON COLUMN features.version IS '特征版本号，支持历史版本追溯';
+COMMENT ON COLUMN features.length_mm IS '长度（毫米）（报表第5列）';
+COMMENT ON COLUMN features.width_mm IS '宽度（毫米）（报表第6列）';
+COMMENT ON COLUMN features.thickness_mm IS '厚度（毫米）（报表第7列）';
+COMMENT ON COLUMN features.quantity IS '数量（报表第8列）';
+COMMENT ON COLUMN features.heat_treatment IS '热处理要求';
+COMMENT ON COLUMN features.volume_mm3 IS '体积（立方毫米）';
+COMMENT ON COLUMN features.calculated_weight_kg IS '计算重量（千克）';
+COMMENT ON COLUMN features.top_view_wire_length IS '俯视图线割长度（毫米）';
+COMMENT ON COLUMN features.front_view_wire_length IS '正视图线割长度（毫米）';
+COMMENT ON COLUMN features.side_view_wire_length IS '侧视图线割长度（毫米）';
+COMMENT ON COLUMN features.has_auto_material IS '是否有自找料';
+COMMENT ON COLUMN features.needs_heat_treatment IS '是否需要热处理';
+COMMENT ON COLUMN features.boring_length_mm IS '镗孔长度（毫米）';
+COMMENT ON COLUMN features.processing_instructions IS '加工说明，JSON格式，包含所有提取到的加工说明';
+COMMENT ON COLUMN features.is_complete IS '特征数据是否完整';
+COMMENT ON COLUMN features.missing_params IS '缺失的参数列表';
+COMMENT ON COLUMN features.abnormal_situation IS '异常情况，JSON格式';
+COMMENT ON COLUMN features.created_by IS '创建人';
+COMMENT ON COLUMN features.created_at IS '创建时间';
+COMMENT ON COLUMN features.metadata IS '扩展元数据，JSON格式';
+
+-- ============================================
+-- price_items表字段注释
+-- ============================================
+
+COMMENT ON COLUMN price_items.id IS '价格项唯一标识，如P001';
+COMMENT ON COLUMN price_items.version_id IS '价格版本号，如v1.0';
+COMMENT ON COLUMN price_items.feature_type IS '特征类型：WIRE-线割, NC-数控, DRILL-钻孔等';
+COMMENT ON COLUMN price_items.name IS '价格项名称';
+COMMENT ON COLUMN price_items.unit_price IS '单价';
+COMMENT ON COLUMN price_items.unit IS '单位：元/mm²、元/小时等';
+COMMENT ON COLUMN price_items.param_conditions IS '参数匹配条件，JSON格式';
+COMMENT ON COLUMN price_items.priority IS '优先级，数值越大优先级越高';
+COMMENT ON COLUMN price_items.is_active IS '是否激活';
+COMMENT ON COLUMN price_items.created_at IS '创建时间';
+
+-- ============================================
+-- process_rules表字段注释
+-- ============================================
+
+COMMENT ON COLUMN process_rules.id IS '规则唯一标识，如R001';
+COMMENT ON COLUMN process_rules.version_id IS '规则版本号，如v1.0';
+COMMENT ON COLUMN process_rules.feature_type IS '特征类型：WIRE-线割, NC-数控等';
+COMMENT ON COLUMN process_rules.name IS '规则名称';
+COMMENT ON COLUMN process_rules.conditions IS '规则条件，JSON格式';
+COMMENT ON COLUMN process_rules.output_params IS '输出参数，JSON格式';
+COMMENT ON COLUMN process_rules.priority IS '优先级，数值越大优先级越高';
+COMMENT ON COLUMN process_rules.is_active IS '是否激活';
+COMMENT ON COLUMN process_rules.created_at IS '创建时间';
+
+-- ============================================
+-- job_price_snapshots表字段注释
+-- ============================================
+
+COMMENT ON COLUMN job_price_snapshots.snapshot_id IS '快照唯一标识，自增主键';
+COMMENT ON COLUMN job_price_snapshots.job_id IS '所属任务ID';
+COMMENT ON COLUMN job_price_snapshots.original_price_id IS '原始价格项ID，用于追溯';
+COMMENT ON COLUMN job_price_snapshots.version_id IS '价格版本号';
+COMMENT ON COLUMN job_price_snapshots.feature_type IS '特征类型';
+COMMENT ON COLUMN job_price_snapshots.name IS '价格项名称';
+COMMENT ON COLUMN job_price_snapshots.description IS '描述';
+COMMENT ON COLUMN job_price_snapshots.unit_price IS '单价（用户可修改）';
+COMMENT ON COLUMN job_price_snapshots.unit IS '单位';
+COMMENT ON COLUMN job_price_snapshots.param_conditions IS '参数条件，JSON格式';
+COMMENT ON COLUMN job_price_snapshots.priority IS '优先级';
+COMMENT ON COLUMN job_price_snapshots.is_modified IS '是否被用户修改';
+COMMENT ON COLUMN job_price_snapshots.modified_by IS '修改人';
+COMMENT ON COLUMN job_price_snapshots.modified_at IS '修改时间';
+COMMENT ON COLUMN job_price_snapshots.modification_reason IS '修改原因';
+COMMENT ON COLUMN job_price_snapshots.snapshot_created_at IS '快照创建时间';
+COMMENT ON COLUMN job_price_snapshots.metadata IS '扩展元数据，JSON格式';
+
+-- ============================================
+-- job_process_snapshots表字段注释
+-- ============================================
+
+COMMENT ON COLUMN job_process_snapshots.snapshot_id IS '快照唯一标识，自增主键';
+COMMENT ON COLUMN job_process_snapshots.job_id IS '所属任务ID';
+COMMENT ON COLUMN job_process_snapshots.original_rule_id IS '原始规则ID，用于追溯';
+COMMENT ON COLUMN job_process_snapshots.version_id IS '规则版本号';
+COMMENT ON COLUMN job_process_snapshots.feature_type IS '特征类型';
+COMMENT ON COLUMN job_process_snapshots.name IS '规则名称';
+COMMENT ON COLUMN job_process_snapshots.description IS '描述';
+COMMENT ON COLUMN job_process_snapshots.conditions IS '规则条件，JSON格式（用户可修改）';
+COMMENT ON COLUMN job_process_snapshots.output_params IS '输出参数，JSON格式（用户可修改）';
+COMMENT ON COLUMN job_process_snapshots.priority IS '优先级';
+COMMENT ON COLUMN job_process_snapshots.is_modified IS '是否被用户修改';
+COMMENT ON COLUMN job_process_snapshots.modified_by IS '修改人';
+COMMENT ON COLUMN job_process_snapshots.modified_at IS '修改时间';
+COMMENT ON COLUMN job_process_snapshots.modification_reason IS '修改原因';
+COMMENT ON COLUMN job_process_snapshots.snapshot_created_at IS '快照创建时间';
+COMMENT ON COLUMN job_process_snapshots.metadata IS '扩展元数据，JSON格式';
+
+-- ============================================
+-- user_interactions表字段注释
+-- ============================================
+
+COMMENT ON COLUMN user_interactions.interaction_id IS '交互唯一标识UUID';
+COMMENT ON COLUMN user_interactions.job_id IS '所属任务ID';
+COMMENT ON COLUMN user_interactions.card_id IS '卡片ID';
+COMMENT ON COLUMN user_interactions.card_type IS '卡片类型：missing_input-缺失输入, choice-选择, review-复核';
+COMMENT ON COLUMN user_interactions.card_data IS '卡片数据，JSON格式';
+COMMENT ON COLUMN user_interactions.user_response IS '用户响应数据，JSON格式';
+COMMENT ON COLUMN user_interactions.action IS '用户操作：submit-提交, re_recognize-重新识别, skip-跳过';
+COMMENT ON COLUMN user_interactions.created_at IS '卡片创建时间';
+COMMENT ON COLUMN user_interactions.responded_at IS '用户响应时间';
+COMMENT ON COLUMN user_interactions.status IS '状态：pending-待处理, responded-已响应, expired-已过期';
+
+-- ============================================
+-- operation_logs表字段注释
+-- ============================================
+
+COMMENT ON COLUMN operation_logs.log_id IS '日志ID，自增主键';
+COMMENT ON COLUMN operation_logs.job_id IS '所属任务ID';
+COMMENT ON COLUMN operation_logs.subgraph_id IS '子图ID（可选）';
+COMMENT ON COLUMN operation_logs.agent IS 'Agent名称';
+COMMENT ON COLUMN operation_logs.action IS '操作名称';
+COMMENT ON COLUMN operation_logs.input_data IS '输入数据，JSON格式';
+COMMENT ON COLUMN operation_logs.output_data IS '输出数据，JSON格式';
+COMMENT ON COLUMN operation_logs.status IS '状态：success-成功, failed-失败, warning-警告';
+COMMENT ON COLUMN operation_logs.duration_ms IS '执行时长（毫秒）';
+COMMENT ON COLUMN operation_logs.error_message IS '错误信息';
+COMMENT ON COLUMN operation_logs.created_at IS '创建时间';
+
+-- ============================================
+-- audit_logs表字段注释
+-- ============================================
+
+COMMENT ON COLUMN audit_logs.audit_id IS '审计ID，自增主键';
+COMMENT ON COLUMN audit_logs.user_id IS '用户ID';
+COMMENT ON COLUMN audit_logs.action IS '操作类型';
+COMMENT ON COLUMN audit_logs.resource_type IS '资源类型：job-任务, subgraph-子图, price-价格, rule-规则';
+COMMENT ON COLUMN audit_logs.resource_id IS '资源ID';
+COMMENT ON COLUMN audit_logs.changes IS '变更内容，JSON格式，包含before和after';
+COMMENT ON COLUMN audit_logs.ip_address IS 'IP地址';
+COMMENT ON COLUMN audit_logs.user_agent IS '用户代理字符串';
+COMMENT ON COLUMN audit_logs.created_at IS '创建时间';
+
+-- ============================================
+-- reports表字段注释
+-- ============================================
+
+COMMENT ON COLUMN reports.report_id IS '报表唯一标识';
+COMMENT ON COLUMN reports.job_id IS '所属任务ID';
+COMMENT ON COLUMN reports.file_type IS '文件类型：xlsx-Excel, pdf-PDF';
+COMMENT ON COLUMN reports.file_path IS 'MinIO文件路径';
+COMMENT ON COLUMN reports.file_size IS '文件大小（字节）';
+COMMENT ON COLUMN reports.download_url IS '下载URL（预签名）';
+COMMENT ON COLUMN reports.url_expires_at IS 'URL过期时间';
+COMMENT ON COLUMN reports.checksum IS '文件MD5校验和';
+COMMENT ON COLUMN reports.created_at IS '创建时间';
+
+-- ============================================
+-- report_summary表字段注释
+-- ============================================
+
+COMMENT ON COLUMN report_summary.summary_id IS '汇总唯一标识UUID';
+COMMENT ON COLUMN report_summary.report_id IS '报表ID';
+COMMENT ON COLUMN report_summary.job_id IS '所属任务ID';
+COMMENT ON COLUMN report_summary.total_material_cost IS '材料费合计（元）';
+COMMENT ON COLUMN report_summary.total_heat_treatment_cost IS '热处理费合计（元）';
+COMMENT ON COLUMN report_summary.total_nc_roughing_cost IS 'NC开粗费用合计（元）';
+COMMENT ON COLUMN report_summary.total_nc_milling_cost IS 'NC精铣费用合计（元）';
+COMMENT ON COLUMN report_summary.total_drilling_cost IS '钻床费用合计（元）';
+COMMENT ON COLUMN report_summary.total_milling_machine_cost IS '铣床费用合计（元）';
+COMMENT ON COLUMN report_summary.total_large_grinding_cost IS '大磨床费用合计（元）';
+COMMENT ON COLUMN report_summary.total_small_grinding_cost IS '小磨床费用合计（元）';
+COMMENT ON COLUMN report_summary.total_slow_wire_cost IS '慢丝费用合计（元）';
+COMMENT ON COLUMN report_summary.total_slow_wire_side_cost IS '慢丝侧割费用合计（元）';
+COMMENT ON COLUMN report_summary.total_mid_wire_cost IS '中丝费用合计（元）';
+COMMENT ON COLUMN report_summary.total_fast_wire_cost IS '快丝费用合计（元）';
+COMMENT ON COLUMN report_summary.total_edm_cost IS '放电费用合计（元）';
+COMMENT ON COLUMN report_summary.total_engraving_cost IS '雕刻费用合计（元）';
+COMMENT ON COLUMN report_summary.total_separate_item_cost IS '单独计费合计（元）';
+COMMENT ON COLUMN report_summary.total_processing_cost IS '加工费总合计（元）';
+COMMENT ON COLUMN report_summary.grand_total IS '总费用（材料+热处理+加工）';
+COMMENT ON COLUMN report_summary.management_fee IS '管理费（元）';
+COMMENT ON COLUMN report_summary.final_total IS '最终总计（元）';
+COMMENT ON COLUMN report_summary.created_at IS '创建时间';
+
+-- ============================================
+-- archives表字段注释
+-- ============================================
+
+COMMENT ON COLUMN archives.archive_id IS '归档唯一标识';
+COMMENT ON COLUMN archives.job_id IS '所属任务ID';
+COMMENT ON COLUMN archives.archive_path IS 'MinIO归档路径';
+COMMENT ON COLUMN archives.file_size IS '文件大小（字节）';
+COMMENT ON COLUMN archives.checksum IS 'MD5校验和';
+COMMENT ON COLUMN archives.archived_at IS '归档时间';
+COMMENT ON COLUMN archives.expires_at IS '过期时间（7年后）';
+
+-- ============================================
+-- batch_recalculations表字段注释
+-- ============================================
+
+COMMENT ON COLUMN batch_recalculations.batch_recalc_id IS '批量重算唯一标识';
+COMMENT ON COLUMN batch_recalculations.job_id IS '所属任务ID';
+COMMENT ON COLUMN batch_recalculations.subgraph_ids IS '子图ID列表';
+COMMENT ON COLUMN batch_recalculations.reason IS '重算原因';
+COMMENT ON COLUMN batch_recalculations.total_count IS '总数';
+COMMENT ON COLUMN batch_recalculations.completed_count IS '完成数';
+COMMENT ON COLUMN batch_recalculations.failed_count IS '失败数';
+COMMENT ON COLUMN batch_recalculations.old_total_cost IS '旧总成本（元）';
+COMMENT ON COLUMN batch_recalculations.new_total_cost IS '新总成本（元）';
+COMMENT ON COLUMN batch_recalculations.cost_diff IS '成本差异（元）';
+COMMENT ON COLUMN batch_recalculations.status IS '状态：pending-待处理, processing-处理中, completed-已完成, failed-失败';
+COMMENT ON COLUMN batch_recalculations.created_by IS '创建人';
+COMMENT ON COLUMN batch_recalculations.created_at IS '创建时间';
+COMMENT ON COLUMN batch_recalculations.completed_at IS '完成时间';
+
+-- ============================================
+-- recalculations表字段注释
+-- ============================================
+
+COMMENT ON COLUMN recalculations.recalc_id IS '重算唯一标识';
+COMMENT ON COLUMN recalculations.job_id IS '所属任务ID';
+COMMENT ON COLUMN recalculations.subgraph_id IS '子图ID';
+COMMENT ON COLUMN recalculations.batch_recalc_id IS '批量重算ID（可选）';
+COMMENT ON COLUMN recalculations.reason IS '重算原因';
+COMMENT ON COLUMN recalculations.modifications IS '修改的参数，JSON格式';
+COMMENT ON COLUMN recalculations.old_cost IS '旧成本（元）';
+COMMENT ON COLUMN recalculations.new_cost IS '新成本（元）';
+COMMENT ON COLUMN recalculations.cost_diff IS '成本差异（元）';
+COMMENT ON COLUMN recalculations.status IS '状态：pending-待处理, processing-处理中, completed-已完成, failed-失败';
+COMMENT ON COLUMN recalculations.created_by IS '创建人';
+COMMENT ON COLUMN recalculations.created_at IS '创建时间';
+COMMENT ON COLUMN recalculations.completed_at IS '完成时间';
+
+-- ============================================
+-- process_changes表字段注释
+-- ============================================
+
+COMMENT ON COLUMN process_changes.change_id IS '变更唯一标识';
+COMMENT ON COLUMN process_changes.job_id IS '所属任务ID';
+COMMENT ON COLUMN process_changes.subgraph_id IS '子图ID';
+COMMENT ON COLUMN process_changes.from_process IS '原工艺类型';
+COMMENT ON COLUMN process_changes.to_process IS '新工艺类型';
+COMMENT ON COLUMN process_changes.reason IS '变更原因';
+COMMENT ON COLUMN process_changes.cost_impact IS '成本影响（元）';
+COMMENT ON COLUMN process_changes.extrusion_height IS '拉伸高度（毫米）';
+COMMENT ON COLUMN process_changes.created_by IS '创建人';
+COMMENT ON COLUMN process_changes.created_at IS '创建时间';
+
+-- ============================================
+-- nc_calculations表字段注释
+-- ============================================
+
+COMMENT ON COLUMN nc_calculations.calc_id IS '计算唯一标识';
+COMMENT ON COLUMN nc_calculations.job_id IS '所属任务ID';
+COMMENT ON COLUMN nc_calculations.subgraph_id IS '子图ID（可选）';
+COMMENT ON COLUMN nc_calculations.calc_type IS '计算类型：complete-完整计算, single-单独计算';
+COMMENT ON COLUMN nc_calculations.prt_file IS 'PRT文件路径';
+COMMENT ON COLUMN nc_calculations.drilling_time IS '钻孔时间（分钟）';
+COMMENT ON COLUMN nc_calculations.roughing_time IS '开粗时间（分钟）';
+COMMENT ON COLUMN nc_calculations.milling_time IS '精铣时间（分钟）';
+COMMENT ON COLUMN nc_calculations.total_cost IS '总成本（元）';
+COMMENT ON COLUMN nc_calculations.created_at IS '创建时间';
+
+-- ============================================
+-- price_histories表字段注释
+-- ============================================
+
+COMMENT ON COLUMN price_histories.history_id IS '历史记录ID，自增主键';
+COMMENT ON COLUMN price_histories.job_id IS '所属任务ID';
+COMMENT ON COLUMN price_histories.subgraph_id IS '子图ID';
+COMMENT ON COLUMN price_histories.old_params IS '旧参数，JSON格式';
+COMMENT ON COLUMN price_histories.new_params IS '新参数，JSON格式';
+COMMENT ON COLUMN price_histories.old_cost IS '旧成本（元）';
+COMMENT ON COLUMN price_histories.new_cost IS '新成本（元）';
+COMMENT ON COLUMN price_histories.change_type IS '变更类型';
+COMMENT ON COLUMN price_histories.changed_by IS '变更人';
+COMMENT ON COLUMN price_histories.created_at IS '创建时间';
