@@ -2,5 +2,6 @@
 from .auth_service import auth_service
 from .process_rule_service import process_rule_service
 from .price_item_service import price_item_service
+from .chat_session_service import chat_session_service
 
-__all__ = ['auth_service', 'process_rule_service', 'price_item_service']
+__all__ = ['auth_service', 'process_rule_service', 'price_item_service', 'chat_session_service']

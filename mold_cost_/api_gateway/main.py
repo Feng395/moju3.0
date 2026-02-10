@@ -168,10 +168,11 @@ app.include_router(pricing.router)   # 价格计算路由
 app.include_router(reports.router)   # 报表导出路由
 
 # 🆕 账户系统路由（从 mold_cost_account 迁移）
-from .routers.account import auth, process_rules, price_items
+from .routers.account import auth, process_rules, price_items, chat_sessions
 app.include_router(auth.router, tags=["认证"])
 app.include_router(process_rules.router, prefix="/api/process-rules", tags=["工艺规则"])
 app.include_router(price_items.router, prefix="/api/price-items", tags=["价格项"])
+app.include_router(chat_sessions.router, prefix="/api/chat-sessions", tags=["聊天会话"])
 
 
 @app.get("/")
@@ -199,6 +200,7 @@ async def root():
             },
             "process_rules": "/api/process-rules",
             "price_items": "/api/price-items",
+            "chat_sessions": "/api/chat-sessions",
             "docs": "/docs",
             "health": "/health"
         }
