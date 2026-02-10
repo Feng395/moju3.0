@@ -17,15 +17,16 @@
   7. 任务列表查询 (mold_cost-main)
   8. 继续执行任务（异步后台）(mold_cost-main)
 - 路由端点：
-  - POST /jobs/upload - 上传文件创建任务
-  - GET /jobs/{job_id}/status - 查询任务状态
-  - GET /jobs/{job_id}/snapshots/prices - 查询价格快照
-  - GET /jobs/{job_id}/snapshots/processes - 查询工艺快照
-  - GET /jobs/{job_id}/files/{file_type}/download - 下载文件
-  - GET /jobs/{job_id}/files/{file_type}/url - 获取预签名URL
-  - GET /jobs/{job_id} - 获取任务详情（使用视图）
-  - GET /jobs/ - 获取任务列表
-  - POST /jobs/{job_id}/continue - 继续执行任务
+  - POST /jobs/upload - 上传文件创建任务 (mold_cost_)
+  - POST /jobs/ - 创建任务（标准REST风格）(mold_cost-main)
+  - GET /jobs/{job_id}/status - 查询任务状态 (mold_cost_)
+  - GET /jobs/{job_id}/snapshots/prices - 查询价格快照 (mold_cost_)
+  - GET /jobs/{job_id}/snapshots/processes - 查询工艺快照 (mold_cost_)
+  - GET /jobs/{job_id}/files/{file_type}/download - 下载文件 (mold_cost_)
+  - GET /jobs/{job_id}/files/{file_type}/url - 获取预签名URL (mold_cost_)
+  - GET /jobs/{job_id} - 获取任务详情（使用视图）(mold_cost-main)
+  - GET /jobs/ - 获取任务列表 (mold_cost-main)
+  - POST /jobs/{job_id}/continue - 继续执行任务 (mold_cost-main)
 """
 import logging
 from typing import Optional
@@ -459,6 +460,58 @@ async def list_jobs(
     """
     # TODO: 实现任务列表查询
     return {"jobs": [], "total": 0}
+
+
+@router.post("/")
+async def create_job(
+    dwg_file: UploadFile = File(...),
+    prt_file: Optional[UploadFile] = File(None),
+    current_user: dict = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    创建新任务（标准REST风格）
+    
+    来自 mold_cost-main，与 /upload 功能相同，提供标准REST API
+    
+    Args:
+        dwg_file: DWG文件（必须）
+        prt_file: PRT文件（可选）
+        current_user: 当前用户
+        db: 数据库会话
+    
+    Returns:
+        {
+            "job_id": "uuid",
+            "status": "pending",
+            "message": "任务创建成功"
+        }
+    """
+    try:
+        job_service = JobService()
+        
+        result = await job_service.create_job_from_upload(
+            db=db,
+            user_id=current_user["user_id"],
+            dwg_file=dwg_file,
+            prt_file=prt_file,
+            encryption_key=None
+        )
+        
+        return result
+    
+    except HTTPException:
+        raise
+    
+    except Exception as e:
+        logger.error(f"❌ 创建任务失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "INTERNAL_SERVER_ERROR",
+                "message": f"创建任务失败: {str(e)}"
+            }
+        )
 
 
 @router.post("/{job_id}/continue")
