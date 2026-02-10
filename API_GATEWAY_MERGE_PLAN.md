@@ -351,6 +351,37 @@ git commit -m "合并 api_gateway 目录
 3. ⏳ 测试验证所有路由
 4. ⏳ 提交最终版本
 
+
+✅ api_gateway 目录合并完成
+已成功完成 api_gateway 目录的完整合并，所有文件都已添加标准化的合并头信息并提交到 GitHub。
+
+合并成果
+根目录文件（4个）：
+
+✅ auth.py - 保留 mold_cost_ 完整版认证
+✅ config.py - 保留独有配置文件
+✅ main.py - 合并所有路由注册（补充了 features, pricing, reports）
+✅ websocket.py - 保留完整版 WebSocket
+routers/ 目录（12个）：
+
+✅ 从 mold_cost-main 复制：features.py, pricing.py, reports.py
+✅ 合并共同文件：init.py, jobs.py（10个端点）, phase2.py, recalculations.py
+✅ 保留独有文件：chat_router.py, file_router.py, interactions.py, review_router.py, websocket_router.py
+utils/ 目录（9个）：
+
+✅ 合并：init.py, minio_client.py（补充了8个方法）
+✅ 保留独有：chat_logger.py, encryption.py, message_formatter.py, rabbitmq_client.py, redis_client.py, snapshot_manager.py, validators.py
+独有目录（14个文件）：
+
+✅ models/：init.py, interaction_models.py
+✅ repositories/：8个文件全部完成
+✅ services/：4个文件全部完成
+提交记录
+✅ 补充 minio_client.py 的8个方法
+✅ 为所有独有文件添加合并头信息（22个文件）
+✅ 清理已合并的 mold_cost-main 文件（22个文件）
+所有更改已成功推送到 GitHub。
+
 ---
 
 **文档版本：** v1.0  
