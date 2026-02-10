@@ -1,7 +1,17 @@
-/*
- Navicat Premium Data Transfer
+-- ============================================
+-- 迁移来源: mold_cost/backend_main/infrastructure/init-db.sql
+-- 迁移日期: 2026-02-06
+-- 说明: 数据库初始化脚本，创建所有表结构和索引
+-- 改进说明:
+--   - 整合到统一的 infrastructure 目录
+--   - 包含完整的数据库schema定义
+--   - 支持Docker容器初始化
+-- ============================================
 
- Source Server         : 192.168.1.54
+/*
+ Navicat Premium Dump SQL
+
+ Source Server         : moju
  Source Server Type    : PostgreSQL
  Source Server Version : 170006 (170006)
  Source Host           : 192.168.1.54:5432
@@ -12,7 +22,7 @@
  Target Server Version : 170006 (170006)
  File Encoding         : 65001
 
- Date: 20/01/2026 14:35:18
+ Date: 06/02/2026 13:39:58
 */
 
 
@@ -345,14 +355,16 @@ CACHE 1
   "processing_instructions" jsonb,
   "is_complete" bool DEFAULT false,
   "missing_params" text[] COLLATE "pg_catalog"."default",
-  "extended_features" jsonb,
+  "abnormal_situation" jsonb,
   "created_by" varchar(50) COLLATE "pg_catalog"."default",
   "created_at" timestamp(6) NOT NULL DEFAULT now(),
   "metadata" jsonb,
   "slider_angle" varchar(255) COLLATE "pg_catalog"."default",
   "boring_num" int4,
-  "boring_outer" varchar(255) COLLATE "pg_catalog"."default",
-  "borehole" varchar(255) COLLATE "pg_catalog"."default"
+  "nc_time_cost" jsonb,
+  "tooth_hole" jsonb,
+  "water_mill" jsonb,
+  "has_material_preparation" varchar(255) COLLATE "pg_catalog"."default"
 )
 ;
 COMMENT ON COLUMN "public"."features"."feature_id" IS '特征唯一标识，自增主键';
@@ -375,14 +387,16 @@ COMMENT ON COLUMN "public"."features"."boring_length_mm" IS '镗孔长度（毫�
 COMMENT ON COLUMN "public"."features"."processing_instructions" IS '加工说明，JSON格式，包含所有提取到的加工说明';
 COMMENT ON COLUMN "public"."features"."is_complete" IS '特征数据是否完整';
 COMMENT ON COLUMN "public"."features"."missing_params" IS '缺失的参数列表';
-COMMENT ON COLUMN "public"."features"."extended_features" IS '扩展特征，JSON格式';
+COMMENT ON COLUMN "public"."features"."abnormal_situation" IS '异常情况记录，JSON格式';
 COMMENT ON COLUMN "public"."features"."created_by" IS '创建人';
 COMMENT ON COLUMN "public"."features"."created_at" IS '创建时间';
-COMMENT ON COLUMN "public"."features"."metadata" IS '扩展元数据，JSON格式';
+COMMENT ON COLUMN "public"."features"."metadata" IS '线割加工工艺说明，JSON格式';
 COMMENT ON COLUMN "public"."features"."slider_angle" IS '滑块角度';
 COMMENT ON COLUMN "public"."features"."boring_num" IS '孔的个数';
-COMMENT ON COLUMN "public"."features"."boring_outer" IS 'NC镗孔外导套孔个数';
-COMMENT ON COLUMN "public"."features"."borehole" IS 'NC合销镗孔个数';
+COMMENT ON COLUMN "public"."features"."nc_time_cost" IS 'NC时间详细数据，格式: {"nc_details": [{"code": "L", "value": "5"}, {"code": "ZXZ", "value": "5"}, {"code": "开粗", "value": "5"}, {"code": "精铣", "value": "5"}]}';
+COMMENT ON COLUMN "public"."features"."tooth_hole" IS '牙孔数据，JSON格式';
+COMMENT ON COLUMN "public"."features"."water_mill" IS '水磨数据，JSON格式';
+COMMENT ON COLUMN "public"."features"."has_material_preparation" IS '是否备料于';
 COMMENT ON TABLE "public"."features" IS '特征表，存储从CAD提取的原始特征数据，支持历史版本';
 
 -- ----------------------------
@@ -827,14 +841,33 @@ CACHE 1
   "selected_base_cost" numeric(12,2),
   "base_cost_selection" varchar(100) COLLATE "pg_catalog"."default",
   "material_additional_cost" numeric(12,2) DEFAULT 0,
-  "process_additional_cost" numeric(12,2) DEFAULT 0,
-  "other_additional_cost" numeric(12,2) DEFAULT 0,
+  "material_cost" numeric(12,2) DEFAULT 0,
+  "heat_treatment_cost" numeric(12,2) DEFAULT 0,
   "additional_cost_total" numeric(12,2) DEFAULT 0,
   "final_cost" numeric(12,2),
   "calculation_steps" jsonb,
   "calculated_at" timestamp(6) NOT NULL DEFAULT now(),
   "created_at" timestamp(6) NOT NULL DEFAULT now(),
-  "heat_additional_cost" numeric(12,2)
+  "heat_additional_cost" numeric(12,2),
+  "thread_ends_cost" varchar(255) COLLATE "pg_catalog"."default",
+  "hanging_table_cost" varchar(255) COLLATE "pg_catalog"."default",
+  "chamfer_cost" varchar(255) COLLATE "pg_catalog"."default",
+  "bevel_cost" varchar(255) COLLATE "pg_catalog"."default",
+  "oil_tank_cost" varchar(255) COLLATE "pg_catalog"."default",
+  "grinding_cost" varchar(255) COLLATE "pg_catalog"."default",
+  "water_mill_cost" varchar(255) COLLATE "pg_catalog"."default",
+  "high_cost" varchar(255) COLLATE "pg_catalog"."default",
+  "plate_cost" varchar(255) COLLATE "pg_catalog"."default",
+  "long_strip_cost" varchar(255) COLLATE "pg_catalog"."default",
+  "component_cost" varchar(255) COLLATE "pg_catalog"."default",
+  "tooth_hole_cost" varchar(255) COLLATE "pg_catalog"."default",
+  "tooth_hole_time_cost" varchar(255) COLLATE "pg_catalog"."default",
+  "nc_roughing_cost" varchar(255) COLLATE "pg_catalog"."default",
+  "nc_milling_cost" varchar(255) COLLATE "pg_catalog"."default",
+  "nc_drilling_cost" varchar(255) COLLATE "pg_catalog"."default",
+  "nc_base_roughing_cost" varchar(255) COLLATE "pg_catalog"."default",
+  "nc_base_milling_cost" varchar(255) COLLATE "pg_catalog"."default",
+  "nc_base_drilling_cost" varchar(255) COLLATE "pg_catalog"."default"
 )
 ;
 COMMENT ON COLUMN "public"."processing_cost_calculation_details"."detail_id" IS '主键，自增';
@@ -852,14 +885,33 @@ COMMENT ON COLUMN "public"."processing_cost_calculation_details"."standard_base_
 COMMENT ON COLUMN "public"."processing_cost_calculation_details"."selected_base_cost" IS '选中的基础成本';
 COMMENT ON COLUMN "public"."processing_cost_calculation_details"."base_cost_selection" IS '基础成本选择逻辑';
 COMMENT ON COLUMN "public"."processing_cost_calculation_details"."material_additional_cost" IS '材料附加费';
-COMMENT ON COLUMN "public"."processing_cost_calculation_details"."process_additional_cost" IS '工艺附加费：线割滑块费';
-COMMENT ON COLUMN "public"."processing_cost_calculation_details"."other_additional_cost" IS '其他附加费：线割穿孔费';
+COMMENT ON COLUMN "public"."processing_cost_calculation_details"."material_cost" IS '材料费';
+COMMENT ON COLUMN "public"."processing_cost_calculation_details"."heat_treatment_cost" IS '热处理费';
 COMMENT ON COLUMN "public"."processing_cost_calculation_details"."additional_cost_total" IS '附加费合计';
 COMMENT ON COLUMN "public"."processing_cost_calculation_details"."final_cost" IS '最终费用';
 COMMENT ON COLUMN "public"."processing_cost_calculation_details"."calculation_steps" IS '计算步骤详情(JSON数组)';
 COMMENT ON COLUMN "public"."processing_cost_calculation_details"."calculated_at" IS '计算时间';
 COMMENT ON COLUMN "public"."processing_cost_calculation_details"."created_at" IS '创建时间';
 COMMENT ON COLUMN "public"."processing_cost_calculation_details"."heat_additional_cost" IS '热处理附加费';
+COMMENT ON COLUMN "public"."processing_cost_calculation_details"."thread_ends_cost" IS '线头费';
+COMMENT ON COLUMN "public"."processing_cost_calculation_details"."hanging_table_cost" IS '挂台费';
+COMMENT ON COLUMN "public"."processing_cost_calculation_details"."chamfer_cost" IS '倒角费';
+COMMENT ON COLUMN "public"."processing_cost_calculation_details"."bevel_cost" IS '斜面耗时';
+COMMENT ON COLUMN "public"."processing_cost_calculation_details"."oil_tank_cost" IS '油槽耗时';
+COMMENT ON COLUMN "public"."processing_cost_calculation_details"."grinding_cost" IS '研磨费';
+COMMENT ON COLUMN "public"."processing_cost_calculation_details"."water_mill_cost" IS '磨床费';
+COMMENT ON COLUMN "public"."processing_cost_calculation_details"."high_cost" IS '高度费';
+COMMENT ON COLUMN "public"."processing_cost_calculation_details"."plate_cost" IS '大水磨板费';
+COMMENT ON COLUMN "public"."processing_cost_calculation_details"."long_strip_cost" IS '大水磨长条费';
+COMMENT ON COLUMN "public"."processing_cost_calculation_details"."component_cost" IS '大水磨零件费';
+COMMENT ON COLUMN "public"."processing_cost_calculation_details"."tooth_hole_cost" IS '放电牙孔费';
+COMMENT ON COLUMN "public"."processing_cost_calculation_details"."tooth_hole_time_cost" IS '放电时间';
+COMMENT ON COLUMN "public"."processing_cost_calculation_details"."nc_roughing_cost" IS 'nc开粗费用';
+COMMENT ON COLUMN "public"."processing_cost_calculation_details"."nc_milling_cost" IS 'nc精铣费用';
+COMMENT ON COLUMN "public"."processing_cost_calculation_details"."nc_drilling_cost" IS 'nc钻床费用';
+COMMENT ON COLUMN "public"."processing_cost_calculation_details"."nc_base_roughing_cost" IS 'nc开粗基本费用';
+COMMENT ON COLUMN "public"."processing_cost_calculation_details"."nc_base_milling_cost" IS 'nc精铣基本费用';
+COMMENT ON COLUMN "public"."processing_cost_calculation_details"."nc_base_drilling_cost" IS 'nc钻床基本费用';
 COMMENT ON TABLE "public"."processing_cost_calculation_details" IS '加工费用计算明细表，统一存储各工艺计算过程中的中间结果';
 
 -- ----------------------------
@@ -1000,7 +1052,7 @@ CREATE TABLE "public"."subgraphs" (
   "drilling_time" numeric(10,2),
   "milling_machine_time" numeric(10,2),
   "large_grinding_time" numeric(10,2),
-  "small_grinding_count" int4,
+  "small_grinding_time" numeric(10,2),
   "edm_time" numeric(10,2),
   "engraving_time" numeric(10,2),
   "slow_wire_length" numeric(12,3),
@@ -1044,7 +1096,8 @@ CREATE TABLE "public"."subgraphs" (
   "created_at" timestamp(6) NOT NULL DEFAULT now(),
   "updated_at" timestamp(6) NOT NULL DEFAULT now(),
   "metadata" jsonb,
-  "wire_process" varchar(255) COLLATE "pg_catalog"."default"
+  "wire_process" varchar(255) COLLATE "pg_catalog"."default",
+  "small_grinding_count" int4
 )
 ;
 COMMENT ON COLUMN "public"."subgraphs"."subgraph_id" IS '子图唯一标识，如UP01、UP02';
@@ -1058,16 +1111,16 @@ COMMENT ON COLUMN "public"."subgraphs"."material_cost" IS '材料费（元）';
 COMMENT ON COLUMN "public"."subgraphs"."heat_treatment_unit_price" IS '热处理单价（元）';
 COMMENT ON COLUMN "public"."subgraphs"."heat_treatment_cost" IS '热处理费（元）';
 COMMENT ON COLUMN "public"."subgraphs"."process_description" IS '工艺说明，如S-Z-WC-QC（报表第14列）';
-COMMENT ON COLUMN "public"."subgraphs"."nc_roughing_time" IS 'NC开粗时间（小时）（报表第15列）';
-COMMENT ON COLUMN "public"."subgraphs"."nc_milling_time" IS 'NC精铣时间（小时）（报表第16列）';
-COMMENT ON COLUMN "public"."subgraphs"."drilling_time" IS '钻床时间（小时）（报表第17列）';
+COMMENT ON COLUMN "public"."subgraphs"."nc_roughing_time" IS '开粗时间（分钟）';
+COMMENT ON COLUMN "public"."subgraphs"."nc_milling_time" IS '精铣时间（分钟）';
+COMMENT ON COLUMN "public"."subgraphs"."drilling_time" IS '钻孔时间（分钟）';
 COMMENT ON COLUMN "public"."subgraphs"."milling_machine_time" IS '铣床时间（小时）（报表第18列）';
 COMMENT ON COLUMN "public"."subgraphs"."large_grinding_time" IS '大水磨时间（小时）（报表第19列）';
-COMMENT ON COLUMN "public"."subgraphs"."small_grinding_count" IS '小磨床数量（个）（报表第20列）';
+COMMENT ON COLUMN "public"."subgraphs"."small_grinding_time" IS '小磨床时间（小时）（报表第20列）';
 COMMENT ON COLUMN "public"."subgraphs"."edm_time" IS '放电时间（小时）（报表第25列）';
 COMMENT ON COLUMN "public"."subgraphs"."engraving_time" IS '雕刻时间（小时）（报表第26列）';
 COMMENT ON COLUMN "public"."subgraphs"."slow_wire_length" IS '慢丝长度（mm）（报表第21列）';
-COMMENT ON COLUMN "public"."subgraphs"."slow_wire_side_length" IS '慢丝侧割长度（mm）（报表第22列）';
+COMMENT ON COLUMN "public"."subgraphs"."slow_wire_side_length" IS '侧割长度（mm）（报表第22列）';
 COMMENT ON COLUMN "public"."subgraphs"."mid_wire_length" IS '中丝长度（mm）（报表第23列）';
 COMMENT ON COLUMN "public"."subgraphs"."fast_wire_length" IS '快丝长度（mm）（报表第24列）';
 COMMENT ON COLUMN "public"."subgraphs"."separate_item" IS '单独项说明（报表第27列）';
@@ -1108,6 +1161,7 @@ COMMENT ON COLUMN "public"."subgraphs"."created_at" IS '创建时间';
 COMMENT ON COLUMN "public"."subgraphs"."updated_at" IS '更新时间';
 COMMENT ON COLUMN "public"."subgraphs"."metadata" IS '扩展元数据，JSON格式';
 COMMENT ON COLUMN "public"."subgraphs"."wire_process" IS '线割工艺';
+COMMENT ON COLUMN "public"."subgraphs"."small_grinding_count" IS '小磨床数量（个）（报表第20列）';
 COMMENT ON TABLE "public"."subgraphs" IS '子图表，存储每个子图的业务数据和成本信息';
 
 -- ----------------------------
@@ -1181,6 +1235,43 @@ COMMENT ON COLUMN "public"."users"."metadata" IS '扩展元数据，JSON格式';
 COMMENT ON TABLE "public"."users" IS '用户表，存储用户信息和权限';
 
 -- ----------------------------
+-- Function structure for sync_job_total_cost
+-- ----------------------------
+DROP FUNCTION IF EXISTS "public"."sync_job_total_cost"();
+CREATE OR REPLACE FUNCTION "public"."sync_job_total_cost"()
+  RETURNS "pg_catalog"."trigger" AS $BODY$
+DECLARE
+    v_job_id UUID;
+    v_total_cost DECIMAL(12,2);
+BEGIN
+    -- 获取 job_id（INSERT/UPDATE 使用 NEW，DELETE 使用 OLD）
+    IF TG_OP = 'DELETE' THEN
+        v_job_id := OLD.job_id;
+    ELSE
+        v_job_id := NEW.job_id;
+    END IF;
+    
+    -- 计算该任务的总成本
+    SELECT COALESCE(SUM(total_cost), 0)
+    INTO v_total_cost
+    FROM subgraphs
+    WHERE job_id = v_job_id;
+    
+    -- 更新 jobs 表
+    UPDATE jobs
+    SET 
+        total_cost = v_total_cost,
+        updated_at = NOW()
+    WHERE job_id = v_job_id;
+    
+    RETURN NULL; -- AFTER 触发器返回值被忽略
+END;
+$BODY$
+  LANGUAGE plpgsql VOLATILE
+  COST 100;
+COMMENT ON FUNCTION "public"."sync_job_total_cost"() IS '自动同步 jobs.total_cost 的触发器函数';
+
+-- ----------------------------
 -- Function structure for update_updated_at_column
 -- ----------------------------
 DROP FUNCTION IF EXISTS "public"."update_updated_at_column"();
@@ -1235,6 +1326,67 @@ CREATE VIEW "public"."v_subgraph_summary" AS  SELECT job_id,
   GROUP BY job_id;
 
 -- ----------------------------
+-- View structure for v_job_cost_summary
+-- ----------------------------
+DROP VIEW IF EXISTS "public"."v_job_cost_summary";
+CREATE VIEW "public"."v_job_cost_summary" AS  SELECT j.job_id,
+    j.user_id,
+    j.dwg_file_name,
+    j.prt_file_name,
+    j.status,
+    j.current_stage,
+    j.progress,
+    j.created_at,
+    j.updated_at,
+    j.completed_at,
+    j.error_message,
+    j.metadata,
+    COALESCE(s.total_subgraphs, 0::bigint) AS total_subgraphs,
+    COALESCE(s.total_cost, 0::numeric) AS total_cost,
+    COALESCE(s.material_cost, 0::numeric) AS material_cost,
+    COALESCE(s.heat_treatment_cost, 0::numeric) AS heat_treatment_cost,
+    COALESCE(s.processing_cost_total, 0::numeric) AS processing_cost_total,
+    COALESCE(s.nc_roughing_cost, 0::numeric) AS nc_roughing_cost,
+    COALESCE(s.nc_milling_cost, 0::numeric) AS nc_milling_cost,
+    COALESCE(s.drilling_cost, 0::numeric) AS drilling_cost,
+    COALESCE(s.milling_machine_cost, 0::numeric) AS milling_machine_cost,
+    COALESCE(s.large_grinding_cost, 0::numeric) AS large_grinding_cost,
+    COALESCE(s.small_grinding_cost, 0::numeric) AS small_grinding_cost,
+    COALESCE(s.slow_wire_cost, 0::numeric) AS slow_wire_cost,
+    COALESCE(s.slow_wire_side_cost, 0::numeric) AS slow_wire_side_cost,
+    COALESCE(s.mid_wire_cost, 0::numeric) AS mid_wire_cost,
+    COALESCE(s.fast_wire_cost, 0::numeric) AS fast_wire_cost,
+    COALESCE(s.edm_cost, 0::numeric) AS edm_cost,
+    COALESCE(s.engraving_cost, 0::numeric) AS engraving_cost,
+    COALESCE(s.separate_item_cost, 0::numeric) AS separate_item_cost,
+    COALESCE(s.nc_roughing_cost, 0::numeric) + COALESCE(s.nc_milling_cost, 0::numeric) + COALESCE(s.drilling_cost, 0::numeric) AS nc_cost,
+    COALESCE(s.large_grinding_cost, 0::numeric) + COALESCE(s.small_grinding_cost, 0::numeric) AS grinding_cost,
+    COALESCE(s.slow_wire_cost, 0::numeric) + COALESCE(s.slow_wire_side_cost, 0::numeric) + COALESCE(s.mid_wire_cost, 0::numeric) + COALESCE(s.fast_wire_cost, 0::numeric) AS wire_cost
+   FROM jobs j
+     LEFT JOIN ( SELECT subgraphs.job_id,
+            count(*) AS total_subgraphs,
+            sum(subgraphs.total_cost) AS total_cost,
+            sum(subgraphs.material_cost) AS material_cost,
+            sum(subgraphs.heat_treatment_cost) AS heat_treatment_cost,
+            sum(subgraphs.processing_cost_total) AS processing_cost_total,
+            sum(subgraphs.nc_roughing_cost) AS nc_roughing_cost,
+            sum(subgraphs.nc_milling_cost) AS nc_milling_cost,
+            sum(subgraphs.drilling_cost) AS drilling_cost,
+            sum(subgraphs.milling_machine_cost) AS milling_machine_cost,
+            sum(subgraphs.large_grinding_cost) AS large_grinding_cost,
+            sum(subgraphs.small_grinding_cost) AS small_grinding_cost,
+            sum(subgraphs.slow_wire_cost) AS slow_wire_cost,
+            sum(subgraphs.slow_wire_side_cost) AS slow_wire_side_cost,
+            sum(subgraphs.mid_wire_cost) AS mid_wire_cost,
+            sum(subgraphs.fast_wire_cost) AS fast_wire_cost,
+            sum(subgraphs.edm_cost) AS edm_cost,
+            sum(subgraphs.engraving_cost) AS engraving_cost,
+            sum(subgraphs.separate_item_cost) AS separate_item_cost
+           FROM subgraphs
+          GROUP BY subgraphs.job_id) s ON j.job_id = s.job_id;
+COMMENT ON VIEW "public"."v_job_cost_summary" IS '任务成本汇总视图 - 实时从 subgraphs 表计算，确保数据一致性';
+
+-- ----------------------------
 -- Alter sequences owned by
 -- ----------------------------
 ALTER SEQUENCE "public"."audit_logs_audit_id_seq"
@@ -1246,21 +1398,21 @@ SELECT setval('"public"."audit_logs_audit_id_seq"', 1, false);
 -- ----------------------------
 ALTER SEQUENCE "public"."audit_logs_audit_id_seq1"
 OWNED BY "public"."audit_logs"."audit_id";
-SELECT setval('"public"."audit_logs_audit_id_seq1"', 228, true);
+SELECT setval('"public"."audit_logs_audit_id_seq1"', 1043, true);
 
 -- ----------------------------
 -- Alter sequences owned by
 -- ----------------------------
 ALTER SEQUENCE "public"."chat_messages_message_id_seq"
 OWNED BY "public"."chat_messages"."message_id";
-SELECT setval('"public"."chat_messages_message_id_seq"', 395, true);
+SELECT setval('"public"."chat_messages_message_id_seq"', 8608, true);
 
 -- ----------------------------
 -- Alter sequences owned by
 -- ----------------------------
 ALTER SEQUENCE "public"."features_feature_id_seq"
 OWNED BY "public"."features"."feature_id";
-SELECT setval('"public"."features_feature_id_seq"', 859, true);
+SELECT setval('"public"."features_feature_id_seq"', 21491, true);
 
 -- ----------------------------
 -- Alter sequences owned by
@@ -1274,7 +1426,7 @@ SELECT setval('"public"."job_price_snapshots_snapshot_id_seq"', 1, false);
 -- ----------------------------
 ALTER SEQUENCE "public"."job_price_snapshots_snapshot_id_seq1"
 OWNED BY "public"."job_price_snapshots"."snapshot_id";
-SELECT setval('"public"."job_price_snapshots_snapshot_id_seq1"', 8684, true);
+SELECT setval('"public"."job_price_snapshots_snapshot_id_seq1"', 94165, true);
 
 -- ----------------------------
 -- Alter sequences owned by
@@ -1288,7 +1440,7 @@ SELECT setval('"public"."job_process_snapshots_snapshot_id_seq"', 1, false);
 -- ----------------------------
 ALTER SEQUENCE "public"."job_process_snapshots_snapshot_id_seq1"
 OWNED BY "public"."job_process_snapshots"."snapshot_id";
-SELECT setval('"public"."job_process_snapshots_snapshot_id_seq1"', 5493, true);
+SELECT setval('"public"."job_process_snapshots_snapshot_id_seq1"', 5717, true);
 
 -- ----------------------------
 -- Alter sequences owned by
@@ -1316,7 +1468,7 @@ SELECT setval('"public"."operation_logs_log_id_seq"', 1, false);
 -- ----------------------------
 ALTER SEQUENCE "public"."operation_logs_log_id_seq1"
 OWNED BY "public"."operation_logs"."log_id";
-SELECT setval('"public"."operation_logs_log_id_seq1"', 391, true);
+SELECT setval('"public"."operation_logs_log_id_seq1"', 2206, true);
 
 -- ----------------------------
 -- Alter sequences owned by
@@ -1337,7 +1489,7 @@ SELECT setval('"public"."price_histories_history_id_seq1"', 1, false);
 -- ----------------------------
 ALTER SEQUENCE "public"."processing_cost_calculation_details_detail_id_seq"
 OWNED BY "public"."processing_cost_calculation_details"."detail_id";
-SELECT setval('"public"."processing_cost_calculation_details_detail_id_seq"', 441, true);
+SELECT setval('"public"."processing_cost_calculation_details_detail_id_seq"', 99909, true);
 
 -- ----------------------------
 -- Indexes structure for table archives
@@ -1427,13 +1579,26 @@ ALTER TABLE "public"."chat_sessions" ADD CONSTRAINT "chat_sessions_pkey" PRIMARY
 -- ----------------------------
 -- Indexes structure for table features
 -- ----------------------------
+CREATE INDEX "idx_feature_job_subgraph" ON "public"."features" USING btree (
+  "job_id" "pg_catalog"."uuid_ops" ASC NULLS LAST,
+  "subgraph_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
+CREATE INDEX "idx_feature_job_subgraph_version" ON "public"."features" USING btree (
+  "job_id" "pg_catalog"."uuid_ops" ASC NULLS LAST,
+  "subgraph_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+  "version" "pg_catalog"."int4_ops" DESC NULLS FIRST
+);
+CREATE INDEX "idx_feature_subgraph_version" ON "public"."features" USING btree (
+  "subgraph_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+  "version" "pg_catalog"."int4_ops" DESC NULLS FIRST
+);
 CREATE INDEX "idx_features_auto_material" ON "public"."features" USING btree (
   "job_id" "pg_catalog"."uuid_ops" ASC NULLS LAST,
   "subgraph_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
   "has_auto_material" "pg_catalog"."bool_ops" ASC NULLS LAST
 ) WHERE has_auto_material = true;
 CREATE INDEX "idx_features_extended_features" ON "public"."features" USING gin (
-  "extended_features" "pg_catalog"."jsonb_ops"
+  "abnormal_situation" "pg_catalog"."jsonb_ops"
 );
 CREATE INDEX "idx_features_heat_treatment" ON "public"."features" USING btree (
   "job_id" "pg_catalog"."uuid_ops" ASC NULLS LAST,
@@ -1446,6 +1611,9 @@ CREATE INDEX "idx_features_job_id" ON "public"."features" USING btree (
 CREATE INDEX "idx_features_job_subgraph" ON "public"."features" USING btree (
   "job_id" "pg_catalog"."uuid_ops" ASC NULLS LAST,
   "subgraph_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
+CREATE INDEX "idx_features_nc_time_cost" ON "public"."features" USING gin (
+  "nc_time_cost" "pg_catalog"."jsonb_ops"
 );
 CREATE INDEX "idx_features_processing_instructions" ON "public"."features" USING gin (
   "processing_instructions" "pg_catalog"."jsonb_ops"
@@ -1470,6 +1638,10 @@ ALTER TABLE "public"."features" ADD CONSTRAINT "features_pkey" PRIMARY KEY ("fea
 -- ----------------------------
 -- Indexes structure for table job_price_snapshots
 -- ----------------------------
+CREATE INDEX "idx_job_price_job_category" ON "public"."job_price_snapshots" USING btree (
+  "job_id" "pg_catalog"."uuid_ops" ASC NULLS LAST,
+  "category" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
 CREATE INDEX "idx_job_price_snapshots_category" ON "public"."job_price_snapshots" USING btree (
   "category" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
 );
@@ -1497,6 +1669,10 @@ ALTER TABLE "public"."job_price_snapshots" ADD CONSTRAINT "job_price_snapshots_p
 -- ----------------------------
 -- Indexes structure for table job_process_snapshots
 -- ----------------------------
+CREATE INDEX "idx_job_process_job_feature" ON "public"."job_process_snapshots" USING btree (
+  "job_id" "pg_catalog"."uuid_ops" ASC NULLS LAST,
+  "feature_type" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
 CREATE INDEX "idx_job_process_snapshots_feature_type" ON "public"."job_process_snapshots" USING btree (
   "feature_type" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
 );
@@ -1523,6 +1699,13 @@ ALTER TABLE "public"."job_process_snapshots" ADD CONSTRAINT "job_process_snapsho
 -- ----------------------------
 -- Indexes structure for table jobs
 -- ----------------------------
+CREATE INDEX "idx_job_id" ON "public"."jobs" USING btree (
+  "job_id" "pg_catalog"."uuid_ops" ASC NULLS LAST
+);
+CREATE INDEX "idx_job_status_created" ON "public"."jobs" USING btree (
+  "status" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+  "created_at" "pg_catalog"."timestamp_ops" DESC NULLS FIRST
+);
 CREATE INDEX "idx_jobs_created_at" ON "public"."jobs" USING btree (
   "created_at" "pg_catalog"."timestamp_ops" DESC NULLS FIRST
 );
@@ -1679,6 +1862,10 @@ ALTER TABLE "public"."process_rules" ADD CONSTRAINT "process_rules_pkey" PRIMARY
 -- ----------------------------
 -- Indexes structure for table processing_cost_calculation_details
 -- ----------------------------
+CREATE INDEX "idx_calc_details_job_subgraph" ON "public"."processing_cost_calculation_details" USING btree (
+  "job_id" "pg_catalog"."uuid_ops" ASC NULLS LAST,
+  "subgraph_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
 CREATE INDEX "idx_proc_calc_calculated_at" ON "public"."processing_cost_calculation_details" USING btree (
   "calculated_at" "pg_catalog"."timestamp_ops" DESC NULLS FIRST
 );
@@ -1769,6 +1956,13 @@ ALTER TABLE "public"."reports" ADD CONSTRAINT "reports_pkey" PRIMARY KEY ("repor
 -- ----------------------------
 -- Indexes structure for table subgraphs
 -- ----------------------------
+CREATE INDEX "idx_subgraph_job_id" ON "public"."subgraphs" USING btree (
+  "job_id" "pg_catalog"."uuid_ops" ASC NULLS LAST
+);
+CREATE INDEX "idx_subgraph_job_id_order" ON "public"."subgraphs" USING btree (
+  "job_id" "pg_catalog"."uuid_ops" ASC NULLS LAST,
+  "subgraph_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
 CREATE INDEX "idx_subgraphs_job_id" ON "public"."subgraphs" USING btree (
   "job_id" "pg_catalog"."uuid_ops" ASC NULLS LAST
 );
@@ -1783,6 +1977,16 @@ CREATE INDEX "idx_subgraphs_status" ON "public"."subgraphs" USING btree (
 -- ----------------------------
 -- Triggers structure for table subgraphs
 -- ----------------------------
+CREATE TRIGGER "trigger_sync_job_total_cost_delete" AFTER DELETE ON "public"."subgraphs"
+FOR EACH ROW
+EXECUTE PROCEDURE "public"."sync_job_total_cost"();
+CREATE TRIGGER "trigger_sync_job_total_cost_insert" AFTER INSERT ON "public"."subgraphs"
+FOR EACH ROW
+EXECUTE PROCEDURE "public"."sync_job_total_cost"();
+CREATE TRIGGER "trigger_sync_job_total_cost_update" AFTER UPDATE OF "total_cost" ON "public"."subgraphs"
+FOR EACH ROW
+WHEN ((old.total_cost IS DISTINCT FROM new.total_cost))
+EXECUTE PROCEDURE "public"."sync_job_total_cost"();
 CREATE TRIGGER "update_subgraphs_updated_at" BEFORE UPDATE ON "public"."subgraphs"
 FOR EACH ROW
 EXECUTE PROCEDURE "public"."update_updated_at_column"();
