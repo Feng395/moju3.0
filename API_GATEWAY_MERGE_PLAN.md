@@ -325,28 +325,29 @@ git commit -m "合并 api_gateway 目录
 
 ## 📊 合并统计
 
-### 文件数量
-- 根目录共同文件：4 个（auth, main, websocket, database）
-- 根目录独有文件：2 个（config, README）
-- routers 共同文件：4 个
-- routers mold_cost-main 独有：3 个
-- routers mold_cost_ 独有：5 个
-- utils 共同文件：2 个
-- utils mold_cost_ 独有：7 个
-- mold_cost_ 独有目录：3 个（models, repositories, services）
+### 已完成文件数量
+- ✅ 根目录文件：4/6 个（auth, config, websocket, main）
+- ✅ routers 独有文件：3/3 个（features, pricing, reports）
+- ✅ routers 共同文件：1/4 个（__init__.py）
+- ✅ utils 共同文件：1/2 个（minio_client.py）
+- ⏳ routers 待合并：3 个（jobs, phase2, recalculations）
+- ⏳ utils 待添加头信息：7 个（mold_cost_ 独有）
+- ⏳ 独有目录待添加头信息：3 个（models, repositories, services）
 
 ### 合并策略分布
 - 保留 mold_cost_：大部分文件（架构更完整）
-- 复制 mold_cost-main：3 个路由文件（features, pricing, reports）
-- 需要对比合并：约 6 个文件（main, jobs, phase2, recalculations, __init__, minio_client）
+- 复制 mold_cost-main：3 个路由文件（features, pricing, reports）✅
+- 需要对比合并：约 6 个文件（main✅, jobs, phase2, recalculations, __init__✅, minio_client✅）
 
-### 预计工作量
-- 文件对比：30 分钟
-- 复制文件：10 分钟
-- 合并文件：40 分钟
-- 添加头信息：40 分钟
-- 测试验证：30 分钟
-- **总计：约 2.5 小时**
+### 当前进度
+- **已完成：约 50%**
+- **预计剩余时间：约 1 小时**
+
+### 下一步工作
+1. 对比合并 routers 共同文件（jobs, phase2, recalculations）
+2. 为 mold_cost_ 独有文件添加合并头信息
+3. 测试验证所有路由
+4. 提交最终版本
 
 ---
 
