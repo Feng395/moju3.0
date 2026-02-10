@@ -121,8 +121,8 @@ class NLPParser:
             # 优先使用 LLM 解析
             if self.use_llm:
                 try:
-                    # 🆕 将 user_input 添加到 context
-                    context_with_input = {**raw_data, "user_input": text}
+                    # 🆕 将 user_input 和完整 context 传递
+                    context_with_input = {**context, "user_input": text}
                     changes = await self._parse_with_llm(text, context_with_input)
                     if changes:
                         logger.info(f"✅ LLM 解析成功: {len(changes)} 个修改")
@@ -468,6 +468,142 @@ class NLPParser:
 ]
 ```
 
+## 🆕 特殊场景：多关键词批量修改
+
+### 场景识别
+当用户说"冲头刀口入块都改成..."时，表示要批量修改多类零件：
+- 零件关键词: 多个，可能连写（无分隔符）
+- 匹配方式: 包含匹配（part_name 包含关键词即可）
+- 批量操作: 每个关键词对应一组零件
+
+### 分词规则
+1. 优先识别常见零件名称（2-4字）：
+   - 冲头、刀口、入块、模板、夹板、垫板、导柱、导套、顶针等
+2. 如果有分隔符（逗号、顿号、"和"字），按分隔符分词
+3. 如果无分隔符，使用零件名称常识进行智能分词
+
+### 输出格式（多关键词场景）
+```json
+[
+  {{
+    "table": "subgraphs",
+    "filter": {{
+      "part_name_contains": "冲头",
+      "match_type": "contains"
+    }},
+    "field": "wire_process",
+    "value": "slow_and_one",
+    "original_text": "冲头刀口入块都改成慢丝割一修一"
+  }},
+  {{
+    "table": "subgraphs",
+    "filter": {{
+      "part_name_contains": "冲头",
+      "match_type": "contains"
+    }},
+    "field": "wire_process_note",
+    "value": "慢丝割一修一",
+    "original_text": "冲头刀口入块都改成慢丝割一修一"
+  }},
+  {{
+    "table": "subgraphs",
+    "filter": {{
+      "part_name_contains": "刀口",
+      "match_type": "contains"
+    }},
+    "field": "wire_process",
+    "value": "slow_and_one",
+    "original_text": "冲头刀口入块都改成慢丝割一修一"
+  }},
+  {{
+    "table": "subgraphs",
+    "filter": {{
+      "part_name_contains": "刀口",
+      "match_type": "contains"
+    }},
+    "field": "wire_process_note",
+    "value": "慢丝割一修一",
+    "original_text": "冲头刀口入块都改成慢丝割一修一"
+  }},
+  {{
+    "table": "subgraphs",
+    "filter": {{
+      "part_name_contains": "入块",
+      "match_type": "contains"
+    }},
+    "field": "wire_process",
+    "value": "slow_and_one",
+    "original_text": "冲头刀口入块都改成慢丝割一修一"
+  }},
+  {{
+    "table": "subgraphs",
+    "filter": {{
+      "part_name_contains": "入块",
+      "match_type": "contains"
+    }},
+    "field": "wire_process_note",
+    "value": "慢丝割一修一",
+    "original_text": "冲头刀口入块都改成慢丝割一修一"
+  }}
+]
+```
+
+### 示例
+
+**输入1**: "冲头刀口入块都改成慢丝割一修一"
+**分词**: ["冲头", "刀口", "入块"]
+**输出**: 6个修改操作（3个关键词 × 2个字段）
+
+**输入2**: "上模板下模板都改成快丝割一刀"
+**分词**: ["上模板", "下模板"]
+**输出**: 4个修改操作（2个关键词 × 2个字段）
+
+**输入3**: "冲头、刀口都改成慢丝割一修一"
+**分词**: ["冲头", "刀口"]（按逗号分隔）
+**输出**: 4个修改操作
+
+### 注意事项
+1. 每个关键词生成一个独立的修改操作（带 filter）
+2. 同时修改 wire_process 和 wire_process_note 两个字段
+3. 如果无法确定分词边界，在 reasoning 中说明
+
+### 🆕 概念词支持
+系统支持以下概念词，会自动展开为多个关键词进行模糊匹配：
+- **冲头**: 会匹配所有包含"切边冲头"、"切冲冲头"、"冲子"、"废料刀"、"冲头"的零件
+- **刀口入块**: 会匹配所有包含"刀口入子"、"切边入子"、"冲孔入子"、"凹模"的零件
+- **模架**: 会匹配所有包含"模座"、"垫脚"、"托板"的零件
+
+**重要**: 如果用户使用概念词（如"冲头都改成..."），你只需要返回概念词本身，系统会自动展开：
+
+**输入**: "冲头都改成慢丝割一修一"
+**输出**: 
+```json
+[
+  {{
+    "table": "subgraphs",
+    "filter": {{
+      "part_name_contains": "冲头",
+      "match_type": "contains"
+    }},
+    "field": "wire_process",
+    "value": "slow_and_one",
+    "original_text": "冲头都改成慢丝割一修一"
+  }},
+  {{
+    "table": "subgraphs",
+    "filter": {{
+      "part_name_contains": "冲头",
+      "match_type": "contains"
+    }},
+    "field": "wire_process_note",
+    "value": "慢丝割一修一",
+    "original_text": "冲头都改成慢丝割一修一"
+  }}
+]
+```
+
+系统会自动将"冲头"展开为["切边冲头", "切冲冲头", "冲子", "废料刀", "冲头"]并匹配所有相关零件。
+
 ## 重要规则
 1. **ID 可以灵活使用**: 可以使用 part_code（如 LP-02）、part_name（如"上夹板"）、实际的 ID（如 UP01），或特殊标识 "ALL"（表示全部记录），系统会自动映射
 2. **字段名映射**:
@@ -716,6 +852,21 @@ class NLPParser:
             if "filter" in change:
                 change = self._resolve_process_filter(change)
             
+            # 🆕 处理包含匹配过滤器
+            if "filter" in change and "part_name_contains" in change["filter"]:
+                logger.info(f"🔍 检测到包含匹配过滤器: {change['filter']}")
+                
+                # 应用包含匹配，展开为具体的修改操作
+                expanded_changes = self._apply_contains_filter(change, context)
+                
+                if expanded_changes:
+                    validated.extend(expanded_changes)
+                    logger.info(f"✅ 包含匹配展开: {len(expanded_changes)} 个修改操作")
+                else:
+                    logger.warning(f"⚠️  包含匹配未找到任何零件")
+                
+                continue  # 已处理，跳过后续逻辑
+            
             # 🆕 处理 "ALL" 标识：展开为所有记录
             if change.get("id") == "ALL":
                 expanded_changes = self._expand_all_modification(change, context)
@@ -758,7 +909,22 @@ class NLPParser:
             
             validated.append(change)
         
-        return validated
+        # 🆕 去重：如果同一个 table + id + field 被多个关键词匹配到，只保留一次
+        seen = set()
+        deduplicated = []
+        
+        for change in validated:
+            key = (change["table"], change.get("id"), change["field"])
+            if key not in seen:
+                seen.add(key)
+                deduplicated.append(change)
+            else:
+                logger.debug(f"⏭️  跳过重复修改: {change['table']}.{change.get('id')}.{change['field']}")
+        
+        if len(deduplicated) < len(validated):
+            logger.info(f"✅ 去重后: {len(deduplicated)} 个修改操作（原 {len(validated)} 个）")
+        
+        return deduplicated
     
     def _expand_all_modification(
         self,
@@ -1257,12 +1423,14 @@ class NLPParser:
         if is_batch:
             # 批量修改：直接使用 LLM 解析
             logger.info("🔍 检测到批量修改，使用 LLM 解析...")
-            raw_data = context.get("raw_data") or context
             
             if self.use_llm:
                 try:
-                    # 🆕 将 user_input 添加到 context
-                    context_with_input = {**raw_data, "user_input": text}
+                    # 🆕 将 user_input 和 display_view 添加到 context
+                    context_with_input = {
+                        **context,  # 保留完整的 context（包括 display_view）
+                        "user_input": text
+                    }
                     changes = await self._parse_with_llm(text, context_with_input)
                     if changes:
                         logger.info(f"✅ LLM 解析成功: {len(changes)} 个修改")
@@ -1312,12 +1480,14 @@ class NLPParser:
         
         # 回退到 LLM 解析
         logger.info("🤖 回退到 LLM 解析...")
-        raw_data = context.get("raw_data") or context
         
         if self.use_llm:
             try:
-                # 🆕 将 user_input 添加到 context
-                context_with_input = {**raw_data, "user_input": text}
+                # 🆕 将 user_input 和 display_view 添加到 context
+                context_with_input = {
+                    **context,  # 保留完整的 context（包括 display_view）
+                    "user_input": text
+                }
                 changes = await self._parse_with_llm(text, context_with_input)
                 if changes:
                     logger.info(f"✅ LLM 解析成功: {len(changes)} 个修改")
@@ -1471,8 +1641,7 @@ class NLPParser:
             # 🆕 Step 2: 复杂场景直接使用 LLM
             if complexity >= 5:
                 logger.info(f"🤖 检测到复杂句式（复杂度={complexity}），直接使用 LLM 解析")
-                raw_data = context.get("raw_data") or context
-                context_with_input = {**raw_data, "user_input": text}
+                context_with_input = {**context, "user_input": text}
                 return await self._parse_with_llm(text, context_with_input)
             
             # Step 3: 简单场景，尝试正则解析
@@ -1481,9 +1650,7 @@ class NLPParser:
             
             if not part_names_str or not process_desc:
                 logger.warning("⚠️  无法提取零件名称或工艺描述，回退到 LLM")
-                raw_data = context.get("raw_data") or context
-                # 🆕 将 user_input 添加到 context
-                context_with_input = {**raw_data, "user_input": text}
+                context_with_input = {**context, "user_input": text}
                 return await self._parse_with_llm(text, context_with_input)
             
             logger.info(f"📋 零件名称: {part_names_str}, 工艺描述: {process_desc}")
@@ -1491,8 +1658,7 @@ class NLPParser:
             # 🆕 验证零件名称是否包含工艺关键词（可能是正则匹配错误）
             if self._contains_process_keywords(part_names_str):
                 logger.warning(f"⚠️  零件名称包含工艺关键词，可能是正则匹配错误: {part_names_str}，回退到 LLM")
-                raw_data = context.get("raw_data") or context
-                context_with_input = {**raw_data, "user_input": text}
+                context_with_input = {**context, "user_input": text}
                 return await self._parse_with_llm(text, context_with_input)
             
             # 2. 查询 process_rules 表
@@ -1590,9 +1756,7 @@ class NLPParser:
         except Exception as e:
             logger.error(f"❌ 解析工艺修改失败: {e}", exc_info=True)
             # 回退到 LLM
-            raw_data = context.get("raw_data") or context
-            # 🆕 将 user_input 添加到 context
-            context_with_input = {**raw_data, "user_input": text}
+            context_with_input = {**context, "user_input": text}
             return await self._parse_with_llm(text, context_with_input)
     
     def _calculate_complexity(self, text: str) -> int:
@@ -1602,6 +1766,7 @@ class NLPParser:
         复杂度指标：
         - 多个"把"字（复合句式）：+5 分（强信号）
         - 🆕 筛选条件关键词（如"开头"、"结尾"、"包含"）：+5 分（需要语义理解）
+        - 🆕 多个零件关键词连写（无分隔符）+ "都"/"全部"：+5 分（需要智能分词）
         - 多个逗号/顿号（复合句式）：+4 分（2个及以上）
         - 多个"和"字（多个零件）：+2 分（3个及以上）
         - 多个"类"字（多个类型）：+2 分（3个及以上）
@@ -1645,6 +1810,19 @@ class NLPParser:
         if has_filter:
             score += 5
             logger.debug(f"🔍 检测到筛选条件关键词，+5 分")
+        
+        # 🆕 检查1.6：多个零件关键词连写（无分隔符）+ "都"/"全部"
+        # 如："冲头刀口入块都改成..."（需要智能分词）
+        if "都" in text or "全部" in text:
+            # 提取"都"或"全部"之前的部分
+            import re
+            before_all = re.split(r'都|全部', text)[0]
+            
+            # 检查是否包含多个零件关键词（连写，无逗号、顿号、空格、"和"字）
+            # 且长度 > 4（排除"模板都"这种单个关键词的情况）
+            if not re.search(r'[,，、\s和]', before_all) and len(before_all) > 4:
+                score += 5  # 🔧 从 +3 改为 +5，确保触发 LLM
+                logger.debug(f"🔍 检测到多个零件关键词连写（'{before_all}'），+5 分")
         
         # 检查2：多个逗号/顿号（支持中英文逗号和顿号）
         comma_count = text.count('，') + text.count(',') + text.count('、')
@@ -1846,3 +2024,102 @@ class NLPParser:
             logger.error(f"❌ 查询 process_rules 失败: {e}", exc_info=True)
             return None
 
+
+    
+    def _apply_contains_filter(
+        self,
+        change: Dict[str, Any],
+        context: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
+        """
+        应用包含匹配过滤器（支持概念词自动展开）
+        
+        Args:
+            change: 包含 filter 的修改指令
+            context: 数据上下文
+        
+        Returns:
+            展开后的修改列表（每个匹配的零件一个修改）
+        """
+        filter_conditions = change.get("filter", {})
+        keyword = filter_conditions.get("part_name_contains")
+        
+        if not keyword:
+            logger.warning("⚠️  filter 中缺少 part_name_contains")
+            return []
+        
+        # 获取 display_view
+        display_view = context.get("display_view", [])
+        
+        if not display_view:
+            logger.warning("⚠️  context 中没有 display_view，无法进行包含匹配")
+            return []
+        
+        # 🆕 检查是否为概念词，如果是则展开为多个关键词
+        from agents.action_handlers.base_handler import BaseActionHandler
+        keywords = BaseActionHandler.CONCEPT_KEYWORD_MAPPING.get(keyword, [keyword])
+        
+        if len(keywords) > 1:
+            logger.info(f"✅ 概念词展开: {keyword} → {keywords}")
+        
+        # 🆕 对每个关键词进行包含匹配
+        all_matched_items = []
+        matched_by_keyword = {}  # 记录每个关键词匹配到的零件
+        
+        for kw in keywords:
+            matched_items = []
+            for item in display_view:
+                part_name = item.get("part_name", "")
+                if kw in part_name:
+                    matched_items.append(item)
+                    logger.debug(f"✅ 包含匹配: {part_name} (关键词: {kw})")
+            
+            if matched_items:
+                all_matched_items.extend(matched_items)
+                matched_by_keyword[kw] = len(matched_items)
+                logger.info(f"✅ 关键词 '{kw}' 匹配到 {len(matched_items)} 个零件")
+            else:
+                logger.warning(f"⚠️  关键词 '{kw}' 未匹配到任何零件")
+                matched_by_keyword[kw] = 0
+        
+        # 🆕 去重（一个零件可能被多个关键词匹配到）
+        seen_subgraph_ids = set()
+        unique_matched_items = []
+        for item in all_matched_items:
+            source = item.get("_source", {})
+            subgraph_id = source.get("subgraph_id")
+            if subgraph_id and subgraph_id not in seen_subgraph_ids:
+                seen_subgraph_ids.add(subgraph_id)
+                unique_matched_items.append(item)
+        
+        if not unique_matched_items:
+            logger.warning(f"⚠️  关键词 '{keyword}' 未匹配到任何零件")
+            return []
+        
+        # 🆕 如果是概念词，显示详细的匹配摘要
+        if len(keywords) > 1:
+            summary_parts = [f"{kw}: {count}个" for kw, count in matched_by_keyword.items()]
+            logger.info(f"✅ 概念词 '{keyword}' 匹配到 {len(unique_matched_items)} 个零件（{', '.join(summary_parts)}）")
+        else:
+            logger.info(f"✅ 关键词 '{keyword}' 匹配到 {len(unique_matched_items)} 个零件")
+        
+        # 展开为具体的修改操作
+        expanded_changes = []
+        for item in unique_matched_items:
+            source = item.get("_source", {})
+            subgraph_id = source.get("subgraph_id")
+            
+            if not subgraph_id:
+                continue
+            
+            # 生成修改操作
+            expanded_changes.append({
+                "table": change["table"],
+                "id": subgraph_id,
+                "field": change["field"],
+                "value": change["value"],
+                "original_text": change.get("original_text", ""),
+                "matched_by_keyword": keyword  # 记录原始关键词（可能是概念词）
+            })
+        
+        return expanded_changes

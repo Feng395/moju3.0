@@ -334,6 +334,132 @@ def verify_token():
             "message": "服务器内部错误"
         }), 500
 
+@app.route('/api/change-password', methods=['POST'])
+def change_password():
+    """
+    修改密码接口（需要token认证）
+    
+    请求头:
+    Authorization: Bearer <token>
+    
+    请求体:
+    {
+        "new_password": "新密码"
+    }
+    """
+    try:
+        # 获取并验证token
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return jsonify({
+                "success": False,
+                "message": "缺少认证token"
+            }), 401
+        
+        token = auth_header.split(' ')[1]
+        payload = auth_service.verify_token(token)
+        
+        if not payload:
+            return jsonify({
+                "success": False,
+                "message": "token无效或已过期"
+            }), 401
+        
+        # 获取用户ID
+        user_id = payload.get('user_id')
+        username = payload.get('sub')
+        
+        if not user_id:
+            return jsonify({
+                "success": False,
+                "message": "token中缺少用户信息"
+            }), 401
+        
+        # 获取新密码
+        data = request.get_json()
+        if not data or 'new_password' not in data:
+            return jsonify({
+                "success": False,
+                "message": "缺少new_password参数"
+            }), 400
+        
+        new_password = data['new_password'].strip()
+        
+        # 验证新密码
+        if not new_password:
+            return jsonify({
+                "success": False,
+                "message": "新密码不能为空"
+            }), 400
+        
+        if len(new_password) < 6:
+            return jsonify({
+                "success": False,
+                "message": "新密码长度不能少于6个字符"
+            }), 400
+        
+        # 获取当前用户的密码哈希
+        query_user = """
+        SELECT password_hash 
+        FROM users 
+        WHERE user_id = %s
+        """
+        user = db_manager.execute_query(query_user, (user_id,), fetch_one=True)
+        
+        if not user:
+            return jsonify({
+                "success": False,
+                "message": "用户不存在"
+            }), 404
+        
+        # 检查新密码是否与当前密码相同
+        current_password_hash = user['password_hash']
+        if auth_service.verify_password(new_password, current_password_hash):
+            return jsonify({
+                "success": False,
+                "message": "新密码不能与当前密码相同"
+            }), 400
+        
+        # 加密新密码
+        if BCRYPT_AVAILABLE:
+            # 使用bcrypt加密
+            password_hash = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        else:
+            # 使用简单哈希（不推荐用于生产环境）
+            password_hash = auth_service.hash_password(new_password)
+        
+        # 更新密码
+        query = """
+        UPDATE users 
+        SET password_hash = %s, updated_at = %s
+        WHERE user_id = %s
+        RETURNING user_id, username
+        """
+        result = db_manager.execute_query(
+            query, 
+            (password_hash, datetime.now(), user_id), 
+            fetch_one=True
+        )
+        
+        if result:
+            logger.info(f"用户 {username} (ID: {user_id}) 修改密码成功")
+            return jsonify({
+                "success": True,
+                "message": "密码修改成功"
+            })
+        else:
+            return jsonify({
+                "success": False,
+                "message": "用户不存在"
+            }), 404
+            
+    except Exception as e:
+        logger.error(f"修改密码接口异常: {e}")
+        return jsonify({
+            "success": False,
+            "message": "服务器内部错误"
+        }), 500
+
 if __name__ == "__main__":
     # 启动时测试数据库连接
     if db_manager.test_connection():

@@ -11,13 +11,15 @@ import {
   UserOutlined,
   SettingOutlined,
   LogoutOutlined,
-  MoreOutlined
+  MoreOutlined,
+  KeyOutlined,
 } from '@ant-design/icons'
 import { theme } from 'antd'
 import { useAppStore } from '../store/useAppStore'
 import { logoutApi } from '../api/auth'
 import { clearAuthData } from '../utils/auth'
 import { AUTH_STORAGE_KEYS } from '../constants/auth'
+import ChangePasswordModal from './ChangePasswordModal'
 
 interface UserInfoSectionProps {
   sidebarCollapsed: boolean;
@@ -39,6 +41,7 @@ interface UserInfo {
 const UserInfoSection: React.FC<UserInfoSectionProps> = ({ sidebarCollapsed }) => {
   const { token } = theme.useToken()
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null)
+  const [changePasswordVisible, setChangePasswordVisible] = useState(false)
   
   const {
     clearMessages,
@@ -109,6 +112,11 @@ const UserInfoSection: React.FC<UserInfoSectionProps> = ({ sidebarCollapsed }) =
     }
   }
 
+  // 处理打开修改密码弹窗
+  const handleOpenChangePassword = () => {
+    setChangePasswordVisible(true)
+  }
+
   // 用户菜单项
   const userMenuItems = [
     {
@@ -116,6 +124,12 @@ const UserInfoSection: React.FC<UserInfoSectionProps> = ({ sidebarCollapsed }) =
       label: '设置',
       icon: <SettingOutlined />,
       onClick: handleOpenSettings,
+    },
+    {
+      key: 'changePassword',
+      label: '修改密码',
+      icon: <KeyOutlined />,
+      onClick: handleOpenChangePassword,
     },
     {
       type: 'divider' as const,
@@ -186,13 +200,14 @@ const UserInfoSection: React.FC<UserInfoSectionProps> = ({ sidebarCollapsed }) =
   }
 
   return (
-    <div
-      className="user-info-section"
-      style={{
-        padding: sidebarCollapsed ? '16px 8px' : '16px 20px',
-        background: '#FAFAFA',
-      }}
-    >
+    <>
+      <div
+        className="user-info-section"
+        style={{
+          padding: sidebarCollapsed ? '16px 8px' : '16px 20px',
+          background: '#FAFAFA',
+        }}
+      >
         <style>{`
           .user-info-container:hover {
             background: ${token.colorFillQuaternary} !important;
@@ -300,6 +315,13 @@ const UserInfoSection: React.FC<UserInfoSectionProps> = ({ sidebarCollapsed }) =
           </Dropdown>
         )}
       </div>
+
+      {/* 修改密码弹窗 */}
+      <ChangePasswordModal
+        visible={changePasswordVisible}
+        onCancel={() => setChangePasswordVisible(false)}
+      />
+    </>
   )
 }
 

@@ -16,6 +16,8 @@ class IntentType(str, Enum):
     PRICE_CALCULATION = "PRICE_CALCULATION"  # 价格计算
     QUERY_DETAILS = "QUERY_DETAILS"  # 查询详情
     GENERAL_CHAT = "GENERAL_CHAT"  # 普通聊天
+    WEIGHT_PRICE_CALCULATION = "WEIGHT_PRICE_CALCULATION"  # 按重量计算
+    WEIGHT_PRICE_QUERY = "WEIGHT_PRICE_QUERY"  # 查询按重量计算详情
     UNKNOWN = "UNKNOWN"  # 未知意图
 
 
@@ -80,6 +82,8 @@ INTENT_TYPES = {
     "PRICE_CALCULATION": IntentType.PRICE_CALCULATION,
     "QUERY_DETAILS": IntentType.QUERY_DETAILS,
     "GENERAL_CHAT": IntentType.GENERAL_CHAT,
+    "WEIGHT_PRICE_CALCULATION": IntentType.WEIGHT_PRICE_CALCULATION,
+    "WEIGHT_PRICE_QUERY": IntentType.WEIGHT_PRICE_QUERY,
     "UNKNOWN": IntentType.UNKNOWN,
 }
 
@@ -106,5 +110,14 @@ INTENT_KEYWORDS = {
         "改为", "修改", "设置为", "改成", "更改", "变更",
         "修改为", "改一下", "换成", "modify", "change", "update",
         "调整", "变成"
+    ],
+    IntentType.WEIGHT_PRICE_CALCULATION: [
+        "按重量计算", "重量计算", "模架按重量", "按重量算价格",
+        "重量价格", "按重量", "weight price", "weight calculation"
+    ],
+    IntentType.WEIGHT_PRICE_QUERY: [
+        "按重量怎么算", "重量计算详情", "重量价格怎么来的",
+        "为什么按重量", "按重量的计算", "重量怎么算",
+        "weight price details", "weight calculation details"
     ],
 }

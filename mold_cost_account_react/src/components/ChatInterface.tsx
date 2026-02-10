@@ -14,6 +14,7 @@ import {
     EyeInvisibleOutlined,
     ExclamationCircleOutlined,
     SyncOutlined,
+    AudioOutlined,
 } from "@ant-design/icons";
 import { useAppStore } from "../store/useAppStore";
 import MessageList from "./MessageList";
@@ -25,6 +26,7 @@ import GlobalProgressBar from "./GlobalProgressBar";
 import Fireworks from "./Fireworks";
 import { chatService } from "../services/chatService";
 import { sessionService } from "../services/sessionService";
+import { speechRecognitionService } from "../services/speechRecognitionService";
 import LoginModal from "./LoginModal";
 import { getValidToken } from "../utils/auth";
 import { AUTH_STORAGE_KEYS } from "../constants/auth";
@@ -55,6 +57,7 @@ const ChatInterface: React.FC = () => {
     const [renamingLoading, setRenamingLoading] = useState(false); // 新增：重命名加载状态
     const [isExporting, setIsExporting] = useState(false); // 新增：导出Excel加载状态
     const [showProgressBar, setShowProgressBar] = useState(true); // 新增：控制进度条显示/隐藏
+    const [isRecording, setIsRecording] = useState(false); // 新增：语音录音状态
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const { token } = theme.useToken();
     const loadedSessionRef = useRef<string | null>(null); // 记录已加载的sessionId，避免重复加载
@@ -535,6 +538,104 @@ const ChatInterface: React.FC = () => {
         // 触发登录状态变化事件
         window.dispatchEvent(new Event('loginStateChange'));
         message.success('登录成功！');
+    };
+
+    // 处理语音识别
+    const handleVoiceRecognition = async () => {
+        if (isRecording) {
+            // 停止录音
+            speechRecognitionService.stopRecognition();
+            setIsRecording(false);
+        } else {
+            // 开始录音前先检查麦克风权限
+            try {
+                // 检查浏览器是否支持麦克风
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    message.error('您的浏览器不支持麦克风功能');
+                    return;
+                }
+
+                // 检查麦克风权限状态
+                if (navigator.permissions && navigator.permissions.query) {
+                    try {
+                        const permissionStatus = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+                        
+                        if (permissionStatus.state === 'denied') {
+                            Modal.warning({
+                                title: '需要麦克风权限',
+                                content: '请在浏览器设置中允许访问麦克风，然后刷新页面重试。',
+                                okText: '我知道了',
+                            });
+                            return;
+                        }
+                    } catch (error) {
+                        // 某些浏览器可能不支持 permissions.query，继续尝试获取麦克风
+                        console.warn('无法查询麦克风权限状态:', error);
+                    }
+                }
+
+                // 尝试获取麦克风权限（测试性请求）
+                try {
+                    const testStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    // 立即停止测试流
+                    testStream.getTracks().forEach(track => track.stop());
+                } catch (error: any) {
+                    console.error('❌ 麦克风权限被拒绝:', error);
+                    
+                    if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+                        Modal.warning({
+                            title: '需要麦克风权限',
+                            content: '请允许浏览器访问麦克风，以便使用语音输入功能。',
+                            okText: '我知道了',
+                        });
+                    } else if (error.name === 'NotFoundError') {
+                        message.error('未检测到麦克风设备');
+                    } else {
+                        message.error('无法访问麦克风，请检查设备连接');
+                    }
+                    return;
+                }
+
+                // 权限检查通过，开始录音
+                setIsRecording(true);
+                
+                speechRecognitionService.startRecognition({
+                    onStart: () => {
+                        console.log('🎤 开始录音');
+                        message.info('开始录音...');
+                    },
+                    onResult: (text, isFinal) => {
+                        console.log('📝 识别结果:', text, isFinal ? '(最终)' : '(临时)');
+                        
+                        // 实时更新输入框内容
+                        if (isFinal) {
+                            // 稳态结果：追加到输入框
+                            setInputValue(prev => {
+                                const newValue = prev ? `${prev} ${text}` : text;
+                                return newValue.trim();
+                            });
+                        } else {
+                            // 非稳态结果：临时显示（可选）
+                            // 这里可以选择不处理，只在稳态时更新
+                        }
+                    },
+                    onEnd: () => {
+                        console.log('✅ 录音结束');
+                        setIsRecording(false);
+                        message.success('录音结束');
+                    },
+                    onError: (error) => {
+                        console.error('❌ 录音错误:', error);
+                        setIsRecording(false);
+                        message.error(`录音失败: ${error}`);
+                    },
+                });
+            } catch (error: any) {
+                console.error('❌ 启动语音识别失败:', error);
+                message.error('启动语音识别失败');
+                setIsRecording(false);
+            }
+        }
     };
 
     // 处理导出报价单Excel
@@ -1549,37 +1650,69 @@ const ChatInterface: React.FC = () => {
 
                             </div>
 
-                            {/* 发送按钮 - 放在原右侧信息的位置 */}
-                            <Button
-                                type={
-                                    inputValue.trim() ? "primary" : "text"
-                                }
-                                icon={<SendOutlined />}
-                                onClick={handleSendMessage}
-                                disabled={!inputValue.trim() || isTyping || isStartingReview || isRefreshing || isCalculating || isReprocessing || !hasReachedMinProgress || isReprocessingInHistory}
-                                style={{
-                                    width: 40,
-                                    height: 40,
-                                    borderRadius: 20,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    background:
-                                        inputValue.trim() && !isTyping && !isStartingReview && !isRefreshing && !isCalculating && !isReprocessing && hasReachedMinProgress && !isReprocessingInHistory
-                                            ? token.colorPrimary
-                                            : "transparent",
-                                    borderColor:
-                                        inputValue.trim() && !isTyping && !isStartingReview && !isRefreshing && !isCalculating && !isReprocessing && hasReachedMinProgress && !isReprocessingInHistory
-                                            ? token.colorPrimary
-                                            : "transparent",
-                                    color:
-                                        inputValue.trim() && !isTyping && !isStartingReview && !isRefreshing && !isCalculating && !isReprocessing && hasReachedMinProgress && !isReprocessingInHistory
-                                            ? "white"
-                                            : token.colorTextSecondary,
-                                    transition: "all 0.2s ease",
-                                }}
-                                className="send-btn"
-                            />
+                            {/* 发送按钮或语音按钮 */}
+                            {/* 录音状态时始终显示语音按钮，不显示发送按钮 */}
+                            {isRecording ? (
+                                <Button
+                                    type="primary"
+                                    icon={<AudioOutlined />}
+                                    onClick={handleVoiceRecognition}
+                                    style={{
+                                        width: 40,
+                                        height: 40,
+                                        borderRadius: 20,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        background: "#ff4d4f",
+                                        borderColor: "#ff4d4f",
+                                        color: "white",
+                                        transition: "all 0.2s ease",
+                                        animation: "pulse 1.5s ease-in-out infinite",
+                                    }}
+                                    className="voice-btn"
+                                />
+                            ) : inputValue.trim() ? (
+                                <Button
+                                    type="primary"
+                                    icon={<SendOutlined />}
+                                    onClick={handleSendMessage}
+                                    disabled={!inputValue.trim() || isTyping || isStartingReview || isRefreshing || isCalculating || isReprocessing || !hasReachedMinProgress || isReprocessingInHistory}
+                                    style={{
+                                        width: 40,
+                                        height: 40,
+                                        borderRadius: 20,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        background: token.colorPrimary,
+                                        borderColor: token.colorPrimary,
+                                        color: "white",
+                                        transition: "all 0.2s ease",
+                                    }}
+                                    className="send-btn"
+                                />
+                            ) : (
+                                <Button
+                                    type="text"
+                                    icon={<AudioOutlined />}
+                                    onClick={handleVoiceRecognition}
+                                    disabled={isTyping || isStartingReview || isRefreshing || isCalculating || isReprocessing}
+                                    style={{
+                                        width: 40,
+                                        height: 40,
+                                        borderRadius: 20,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        background: "transparent",
+                                        borderColor: "transparent",
+                                        color: token.colorTextSecondary,
+                                        transition: "all 0.2s ease",
+                                    }}
+                                    className="voice-btn"
+                                />
+                            )}
                         </div>
                     </div>
 

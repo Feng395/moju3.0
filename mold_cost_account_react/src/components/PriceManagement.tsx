@@ -680,6 +680,7 @@ const PriceManagement: React.FC = () => {
           <Form.Item
             label="类别"
             name="category"
+            rules={[{ required: true, message: '请选择类别' }]}
           >
             <Select
               placeholder="请选择类别"
@@ -693,6 +694,7 @@ const PriceManagement: React.FC = () => {
           <Form.Item
             label="子类"
             name="sub_category"
+            rules={[{ required: true, message: '请输入子类' }]}
           >
             <Input placeholder="请输入子类" />
           </Form.Item>
@@ -700,6 +702,10 @@ const PriceManagement: React.FC = () => {
           <Form.Item
             label="单价"
             name="price"
+            rules={[
+              { required: true, message: '请输入单价' },
+              { pattern: /^\d+(\.\d{1,2})?$/, message: '请输入有效的价格（最多两位小数）' }
+            ]}
           >
             <Input placeholder="例如: 100.00" />
           </Form.Item>
@@ -707,6 +713,7 @@ const PriceManagement: React.FC = () => {
           <Form.Item
             label="单位"
             name="unit"
+            rules={[{ required: true, message: '请输入单位' }]}
           >
             <Input placeholder="例如: 元/小时" />
           </Form.Item>

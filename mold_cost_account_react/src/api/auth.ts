@@ -81,14 +81,10 @@ export const getUserInfoApi = async (): Promise<UserInfo> => {
 }
 
 // 修改密码接口
-export const changePasswordApi = async (params: {
-  currentPassword: string
-  newPassword: string
-}): Promise<{ success: boolean; message: string }> => {
+export const changePasswordApi = async (newPassword: string): Promise<{ success: boolean; message: string }> => {
   try {
-    const response = await post<{ success: boolean; message: string }>(`${config.AUTH_URL}/api/user/change-password`, {
-      current_password: params.currentPassword,
-      new_password: params.newPassword,
+    const response = await post<{ success: boolean; message: string }>(`${config.AUTH_URL}/api/change-password`, {
+      new_password: newPassword,
     })
     
     return response

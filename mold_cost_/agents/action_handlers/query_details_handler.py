@@ -394,6 +394,40 @@ class QueryDetailsHandler(BaseActionHandler):
 ```json
 {json.dumps(steps, ensure_ascii=False, indent=2)}
 ```
+
+🔴 **重要提示**：
+- JSON 数据中的 `wire_base` 类别包含了所有线割工序的详细信息
+- 每个工序都有一个 `"code"` 字段（如 "G", "L", "W", "Z"）
+- 如果用户问某个工序（如 G）的线长，请在 `wire_base` 类别的 `steps` 数组中查找 `"code": "G"` 的对象
+- 该对象包含了该工序的所有数据，包括 `total_length`（线长）
+- ⚠️ **严禁使用 wire_total 类别中的数据回答单个工序的问题**
+- `wire_total` 中的 `wire_length` 和 `slow_wire_length` 是**所有工序的总和**，不是单个工序的线长
+
+🔴 **查询步骤**（必须严格遵守）：
+
+**情况 1：用户问整体计算（如 "DIE-05是怎么算的"）**
+- 回答整体成本构成：材料费 + 线割费 + 水磨费 + ... = 总价
+- 从 `total` 类别中获取总价信息
+- 列出主要费用项目及其金额
+- 不要只回答单个工序的详细数据
+
+**情况 2：用户问单个工序（如 "L的线长是多少"）**
+1. ✅ 定位到 `wire_base` 类别（不是 wire_total）
+2. ✅ 在 `steps` 数组中查找 `"code": "L"` 的对象
+3. ✅ 从该对象中提取 `"total_length"` 字段的值
+4. ✅ 直接使用该值回答，不要计算或推测
+5. ❌ **严禁**使用 `wire_total` 类别中的 `wire_length` 或 `slow_wire_length`
+
+**情况 3：用户问特定类型费用（如 "材料费是多少"）**
+- 定位到对应的类别（如 `material`）
+- 提取该类别中的费用信息
+
+**🔴 常见错误示例（必须避免）**：
+- ❌ 错误：用户问 "L的线长"，回答 3364.15（这是 wire_total 中的总线长）
+- ✅ 正确：用户问 "L的线长"，回答 158.8（这是 wire_base 中 code="L" 的 total_length）
+- ❌ 错误：用户问 "G的线长"，回答"暂无数据"（明明 wire_base 中有 code="G" 的数据）
+- ✅ 正确：用户问 "G的线长"，回答 217.63（这是 wire_base 中 code="G" 的 total_length）
+- 解释计算过程
 {processing_instructions_section}
 
 {field_glossary}
@@ -452,9 +486,10 @@ class QueryDetailsHandler(BaseActionHandler):
 
 **🔴 关键提示（查询单个工序时）**：
 - 如果用户问 "L的线长"，直接从 `wire_base` 类别中找 `code="L"` 的步骤
+- **必须逐字复制 JSON 中的实际值**，不要根据常识推测或计算
 - 使用该步骤中的实际字段：`total_length`, `original_total_length`, `added_length`, `total_length_note`
 - 不要编造字段，如果某个字段不存在，就不要提及
-- 示例回答格式：
+- **示例（必须严格遵守）**：
   ```
   根据 wire_base 类别中的计算步骤，L 的线长是 158.8 mm。
   
@@ -466,6 +501,12 @@ class QueryDetailsHandler(BaseActionHandler):
   
   对应加工说明：4 -Φ12.00割,单+0.01(合销) (instruction)
   ```
+
+**🔴 严格禁止**：
+- ❌ 不要根据孔径、数量等信息自己计算线长
+- ❌ 不要推测或修改 JSON 中的数值
+- ❌ 不要编造 `total_length_note` 的内容
+- ✅ 必须直接复制 JSON 中的实际值
 
 
 注意：

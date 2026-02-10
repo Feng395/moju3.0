@@ -464,6 +464,10 @@ class DataModificationHandler(BaseActionHandler):
         if re.search(r'[A-Z]{2,}[-\d]', user_message) or re.search(r'[A-Z]{2,}开头', user_message):
             logger.info(f"✅ 用户输入包含零件标识符，不需要推断")
             return parsed_changes
+        
+        # 🆕 检查是否为批量修改（包含"都"或"全部"）
+        if '都' in user_message or '全部' in user_message or '所有' in user_message:
+            logger.info(f"✅ 用户输入包含批量修改关键词（都/全部/所有），不需要推断")
             return parsed_changes
         
         # 尝试使用 LLM 从历史推断子图

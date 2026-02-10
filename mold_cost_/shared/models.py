@@ -520,6 +520,9 @@ class ProcessingCostCalculationDetail(Base):
     # 🔑 计算步骤详情 (JSON 格式)
     calculation_steps = Column(JSONB)
     
+    # 🆕 按重量计算步骤详情 (JSON 格式)
+    weight_price_steps = Column(JSONB)
+    
     # 时间戳
     calculated_at = Column(TIMESTAMP, nullable=False, default=datetime.utcnow)
     created_at = Column(TIMESTAMP, nullable=False, default=datetime.utcnow)

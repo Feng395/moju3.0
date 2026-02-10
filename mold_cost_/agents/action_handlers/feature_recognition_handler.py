@@ -53,10 +53,29 @@ class FeatureRecognitionHandler(BaseActionHandler):
         logger.info(f"🔍 处理特征识别: {intent_result.raw_message}")
         
         try:
-            # 1. 提取 subgraph_ids
+            # 1. 提取 subgraph_ids 或关键词
             subgraph_ids = intent_result.parameters.get("subgraph_ids")
+            keyword = intent_result.parameters.get("keyword")  # 🆕 新增
             
-            if not subgraph_ids:
+            if keyword:
+                # 🆕 使用概念词匹配（支持自动展开）
+                logger.info(f"🔍 使用关键词匹配: {keyword}")
+                subgraph_ids, match_results = self._match_subgraphs_by_concept(keyword, context)
+                
+                if not subgraph_ids:
+                    return ActionResult(
+                        status="error",
+                        message=f"未找到包含 '{keyword}' 的零件",
+                        data={}
+                    )
+                
+                logger.info(f"✅ 关键词 '{keyword}' 匹配到 {len(subgraph_ids)} 个子图")
+                
+                # 🆕 生成匹配摘要
+                summary = self._format_match_summary(keyword, match_results)
+                logger.info(f"📊 匹配摘要: {summary}")
+            
+            elif not subgraph_ids:
                 # 如果未指定，则识别所有子图
                 subgraph_ids = self._get_all_subgraph_ids(context)
                 logger.info(f"未指定子图，将识别所有 {len(subgraph_ids)} 个子图")

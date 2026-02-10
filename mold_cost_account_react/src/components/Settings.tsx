@@ -20,11 +20,13 @@ import {
   MoonOutlined,
   CloseOutlined,
   MenuOutlined,
+  SoundOutlined,
 } from '@ant-design/icons'
 import { useAppStore } from '../store/useAppStore'
 import { logoutApi } from '../api/auth'
 import { clearAuthData } from '../utils/auth'
 import { AUTH_STORAGE_KEYS } from '../constants/auth'
+import { speechSynthesisService, VOICE_TYPES, VOICE_TYPE_NAMES, VoiceType } from '../services/speechSynthesisService'
 
 const { Text } = Typography
 
@@ -46,6 +48,7 @@ const Settings: React.FC = () => {
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null)
   const [userDetailVisible, setUserDetailVisible] = useState(false)
   const [themeMode, setThemeMode] = useState<'light' | 'dark'>('light')
+  const [voiceType, setVoiceType] = useState<VoiceType>(VOICE_TYPES.FEMALE)
   
   const {
     clearMessages,
@@ -71,6 +74,12 @@ const Settings: React.FC = () => {
     }
 
     loadUserInfo()
+  }, [])
+
+  // 加载音色设置
+  useEffect(() => {
+    const currentVoiceType = speechSynthesisService.getVoiceType()
+    setVoiceType(currentVoiceType)
   }, [])
 
   // 获取用户显示名称
@@ -146,6 +155,13 @@ const Settings: React.FC = () => {
   const handleThemeChange = (value: 'light' | 'dark') => {
     setThemeMode(value)
     antdMessage.info(`已切换到${value === 'light' ? '浅色' : '深色'}模式（功能开发中）`)
+  }
+
+  // 处理音色切换
+  const handleVoiceTypeChange = (value: VoiceType) => {
+    setVoiceType(value)
+    speechSynthesisService.setVoiceType(value)
+    antdMessage.success(`已切换到${VOICE_TYPE_NAMES[value]}`)
   }
 
   // 处理返回聊天
@@ -350,6 +366,43 @@ const Settings: React.FC = () => {
                   options={[
                     { label: '浅色', value: 'light' },
                     { label: '深色', value: 'dark' },
+                  ]}
+                />
+              </Flex>
+            </Card>
+
+              {/* 角色音色 */}
+              <Card
+              className="settings-card"
+              style={{
+                borderRadius: 12,
+                border: `1px solid ${token.colorBorderSecondary}`,
+                marginBottom: 12,
+                background: '#F7F7F7',
+              }}
+              styles={{ body: { padding: '8px 16px' } }}
+            >
+              <Flex justify="space-between" align="center">
+                <Flex align="center" gap={12}>
+                  <SoundOutlined style={{ fontSize: 20, color: token.colorPrimary }} />
+                  <div>
+                    <div style={{ 
+                      fontSize: 14, 
+                      fontWeight: 500, 
+                      color: token.colorText,
+                    }}>
+                      角色音色
+                    </div>
+                  </div>
+                </Flex>
+                <Select
+                  className="theme-select"
+                  value={voiceType}
+                  onChange={handleVoiceTypeChange}
+                  style={{ width: 120 }}
+                  options={[
+                    { label: VOICE_TYPE_NAMES[VOICE_TYPES.FEMALE], value: VOICE_TYPES.FEMALE },
+                    { label: VOICE_TYPE_NAMES[VOICE_TYPES.MALE], value: VOICE_TYPES.MALE },
                   ]}
                 />
               </Flex>

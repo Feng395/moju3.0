@@ -16,6 +16,13 @@ Subgraphs 成本汇总检索脚本（阶段 5）
 from typing import List, Dict, Any
 import logging
 import asyncio
+import sys
+import os
+
+# 添加项目根目录到Python路径（用于直接运行脚本）
+if __name__ == "__main__":
+    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    sys.path.insert(0, project_root)
 
 from api_gateway.database import db
 
@@ -144,13 +151,6 @@ def search_by_job_id_sync(job_id: str, subgraph_ids: List[str]) -> Dict[str, Any
 
 # 测试入口
 if __name__ == "__main__":
-    import sys
-    import os
-    
-    # 添加项目根目录到Python路径
-    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    sys.path.insert(0, project_root)
-    
     logging.basicConfig(level=logging.INFO)
     
     if len(sys.argv) < 3:

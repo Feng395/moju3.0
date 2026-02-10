@@ -16,7 +16,9 @@ import {
   ClockCircleOutlined,
   RocketOutlined,
   QuestionCircleOutlined,
-  MinusCircleOutlined
+  MinusCircleOutlined,
+  SoundOutlined,
+  PauseCircleOutlined,
 } from '@ant-design/icons'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -31,11 +33,60 @@ import ReviewDataList from './ReviewDataList'
 import MissingFieldsCard from './MissingFieldsCard'
 import MessageDrawingViewer from './MessageDrawingViewer'
 import { chatService } from '../services/chatService'
+import { speechSynthesisService } from '../services/speechSynthesisService'
 import { useAppStore } from '../store/useAppStore'
 import { useCountdown } from '../hooks/useCountdown'
 import { hasDrawingContent } from '../utils/drawingUtils'
 
 const { Text } = Typography
+
+// 语音播放按钮组件
+interface VoicePlayButtonProps {
+  messageId: string
+  content: string
+  isPlaying: boolean
+  onPlay: () => void
+  onStop: () => void
+}
+
+const VoicePlayButton: React.FC<VoicePlayButtonProps> = ({
+  messageId,
+  content,
+  isPlaying,
+  onPlay,
+  onStop,
+}) => {
+  const { token } = theme.useToken()
+
+  return (
+    <Button
+      type="text"
+      size="small"
+      icon={isPlaying ? <PauseCircleOutlined /> : <SoundOutlined />}
+      onClick={isPlaying ? onStop : onPlay}
+      style={{
+        color: isPlaying ? token.colorPrimary : token.colorTextSecondary,
+        padding: '4px 8px',
+        height: 28,
+        fontSize: 14,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 4,
+        transition: 'all 0.2s',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.color = token.colorPrimary
+        e.currentTarget.style.background = token.colorFillQuaternary
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.color = isPlaying ? token.colorPrimary : token.colorTextSecondary
+        e.currentTarget.style.background = 'transparent'
+      }}
+    >
+      {isPlaying ? '停止播放' : '语音播放'}
+    </Button>
+  )
+}
 
 // 带倒计时的确认按钮组件
 interface CountdownConfirmButtonProps {
@@ -147,6 +198,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
   const { token } = theme.useToken()
   const { setMessages, addMessage, setIsCalculating, setIsTyping, setIsRefreshing, setIsReprocessing } = useAppStore()
   const [confirmingMessageId, setConfirmingMessageId] = useState<string | null>(null)
+  const [playingMessageId, setPlayingMessageId] = useState<string | null>(null) // 当前正在播放语音的消息ID
 
   // 检测会话切换或消息列表完全替换（如加载历史消息）
   useEffect(() => {
@@ -252,6 +304,89 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
       setConfirmingMessageId(null);
     }
   };
+
+  // 处理语音播放
+  const handleVoicePlay = useCallback(async (messageId: string, content: string) => {
+    // 如果当前消息正在播放，则停止
+    if (playingMessageId === messageId) {
+      speechSynthesisService.stopPlayback()
+      setPlayingMessageId(null)
+      return
+    }
+
+    // 停止之前正在播放的语音
+    if (playingMessageId) {
+      speechSynthesisService.stopPlayback()
+    }
+
+    // 开始播放新的语音
+    setPlayingMessageId(messageId)
+
+    try {
+      await speechSynthesisService.startSynthesis(content, {
+        onStart: () => {
+          console.log('🔊 开始语音合成:', messageId)
+        },
+        onComplete: () => {
+          console.log('✅ 语音合成完成:', messageId)
+          // 播放完成后重置状态，恢复按钮为"语音播放"
+          setPlayingMessageId(null)
+        },
+        onError: (error) => {
+          console.error('❌ 语音合成失败:', error)
+          antdMessage.error(`语音播放失败: ${error}`)
+          setPlayingMessageId(null)
+        },
+      })
+    } catch (error: any) {
+      console.error('❌ 语音播放失败:', error)
+      setPlayingMessageId(null)
+    }
+  }, [playingMessageId])
+
+  // 处理停止语音播放
+  const handleVoiceStop = useCallback(() => {
+    speechSynthesisService.stopPlayback()
+    setPlayingMessageId(null)
+  }, [])
+
+  // 组件卸载时停止播放
+  useEffect(() => {
+    return () => {
+      speechSynthesisService.stopPlayback()
+    }
+  }, [])
+
+  // 监听新的 assistant 消息，自动播放语音
+  const lastAssistantMessageIdRef = useRef<string | null>(null)
+  
+  useEffect(() => {
+    // 如果没有消息，直接返回
+    if (messages.length === 0) return
+
+    // 获取最后一条消息
+    const lastMessage = messages[messages.length - 1]
+
+    // 检查是否是新的 assistant 消息
+    if (
+      lastMessage.type === 'assistant' &&
+      lastMessage.content &&
+      lastMessage.content.trim() &&
+      lastMessage.id !== lastAssistantMessageIdRef.current && // 确保是新消息
+      !playingMessageId // 当前没有正在播放的语音
+    ) {
+      // 更新最后一条 assistant 消息的 ID
+      lastAssistantMessageIdRef.current = lastMessage.id
+
+      // 延迟一小段时间后自动播放，确保消息已经渲染
+      const timer = setTimeout(() => {
+        console.log('🎵 自动播放 AI 回复语音:', lastMessage.id)
+        handleVoicePlay(lastMessage.id, lastMessage.content)
+      }, 300) // 300ms 延迟，确保消息渲染完成
+
+      return () => clearTimeout(timer)
+    }
+  }, [messages, playingMessageId, handleVoicePlay]) // 依赖 messages、playingMessageId 和 handleVoicePlay
 
   // 根据进度消息阶段获取对应图标
   const getProgressIcon = (stage: string, progress: number, message: string, allMessages: Message[], currentIndex: number) => {
@@ -1358,6 +1493,19 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
                           >
                             {message.content}
                           </ReactMarkdown>
+                          
+                          {/* 语音播放按钮 - 只在 assistant 消息且有内容时显示 */}
+                          {message.type === 'assistant' && message.content && message.content.trim() && (
+                            <div style={{ marginTop: 8 }}>
+                              <VoicePlayButton
+                                messageId={message.id}
+                                content={message.content}
+                                isPlaying={playingMessageId === message.id}
+                                onPlay={() => handleVoicePlay(message.id, message.content)}
+                                onStop={handleVoiceStop}
+                              />
+                            </div>
+                          )}
                           
                           {/* 显示确认状态标签 */}
                           {message.confirmationStatus && (

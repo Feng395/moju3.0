@@ -229,7 +229,16 @@ class IntentRecognizer:
         
         prompt = f"""请识别以下用户消息的意图，并提取相关参数。
 
-🔴 **重要提示**: 如果用户的当前消息中明确包含子图ID（如 UB-07, U2-04, PS-01），必须精确提取该ID，不要使用历史消息中的其他ID！
+🔴 **最重要规则（必须首先检查）**: 
+**单个字母不是子图ID！**
+- 如果用户说 "L的线长"、"W的费用"、"M的时间"、"G的线长"、"K的价格"、"Z的数据"
+- 这里的 L/W/M/G/K/Z 是**加工代码**（machining code），**不是子图ID**
+- 子图ID必须是：**前缀 + 数字** 或 **前缀 + 字母+数字** 的组合
+- ✅ 正确的子图ID格式：UP-01, DIE-03, PS-02, PU-BL2, UP-A1, DIE-05（有前缀+数字）
+- ❌ 错误的子图ID格式：L, W, M, G, K, Z（单个字母，这是加工代码）
+- **如果用户只提到单个字母，必须返回 subgraph_id=None，让系统从历史推断**
+
+🔴 **重要提示**: 如果用户的当前消息中明确包含子图ID（如 UB-07, U2-04, PS-01, DIE-05），必须精确提取该ID，不要使用历史消息中的其他ID！
 
 ## 用户消息
 {message}
@@ -301,7 +310,29 @@ class IntentRecognizer:
      * 如果用户在**询问或验证**计算结果，识别为此意图
      * 如果用户给出了具体计算过程并询问"对吗"，识别为此意图
 
-5. **GENERAL_CHAT**: 普通聊天
+5. **WEIGHT_PRICE_CALCULATION**: 按重量计算模架价格（执行操作）
+   - 用户目的：要求系统按重量计算模架部分的价格
+   - 关键词：按重量计算、重量计算、模架按重量、按重量算价格、重量价格
+   - 示例：
+     * "UP01 按重量计算"
+     * "所有模架按重量算价格"
+     * "重量计算 DIE-03"
+   - ⚠️ 重要：
+     * 必须包含"按重量"或"重量计算"关键词
+     * 这是一个执行操作，需要调用 API
+
+6. **WEIGHT_PRICE_QUERY**: 查询按重量计算详情（不执行操作）
+   - 用户目的：了解按重量计算的过程和详情
+   - 关键词：按重量怎么算、重量计算详情、重量价格怎么来的、为什么按重量
+   - 示例：
+     * "UP01 按重量怎么算的？"
+     * "DIE-03 的重量价格是怎么来的？"
+     * "按重量计算的详情"
+   - ⚠️ 重要：
+     * 必须包含"怎么算"或"详情"等查询词
+     * 这是一个查询操作，不会执行计算
+
+7. **GENERAL_CHAT**: 普通聊天
    - 关键词：你好、谢谢、帮助
    - 示例：你好、这个系统怎么用？
 
@@ -312,13 +343,33 @@ class IntentRecognizer:
   * field: 字段名（如 material, width, length）
   * value: 新值（如 718, 200, 150）
   
-- **FEATURE_RECOGNITION**: 提取 subgraph_ids（如果未指定，则为所有子图）
+- **FEATURE_RECOGNITION**: 提取 subgraph_ids 或 keyword（如果未指定，则为所有子图）
   * 如果用户说"重新识别特征"（未指定子图），返回空数组 []
   * 如果用户说"重新识别 UP01"，返回 ["UP01"]
+  * 🆕 如果用户说"重新识别模板"，返回 keyword = "模板"（系统会自动匹配所有包含"模板"的零件）
+  * 🆕 如果用户说"识别一下冲头"，返回 keyword = "冲头"（系统会自动展开为多个关键词）
+  * 🆕 如果用户说"识别刀口入块"，返回 keyword = "刀口入块"（系统会自动展开为多个关键词）
+  * 🆕 如果用户说"识别模架"，返回 keyword = "模架"（系统会自动展开为多个关键词）
+  * 🆕 支持的概念词：冲头、刀口入块、模架（系统会自动展开为多个关键词进行模糊匹配）
   
-- **PRICE_CALCULATION**: 提取 subgraph_ids（如果未指定，则为所有子图）
+- **PRICE_CALCULATION**: 提取 subgraph_ids 或 keyword（如果未指定，则为所有子图）
   * 如果用户说"重新计算价格"（未指定子图），返回空数组 []
   * 如果用户说"重新计算 UP01 的价格"，返回 ["UP01"]
+  * 🆕 如果用户说"单独把模板计算一下"，返回 keyword = "模板"（系统会自动匹配所有包含"模板"的零件）
+  * 🆕 如果用户说"单独计算一下冲头"，返回 keyword = "冲头"（系统会自动展开为多个关键词：切边冲头、切冲冲头、冲子、废料刀、冲头）
+  * 🆕 如果用户说"计算一下刀口入块"，返回 keyword = "刀口入块"（系统会自动展开为：刀口入子、切边入子、冲孔入子、凹模）
+  * 🆕 如果用户说"计算一下模架"，返回 keyword = "模架"（系统会自动展开为：模座、垫脚、托板）
+  * 🆕 支持的概念词：冲头、刀口入块、模架（系统会自动展开为多个关键词进行模糊匹配）
+
+- **WEIGHT_PRICE_CALCULATION**: 提取 subgraph_ids 或 keyword（如果未指定，则为所有子图）
+  * 如果用户说"按重量计算"（未指定子图），返回空数组 []
+  * 如果用户说"UP01 按重量计算"，返回 ["UP01"]
+  * 如果用户说"模架按重量计算"，返回 keyword = "模架"
+  * 支持的概念词：冲头、刀口入块、模架（系统会自动展开为多个关键词进行模糊匹配）
+
+- **WEIGHT_PRICE_QUERY**: 提取 subgraph_id
+  * 如果用户说"UP01 按重量怎么算的"，返回 subgraph_id = "UP01"
+  * 如果用户使用代词（如"它"），则返回 subgraph_id = None（从历史推断）
   
 - **QUERY_DETAILS**: 提取 subgraph_id 和 query_type（可选）
   * query_type 可选值: weight, material, heat, wire_base, wire_special, wire_speci, add_auto_material, standard, tooth_hole_time, wire_standard, nc_base, nc_roughing, nc_milling, nc_drilling, total, wire_total
@@ -407,27 +458,45 @@ class IntentRecognizer:
 3. **subgraph_ids**: 如果用户说"重新识别 UP01"，则返回 ["UP01"]
 4. **query_type**: 如果用户询问具体的费用类型，提取对应的 query_type
 5. **subgraph_id 提取规则**（🔴 最重要！必须严格遵守）：
-   - **🔴 第一优先（绝对优先）**: 如果用户的**当前消息**中**明确包含子图ID**（如 UB-07, U2-04, PS-01, UP01, B2-03），则**必须精确提取该ID**，**完全忽略历史消息**
+   - **🔴 第零步（最优先检查）**: 
+     * **检查是否为单个字母**：如果用户消息中只包含单个字母（L, W, M, G, K, Z 等），这是**加工代码**，不是子图ID
+     * **必须返回 subgraph_id=None**，让系统从历史推断真正的子图ID
+     * **示例**：
+       - "L的线长是多少？" → subgraph_id=None（L是加工代码）
+       - "G的线长是多少？" → subgraph_id=None（G是加工代码）
+       - "W的费用" → subgraph_id=None（W是加工代码）
+       - "M的时间" → subgraph_id=None（M是加工代码）
+   
+   - **🔴 第一优先（绝对优先）**: 如果用户的**当前消息**中**明确包含子图ID**（如 UB-07, U2-04, PS-01, UP01, B2-03, DIE-05），则**必须精确提取该ID**，**完全忽略历史消息**
    - **⚠️ 重要排除规则**：
-     * **单个字母不是子图ID**：如果用户说"L的线长"、"W的费用"、"M的时间"，这里的 L/W/M 是**加工代码**，不是子图ID
+     * **单个字母不是子图ID**：如果用户说"L的线长"、"W的费用"、"M的时间"、"G的线长"，这里的 L/W/M/G 是**加工代码**，不是子图ID
      * 子图ID必须是：**前缀 + 数字** 或 **前缀 + 字母+数字** 的组合
-     * 正确格式：UP-01, DIE-03, PS-02, PU-BL2, UP-A1（有前缀+数字）
-     * 错误格式：L, W, M, K（单个字母，这是加工代码）
-     * 如果用户只提到单个字母，应该从历史推断子图ID
+     * 正确格式：UP-01, DIE-03, PS-02, PU-BL2, UP-A1, DIE-05（有前缀+数字）
+     * 错误格式：L, W, M, G, K, Z（单个字母，这是加工代码）
+     * 如果用户只提到单个字母，**必须**返回 subgraph_id=None
    - **示例（当前消息优先）**:
      * 用户说"UB-07的价格" → subgraph_id = "UB-07"（不是历史中的其他ID）
      * 用户说"U2-04是怎么算的？" → subgraph_id = "U2-04"（不是 U2-01）
      * 用户说"PS-01的价格" → subgraph_id = "PS-01"
      * 用户说"B2-03大水磨长条费用...这样对吗？" → subgraph_id = "B2-03"
+     * 用户说"DIE-05是怎么算的？" → subgraph_id = "DIE-05"
+   
+   - **示例（单个字母 = 加工代码，必须返回 None）**:
      * 用户说"L的线长是多少？" → subgraph_id = None（L是加工代码，从历史推断）
-   - **代词规则（仅当没有明确ID时）**: 如果用户使用代词（如"它"、"那个"、"这个"）或**单个字母**（如"L"、"W"、"M"），且当前消息中**没有明确的子图ID**，则从历史消息中推断：
+     * 用户说"G的线长是多少？" → subgraph_id = None（G是加工代码，从历史推断）
+     * 用户说"W的费用" → subgraph_id = None（W是加工代码，从历史推断）
+     * 用户说"M的时间" → subgraph_id = None（M是加工代码，从历史推断）
+     * 用户说"K的价格" → subgraph_id = None（K是加工代码，从历史推断）
+     * 用户说"Z的数据" → subgraph_id = None（Z是加工代码，从历史推断）
+   - **代词规则（仅当没有明确ID时）**: 如果用户使用代词（如"它"、"那个"、"这个"）或**单个字母**（如"L"、"W"、"M"、"G"），且当前消息中**没有明确的子图ID**，则**必须返回 subgraph_id=None**，让系统从历史消息中推断：
      * **第一优先**：从最近的**用户消息**中查找（最近1-2条）
      * **第二优先**：从最近的**助手消息**中查找
      * **第三优先**：从所有历史消息中查找
    - **示例（代词推断）**:
-     * 历史：用户问"U2-04的计算过程"，助手回答"U2-04的总成本..."，用户说"它的重量是多少？" → subgraph_id = "U2-04"（从最近的用户消息推断）
-     * 历史：用户问"UB-07的价格"，用户说"它的重量是多少？" → subgraph_id = "UB-07"（从最近的用户消息推断）
-     * 历史：用户问"DIE-05怎么算的？"，用户说"L的线长是多少？" → subgraph_id = "DIE-05"（L是加工代码，从历史推断子图）
+     * 历史：用户问"U2-04的计算过程"，助手回答"U2-04的总成本..."，用户说"它的重量是多少？" → subgraph_id = None（使用代词，从历史推断 U2-04）
+     * 历史：用户问"UB-07的价格"，用户说"它的重量是多少？" → subgraph_id = None（使用代词，从历史推断 UB-07）
+     * 历史：用户问"DIE-05怎么算的？"，用户说"L的线长是多少？" → subgraph_id = None（L是加工代码，从历史推断 DIE-05）
+     * 历史：用户问"DIE-05怎么算的？"，用户说"G的线长是多少？" → subgraph_id = None（G是加工代码，从历史推断 DIE-05）
    - 子图ID通常格式：UP01, LP-02, DIE-03, PS-01, U2-01, U2-04, B2-03, DIE2-07, UB-07, PU-BL2 等
    - **🔴 关键规则**: 当前消息中的ID **永远优先于** 历史消息中的ID，但**单个字母不是子图ID**
 6. **只返回 JSON**: 不要有其他解释文字
@@ -522,6 +591,29 @@ class IntentRecognizer:
                 intent_type=IntentType.QUERY_DETAILS,
                 confidence=0.9,
                 parameters={"subgraph_id": subgraph_id} if subgraph_id else {},
+                raw_message=message
+            )
+        
+        # 🆕 0.5. 优先检查按重量相关的意图（比普通查询更具体）
+        # 检查按重量计算查询关键词
+        weight_query_keywords = INTENT_KEYWORDS.get(IntentType.WEIGHT_PRICE_QUERY, [])
+        if any(keyword in message for keyword in weight_query_keywords):
+            subgraph_id = self._extract_single_subgraph_id(message, context)
+            return IntentResult(
+                intent_type=IntentType.WEIGHT_PRICE_QUERY,
+                confidence=0.85,
+                parameters={"subgraph_id": subgraph_id} if subgraph_id else {},
+                raw_message=message
+            )
+        
+        # 检查按重量计算关键词
+        weight_calc_keywords = INTENT_KEYWORDS.get(IntentType.WEIGHT_PRICE_CALCULATION, [])
+        if any(keyword in message for keyword in weight_calc_keywords):
+            subgraph_ids = self._extract_subgraph_ids_from_text(message, context)
+            return IntentResult(
+                intent_type=IntentType.WEIGHT_PRICE_CALCULATION,
+                confidence=0.85,
+                parameters={"subgraph_ids": subgraph_ids},
                 raw_message=message
             )
         

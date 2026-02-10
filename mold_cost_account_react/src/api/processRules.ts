@@ -162,14 +162,14 @@ export const updateProcessRule = async (ruleId: string, params: UpdateRuleParams
   return apiClient.put(`/api/process-rules/${ruleId}`, params)
 }
 
-// 5. 删除规则
+// 5. 软删除规则（单个）
 export const deleteProcessRule = async (ruleId: string): Promise<ApiResponse> => {
-  return apiClient.delete(`/api/process-rules/${ruleId}`)
+  return apiClient.put(`/api/process-rules/${ruleId}/soft-delete`)
 }
 
-// 6. 批量删除规则
+// 6. 批量软删除规则
 export const batchDeleteProcessRules = async (ids: string[]): Promise<ApiResponse<{ deleted_count: number }>> => {
-  return apiClient.post('/api/process-rules/batch-delete', { ids })
+  return apiClient.post('/api/process-rules/batch-soft-delete', { ids })
 }
 
 // 7. 根据版本和类型获取规则

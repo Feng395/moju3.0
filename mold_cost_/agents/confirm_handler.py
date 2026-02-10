@@ -101,6 +101,11 @@ class ConfirmHandler:
                     job_id,
                     pending_action
                 )
+            elif action_type == "WEIGHT_PRICE_CALCULATION":
+                result = await self._confirm_weight_price_calculation(
+                    job_id,
+                    pending_action
+                )
             else:
                 return {
                     "status": "error",
@@ -468,6 +473,132 @@ class ConfirmHandler:
             }
         except Exception as e:
             logger.error(f"❌ 价格计算失败: {e}")
+            raise
+    
+    async def _confirm_weight_price_calculation(
+        self,
+        job_id: str,
+        pending_action: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        确认按重量计算价格
+        
+        Args:
+            job_id: 任务ID
+            pending_action: 待确认的操作
+        
+        Returns:
+            处理结果
+        """
+        logger.info(f"⚖️  确认按重量计算价格...")
+        
+        try:
+            # 获取 API 参数和 URL
+            api_params = pending_action.get("api_params")
+            api_url = pending_action.get("api_url", "http://192.168.0.20:8201/api/price_wg")
+            
+            if not api_params:
+                return {
+                    "status": "error",
+                    "message": "未找到 API 参数"
+                }
+            
+            logger.info(f"📤 调用按重量计算 API: {api_url}")
+            logger.info(f"📋 请求参数: {api_params}")
+            
+            headers = {
+                "Content-Type": "application/json"
+            }
+            
+            # 重试配置
+            max_retries = 3
+            retry_delay = 5  # 秒
+            last_error = None
+            
+            for attempt in range(max_retries):
+                try:
+                    if attempt > 0:
+                        logger.info(f"🔄 第 {attempt + 1} 次重试...")
+                        import asyncio
+                        await asyncio.sleep(retry_delay)
+                    
+                    async with httpx.AsyncClient(timeout=self.api_timeout) as client:
+                        response = await client.post(
+                            api_url,
+                            json=api_params,
+                            headers=headers
+                        )
+                        response.raise_for_status()
+                        result = response.json()
+                        
+                        # 成功，跳出重试循环
+                        break
+                        
+                except httpx.HTTPStatusError as e:
+                    last_error = e
+                    # 502/503 可能是服务器忙，值得重试
+                    if e.response.status_code in [502, 503] and attempt < max_retries - 1:
+                        logger.warning(f"⚠️  服务器返回 {e.response.status_code}，{retry_delay}秒后重试...")
+                        continue
+                    else:
+                        raise
+                        
+                except httpx.TimeoutException as e:
+                    last_error = e
+                    if attempt < max_retries - 1:
+                        logger.warning(f"⚠️  请求超时，{retry_delay}秒后重试...")
+                        continue
+                    else:
+                        raise
+            
+            # 如果所有重试都失败，抛出最后一个错误
+            if last_error and 'result' not in locals():
+                raise last_error
+            
+            logger.info(f"✅ 按重量计算 API 调用成功")
+            logger.info(f"📋 响应: {result}")
+            
+            return {
+                "status": "ok",
+                "message": "按重量计算任务已提交",
+                "data": {
+                    "action_type": "WEIGHT_PRICE_CALCULATION",
+                    "task_id": result.get("data", {}).get("task_id"),
+                    "subgraph_ids": api_params.get("subgraph_ids"),
+                    "api_response": result
+                }
+            }
+        
+        except httpx.HTTPStatusError as e:
+            logger.error(f"❌ API 调用失败（已重试 {max_retries} 次）: {e.response.status_code} - {e.response.text}")
+            
+            # 根据不同的错误码返回更友好的消息
+            if e.response.status_code == 502:
+                error_msg = "按重量计算服务暂时不可用（502 Bad Gateway）。可能原因：服务器正在处理其他请求。建议：等待几分钟后重试，或联系管理员检查服务状态"
+            elif e.response.status_code == 503:
+                error_msg = "按重量计算服务正在维护中（503 Service Unavailable），请稍后重试"
+            elif e.response.status_code == 504:
+                error_msg = "按重量计算服务响应超时（504 Gateway Timeout），请稍后重试"
+            else:
+                error_msg = f"按重量计算 API 调用失败: HTTP {e.response.status_code}"
+            
+            return {
+                "status": "error",
+                "message": error_msg,
+                "details": {
+                    "status_code": e.response.status_code,
+                    "response": e.response.text[:200],
+                    "retries": max_retries
+                }
+            }
+        except httpx.TimeoutException as e:
+            logger.error(f"❌ API 调用超时（已重试 {max_retries} 次）: {e}")
+            return {
+                "status": "error",
+                "message": f"按重量计算服务响应超时（已重试 {max_retries} 次），服务器可能正在处理其他请求，请稍后重试"
+            }
+        except Exception as e:
+            logger.error(f"❌ 按重量计算失败: {e}")
             raise
     
     async def _get_pending_action(self, job_id: str) -> Optional[Dict[str, Any]]:

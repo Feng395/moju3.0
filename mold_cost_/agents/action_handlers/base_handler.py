@@ -23,6 +23,14 @@ class BaseActionHandler(ABC):
     所有具体的 Handler 都应继承此类并实现 handle() 方法
     """
     
+    # 🆕 概念词映射表（概念词 → 关键词列表）
+    # 所有关键词都使用模糊匹配（包含匹配）
+    CONCEPT_KEYWORD_MAPPING = {
+        "冲头": ["切边冲头", "切冲冲头", "冲子", "废料刀", "冲头"],
+        "刀口入块": ["刀口入子", "切边入子", "冲孔入子", "凹模"],
+        "模架": ["模座", "垫脚", "托板"],
+    }
+    
     def __init__(self):
         """初始化 Handler"""
         self._redis_client = None
@@ -157,6 +165,153 @@ class BaseActionHandler(ABC):
         logger.debug(f"✅ 提取到 {len(subgraph_ids)} 个 subgraph_id")
         
         return subgraph_ids
+    
+    # ========== 🆕 包含匹配工具（多关键词模糊匹配） ==========
+    
+    def _match_subgraphs_by_keyword(
+        self,
+        keyword: str,
+        context: Dict[str, Any]
+    ) -> list[str]:
+        """
+        通过关键词匹配子图（包含匹配）
+        
+        Args:
+            keyword: 零件关键词（如"模板"、"冲头"）
+            context: 数据上下文（包含 display_view）
+        
+        Returns:
+            匹配的 subgraph_id 列表
+        """
+        display_view = context.get("display_view", [])
+        matched_ids = []
+        
+        logger.info(f"🔍 开始包含匹配: 关键词='{keyword}', display_view 记录数={len(display_view)}")
+        
+        for item in display_view:
+            part_name = item.get("part_name", "")
+            if keyword in part_name:
+                source = item.get("_source", {})
+                subgraph_id = source.get("subgraph_id")
+                if subgraph_id:
+                    matched_ids.append(subgraph_id)
+                    logger.debug(f"✅ 包含匹配: {part_name} (关键词: {keyword})")
+        
+        logger.info(f"✅ 关键词 '{keyword}' 匹配到 {len(matched_ids)} 个子图")
+        return matched_ids
+    
+    def _match_subgraphs_by_keywords(
+        self,
+        keywords: list[str],
+        context: Dict[str, Any]
+    ) -> Dict[str, list[str]]:
+        """
+        通过多个关键词匹配子图（包含匹配）
+        
+        Args:
+            keywords: 关键词列表
+            context: 数据上下文
+        
+        Returns:
+            字典：{keyword: [subgraph_ids]}
+        """
+        results = {}
+        all_matched_ids = set()  # 用于去重
+        
+        for keyword in keywords:
+            matched_ids = self._match_subgraphs_by_keyword(keyword, context)
+            results[keyword] = matched_ids
+            all_matched_ids.update(matched_ids)
+        
+        logger.info(f"✅ 多关键词匹配完成: 共 {len(all_matched_ids)} 个子图（去重后）")
+        return results
+    
+    # ========== 🆕 概念词映射（多关键词模糊匹配扩展） ==========
+    
+    def _expand_concept_to_keywords(self, concept: str) -> list[str]:
+        """
+        将概念词展开为关键词列表
+        
+        Args:
+            concept: 概念词（如"冲头"、"刀口入块"、"模架"）
+        
+        Returns:
+            关键词列表，如果不是概念词则返回 [concept]
+        """
+        keywords = self.CONCEPT_KEYWORD_MAPPING.get(concept)
+        
+        if keywords:
+            logger.info(f"✅ 概念词映射: {concept} → {keywords}")
+            return keywords
+        else:
+            logger.info(f"📋 非概念词，作为普通关键词处理: {concept}")
+            return [concept]
+    
+    def _match_subgraphs_by_concept(
+        self,
+        concept: str,
+        context: Dict[str, Any]
+    ) -> tuple[list[str], Dict[str, list[str]]]:
+        """
+        通过概念词匹配子图（支持概念词自动展开）
+        
+        Args:
+            concept: 概念词或普通关键词
+            context: 数据上下文
+        
+        Returns:
+            (所有匹配的 subgraph_ids, 详细匹配结果)
+        """
+        # 1. 展开概念词
+        keywords = self._expand_concept_to_keywords(concept)
+        
+        # 2. 多关键词匹配
+        match_results = self._match_subgraphs_by_keywords(keywords, context)
+        
+        # 3. 合并所有匹配的 subgraph_ids（去重）
+        all_subgraph_ids = []
+        seen = set()
+        for kw, ids in match_results.items():
+            for sg_id in ids:
+                if sg_id not in seen:
+                    seen.add(sg_id)
+                    all_subgraph_ids.append(sg_id)
+        
+        logger.info(f"✅ 概念词 '{concept}' 匹配到 {len(all_subgraph_ids)} 个子图（去重后）")
+        
+        return all_subgraph_ids, match_results
+    
+    def _format_match_summary(
+        self,
+        original_keyword: str,
+        match_results: Dict[str, list[str]]
+    ) -> str:
+        """
+        格式化匹配摘要
+        
+        Args:
+            original_keyword: 原始关键词（可能是概念词）
+            match_results: 匹配结果 {keyword: [subgraph_ids]}
+        
+        Returns:
+            格式化的摘要字符串
+        """
+        total_count = sum(len(ids) for ids in match_results.values())
+        
+        # 如果是概念词（多个关键词）
+        if len(match_results) > 1:
+            details = []
+            for kw, ids in match_results.items():
+                if len(ids) == 0:
+                    details.append(f"{kw}: 0个（未找到）")
+                else:
+                    details.append(f"{kw}: {len(ids)}个")
+            
+            return f"{original_keyword} {total_count} 个零件（{', '.join(details)}）"
+        
+        # 如果是普通关键词（单个）
+        else:
+            return f"{total_count} 个零件"
 
 
 class ActionHandlerFactory:
@@ -210,6 +365,8 @@ class ActionHandlerFactory:
         from .price_calculation_handler import PriceCalculationHandler
         from .query_details_handler import QueryDetailsHandler
         from .general_chat_handler import GeneralChatHandler
+        from .weight_price_calculation_handler import WeightPriceCalculationHandler
+        from .weight_price_query_handler import WeightPriceQueryHandler
         
         # 注册所有 Handler
         cls.register_handler(IntentType.DATA_MODIFICATION, DataModificationHandler())
@@ -217,5 +374,7 @@ class ActionHandlerFactory:
         cls.register_handler(IntentType.PRICE_CALCULATION, PriceCalculationHandler())
         cls.register_handler(IntentType.QUERY_DETAILS, QueryDetailsHandler())
         cls.register_handler(IntentType.GENERAL_CHAT, GeneralChatHandler())
+        cls.register_handler(IntentType.WEIGHT_PRICE_CALCULATION, WeightPriceCalculationHandler())
+        cls.register_handler(IntentType.WEIGHT_PRICE_QUERY, WeightPriceQueryHandler())
         
         logger.info(f"✅ 所有 Handler 已注册，共 {len(cls._handlers)} 个")

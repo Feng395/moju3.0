@@ -11,6 +11,10 @@
 4. 更新 subgraphs 表的 total_cost 和 processing_cost_total 字段
 5. 生成并更新工艺描述（process_description）
 6. 累加所有 subgraph 的 total_cost，更新 jobs 表的 total_cost 字段
+
+执行顺序：
+阶段 7: 数据清理和校验 (judgment.py) ← 先执行
+阶段 8: 最终总价计算 (本脚本) ← 后执行
 """
 from typing import List, Dict, Any
 from decimal import Decimal, InvalidOperation
@@ -24,7 +28,7 @@ logger = logging.getLogger(__name__)
 # MCP 工具元数据
 MCP_TOOL_META = {
     "name": "calculate_final_total_cost",
-    "description": "计算最终总价和加工成本总计：汇总所有成本项，更新 subgraphs 表和 jobs 表",
+    "description": "计算最终总价和加工成本总计：汇总所有成本项，更新 subgraphs 表和 jobs 表（在 judgment_cleanup 之后执行）",
     "inputSchema": {
         "type": "object",
         "properties": {
@@ -46,7 +50,7 @@ MCP_TOOL_META = {
     },
     "handler": "calculate",
     "needs": ["subgraphs_cost"],
-    "depends_on": ["search_subgraphs_cost_by_job_id"]
+    "depends_on": ["search_subgraphs_cost_by_job_id", "judgment_cleanup"]  # 依赖 judgment_cleanup
 }
 
 

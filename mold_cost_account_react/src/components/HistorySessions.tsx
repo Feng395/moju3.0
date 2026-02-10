@@ -71,6 +71,22 @@ const HistorySessions: React.FC = () => {
   const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null) // 点击防抖计时器
   const switchingJobIdRef = useRef<string | null>(null) // 记录正在切换的jobId，防止重复切换
 
+  // 获取用户角色
+  const getUserRole = (): string => {
+    try {
+      const userInfoStr = localStorage.getItem('userInfo')
+      if (userInfoStr) {
+        const userInfo = JSON.parse(userInfoStr)
+        return userInfo.role || ''
+      }
+    } catch (error) {
+      console.error('获取用户角色失败:', error)
+    }
+    return ''
+  }
+
+  const isAdmin = getUserRole() === 'admin'
+
   // 加载所有会话
   const loadAllSessions = useCallback(async (forceReload = false) => {
     // 防止重复初始化
@@ -773,16 +789,18 @@ const HistorySessions: React.FC = () => {
                         icon: <EditOutlined />,
                         onClick: () => handleRenameSession(session.session_id, sessionTitle),
                       },
-                      {
-                        type: 'divider' as const,
-                      },
-                      {
-                        key: 'delete',
-                        label: '删除',
-                        icon: <DeleteOutlined />,
-                        danger: true,
-                        onClick: () => handleDeleteSession(session.session_id, sessionTitle),
-                      },
+                      ...(isAdmin ? [
+                        {
+                          type: 'divider' as const,
+                        },
+                        {
+                          key: 'delete',
+                          label: '删除',
+                          icon: <DeleteOutlined />,
+                          danger: true,
+                          onClick: () => handleDeleteSession(session.session_id, sessionTitle),
+                        },
+                      ] : []),
                     ]
 
                     return (
@@ -831,40 +849,42 @@ const HistorySessions: React.FC = () => {
                             flexShrink: 0,
                           }}
                         >
-                          <div
-                            className="session-checkbox"
-                            style={{
-                              width: 20,
-                              height: 20,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s',
-                              opacity: selectionMode ? 1 : 0,
-                            }}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              if (!selectionMode) {
-                                setSelectionMode(true)
-                              }
-                              handleToggleSelection(session.session_id)
-                            }}
-                          >
-                            {selectedSessions.has(session.session_id) ? (
-                              <CheckCircleFilled style={{ fontSize: 20, color: token.colorPrimary }} />
-                            ) : (
-                              <div
-                                style={{
-                                  width: 20,
-                                  height: 20,
-                                  borderRadius: '50%',
-                                  border: `2px solid ${token.colorBorder}`,
+                          {isAdmin && (
+                            <div
+                              className="session-checkbox"
+                              style={{
+                                width: 20,
+                                height: 20,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                opacity: selectionMode ? 1 : 0,
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                if (!selectionMode) {
+                                  setSelectionMode(true)
+                                }
+                                handleToggleSelection(session.session_id)
+                              }}
+                            >
+                              {selectedSessions.has(session.session_id) ? (
+                                <CheckCircleFilled style={{ fontSize: 20, color: token.colorPrimary }} />
+                              ) : (
+                                <div
+                                  style={{
+                                    width: 20,
+                                    height: 20,
+                                    borderRadius: '50%',
+                                    border: `2px solid ${token.colorBorder}`,
                                   background: 'transparent',
                                 }}
                               />
                             )}
-                          </div>
+                            </div>
+                          )}
                         </div>
                         
                         {/* 子项内容 - 独立在右边，左侧与搜索框对齐 */}
@@ -961,7 +981,7 @@ const HistorySessions: React.FC = () => {
       </div>
 
       {/* 底部悬浮操作栏 - 选择模式时显示，在右侧内容区域居中 */}
-      {selectionMode && (
+      {isAdmin && selectionMode && (
         <div
           style={{
             position: 'absolute',

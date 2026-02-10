@@ -174,14 +174,14 @@ export const updatePriceItem = async (itemId: string, params: UpdatePriceItemPar
   return apiClient.put(`/api/price-items/${itemId}`, params)
 }
 
-// 5. 删除价格项
+// 5. 软删除价格项（单个）
 export const deletePriceItem = async (itemId: string): Promise<ApiResponse> => {
-  return apiClient.delete(`/api/price-items/${itemId}`)
+  return apiClient.put(`/api/price-items/${itemId}/soft-delete`)
 }
 
-// 6. 批量删除价格项
+// 6. 批量软删除价格项
 export const batchDeletePriceItems = async (ids: string[]): Promise<ApiResponse<{ deleted_count: number }>> => {
-  return apiClient.post('/api/price-items/batch-delete', { ids })
+  return apiClient.post('/api/price-items/batch-soft-delete', { ids })
 }
 
 // 7. 根据版本和类别获取价格项

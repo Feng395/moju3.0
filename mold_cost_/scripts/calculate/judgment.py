@@ -1,14 +1,18 @@
 """
-数据清理和校验脚本
+数据清理和校验脚本（阶段 7）
 负责人：李志鹏
 
 功能说明：
-在 price_total.py 执行前（步骤7）运行，根据物料的实际情况清理不应该存在的计算数据
+在所有成本计算完成后、price_total.py 执行前运行，根据物料的实际情况清理不应该存在的计算数据
 
 判断逻辑：
 1. has_material_preparation 不为空 -> 清空所有成本相关字段（该物料是备料）
 2. metadata 为空或 total_length 为 0 -> 清空线割相关字段和计算步骤
 3. nc_time_cost 为空或相关值为 0 -> 清空对应NC字段和计算步骤
+
+执行顺序：
+阶段 7: 数据清理和校验 (本脚本) ← 先执行
+阶段 8: 最终总价计算 (price_total.py) ← 后执行
 """
 from typing import List, Dict, Any
 import logging
@@ -22,7 +26,7 @@ logger = logging.getLogger(__name__)
 # MCP 工具元数据
 MCP_TOOL_META = {
     "name": "judgment_cleanup",
-    "description": "数据清理和校验：根据物料实际情况清理不应该存在的计算数据",
+    "description": "数据清理和校验：根据物料实际情况清理不应该存在的计算数据（在 price_total 之前执行）",
     "inputSchema": {
         "type": "object",
         "properties": {
@@ -43,7 +47,8 @@ MCP_TOOL_META = {
         "required": ["search_data"]
     },
     "handler": "calculate",
-    "needs": ["base_itemcode"]
+    "needs": ["base_itemcode"],
+    "depends_on": []  # 在所有成本计算完成后执行，但在 price_total 之前
 }
 
 

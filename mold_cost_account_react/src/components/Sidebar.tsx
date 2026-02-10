@@ -76,6 +76,22 @@ const Sidebar: React.FC = () => {
   const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null) // 点击防抖计时器
   const switchingJobIdRef = useRef<string | null>(null) // 记录正在切换的jobId，防止重复切换
 
+  // 获取用户角色
+  const getUserRole = (): string => {
+    try {
+      const userInfoStr = localStorage.getItem('userInfo')
+      if (userInfoStr) {
+        const userInfo = JSON.parse(userInfoStr)
+        return userInfo.role || ''
+      }
+    } catch (error) {
+      console.error('获取用户角色失败:', error)
+    }
+    return ''
+  }
+
+  const isAdmin = getUserRole() === 'admin'
+
   // // 监控 sessions 变化
   // useEffect(() => {
   //   console.log('📊 Sidebar - sessions 已更新:', sessions.length, sessions)
@@ -577,16 +593,18 @@ const Sidebar: React.FC = () => {
                         icon: <EditOutlined />,
                         onClick: () => handleRenameSession(session.session_id, sessionTitle),
                       },
-                      {
-                        type: 'divider' as const,
-                      },
-                      {
-                        key: 'delete',
-                        label: '删除',
-                        icon: <DeleteOutlined />,
-                        danger: true,
-                        onClick: () => handleDeleteSession(session.session_id, sessionTitle),
-                      },
+                      ...(isAdmin ? [
+                        {
+                          type: 'divider' as const,
+                        },
+                        {
+                          key: 'delete',
+                          label: '删除',
+                          icon: <DeleteOutlined />,
+                          danger: true,
+                          onClick: () => handleDeleteSession(session.session_id, sessionTitle),
+                        },
+                      ] : []),
                     ]
 
                     return (
@@ -676,6 +694,28 @@ const Sidebar: React.FC = () => {
                               if (websocketService.isConnected()) {
                                 console.log('🔌 切换会话，断开当前 WebSocket 连接')
                                 websocketService.disconnect()
+                              }
+                              
+                              // 先将会话信息添加到 jobs 数组，确保标题能立即显示
+                              const { addJob, updateJob, jobs } = useAppStore.getState()
+                              const existingJob = jobs.find(j => j.id === session.job_id)
+                              
+                              if (!existingJob) {
+                                // 如果 job 不存在，创建一个临时 job
+                                addJob({
+                                  id: session.job_id,
+                                  title: session.name || session.job_id,
+                                  status: 'processing',
+                                  stage: 'loading',
+                                  progress: 0,
+                                  createdAt: new Date(session.created_at),
+                                  updatedAt: new Date(session.updated_at),
+                                })
+                              } else if (existingJob.title !== session.name) {
+                                // 如果 job 存在但标题不同，更新标题
+                                updateJob(session.job_id, {
+                                  title: session.name || session.job_id,
+                                })
                               }
                               
                               // 切换到新会话
