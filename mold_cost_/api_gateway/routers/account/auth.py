@@ -52,6 +52,10 @@ async def login(login_request: LoginRequest, request: Request):
         "password": "admin123"
     }
     ```
+    
+    **注意**: 
+    - 无论成功或失败，都返回200状态码
+    - 通过 success 字段判断是否成功
     """
     client_ip = get_client_ip(request)
     
@@ -80,10 +84,11 @@ async def login(login_request: LoginRequest, request: Request):
         )
     else:
         logger.warning(f"用户 {login_request.username} 登录失败: {message}，IP: {client_ip}")
+        # 注意：登录失败也返回200状态码，通过success字段判断
         return LoginResponse(success=False, message=message)
 
 
-@router.post("/api/verify-token", response_model=VerifyTokenResponse, tags=["认证"])
+@router.post("/api/verify-token", response_model=VerifyTokenResponse, tags=["认证"], status_code=200)
 async def verify_token_endpoint(verify_request: VerifyTokenRequest):
     """
     验证JWT令牌
@@ -95,6 +100,11 @@ async def verify_token_endpoint(verify_request: VerifyTokenRequest):
     - success: 是否有效
     - message: 消息
     - payload: 令牌载荷（有效时返回）
+    
+    **状态码**:
+    - 200: token有效
+    - 401: token无效或已过期
+    - 400: 缺少token参数
     
     **示例**:
     ```json
@@ -112,13 +122,18 @@ async def verify_token_endpoint(verify_request: VerifyTokenRequest):
             payload=payload
         )
     else:
-        return VerifyTokenResponse(
-            success=False,
-            message="token无效或已过期"
+        # token无效时返回401状态码
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=401,
+            content={
+                "success": False,
+                "message": "token无效或已过期"
+            }
         )
 
 
-@router.post("/api/change-password", response_model=ChangePasswordResponse, tags=["认证"])
+@router.post("/api/change-password", tags=["认证"])
 async def change_password(
     change_request: ChangePasswordRequest,
     current_user: dict = Depends(get_current_user)
@@ -136,6 +151,12 @@ async def change_password(
     - success: 是否成功
     - message: 消息
     
+    **状态码**:
+    - 200: 修改成功
+    - 400: 参数错误或新密码与旧密码相同
+    - 401: token无效
+    - 404: 用户不存在
+    
     **示例**:
     ```json
     {
@@ -147,17 +168,38 @@ async def change_password(
     username = current_user.get("username")
     
     if not user_id:
-        raise HTTPException(status_code=401, detail="token中缺少用户信息")
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=401,
+            content={
+                "success": False,
+                "message": "token中缺少用户信息"
+            }
+        )
     
     # 修改密码
     success, message = await auth_service.change_password(user_id, change_request.new_password)
     
     if success:
         logger.info(f"用户 {username} (ID: {user_id}) 修改密码成功")
-        return ChangePasswordResponse(success=True, message=message)
+        return {"success": True, "message": message}
     else:
-        status_code = 404 if "不存在" in message else 400
-        raise HTTPException(status_code=status_code, detail=message)
+        # 根据错误消息返回不同的状态码
+        from fastapi.responses import JSONResponse
+        if "不存在" in message:
+            status_code = 404
+        elif "相同" in message:
+            status_code = 400
+        else:
+            status_code = 400
+        
+        return JSONResponse(
+            status_code=status_code,
+            content={
+                "success": False,
+                "message": message
+            }
+        )
 
 
 @router.options("/api/login")
