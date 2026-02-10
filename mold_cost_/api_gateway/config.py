@@ -83,23 +83,26 @@ class Settings(BaseSettings):
         return [ext.strip() for ext in self.ALLOWED_FILE_EXTENSIONS.split(",")]
     
     # 外部NC Agent配置
-    NC_AGENT_URL: str = "http://nc-agent:8001"
-    NC_AGENT_TIMEOUT: int = 60
+    NC_AGENT_URL: str = "http://192.168.0.65:8001"
+    NC_AGENT_TIMEOUT: int = 86400  # 24小时超时
     
-    # 日志配置
-    LOG_LEVEL: str = "INFO"
-    LOG_FORMAT: str = "json"
-    
-    # 外部NC Agent配置
-    NC_AGENT_URL: str = "http://nc-agent:8001"
-    NC_AGENT_TIMEOUT: int = 60
+    # 外部API配置
+    FEATURE_REPROCESS_API_URL: str = "http://192.168.1.51:8300/api/features/reprocess"
+    PRICING_RECALCULATE_API_URL: str = "http://192.168.1.51:8300/api/pricing/recalculate"
+    WEIGHT_PRICE_API_URL: str = "http://192.168.0.20:8201/api/price_wg"
+    API_TIMEOUT: int = 60  # 外部API超时，默认60秒
     
     # MCP服务配置（可选，第一期不使用）
     CAD_PARSER_MCP_URL: str = "http://localhost:8101"
+    CAD_PRICE_SEARCH_MCP_URL: str = "http://localhost:8200"
     FEATURE_RECOGNITION_MCP_URL: str = "http://localhost:8102"
     NC_CONNECTOR_MCP_URL: str = "http://localhost:8103"
     PRICING_SERVER_MCP_URL: str = "http://localhost:8105"
     REPORT_GENERATOR_MCP_URL: str = "http://localhost:8107"
+    
+    # 日志配置
+    LOG_LEVEL: str = "INFO"
+    LOG_FORMAT: str = "json"
     
     # 日志配置
     LOG_LEVEL: str = "INFO"
@@ -119,7 +122,9 @@ class Settings(BaseSettings):
     CHAT_SESSION_TIMEOUT: int = 3600  # 会话超时时间（秒）
     
     class Config:
+        # 支持多个环境文件，优先级从高到低
         env_file = ".env"
+        env_file_encoding = "utf-8"
         case_sensitive = True
         extra = "allow"  # 允许额外的字段
 

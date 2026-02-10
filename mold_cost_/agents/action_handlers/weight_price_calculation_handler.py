@@ -29,7 +29,11 @@ class WeightPriceCalculationHandler(BaseActionHandler):
     def __init__(self):
         """初始化 Handler"""
         super().__init__()
+        import os
+        from api_gateway.config import settings
+        self.weight_price_api_url = os.getenv("WEIGHT_PRICE_API_URL", settings.WEIGHT_PRICE_API_URL)
         logger.info("✅ WeightPriceCalculationHandler 初始化完成")
+        logger.info(f"   按重量计算API: {self.weight_price_api_url}")
     
     async def handle(
         self,
@@ -104,7 +108,7 @@ class WeightPriceCalculationHandler(BaseActionHandler):
             # 3. 保存 pending_action 到 Redis
             await self._save_pending_action(job_id, {
                 "action_type": "WEIGHT_PRICE_CALCULATION",
-                "api_url": "http://192.168.0.20:8201/api/price_wg",
+                "api_url": self.weight_price_api_url,
                 "api_params": api_params,
                 "subgraph_ids": subgraph_ids
             })

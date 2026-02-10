@@ -42,7 +42,8 @@ class ProgressPublisher:
         Args:
             redis_url: Redis连接URL，如果不提供则从环境变量读取
         """
-        self.redis_url = redis_url or os.getenv("REDIS_URL", "redis://192.168.0.41:6379/0")
+        from api_gateway.config import settings
+        self.redis_url = redis_url or os.getenv("REDIS_URL", settings.REDIS_URL)
         self.redis_client = None
         self._connect()
     

@@ -1,7 +1,7 @@
 // 环境配置
 export const config = {
   // API基础URL
-  API_BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://192.168.0.41:8211',
+  API_BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
   
   // API前缀
   API_PREFIX: import.meta.env.VITE_API_PREFIX || '/api/v1',
@@ -10,10 +10,10 @@ export const config = {
   AUTH_BASE_URL: import.meta.env.VITE_AUTH_BASE_URL || 'http://localhost:8000',
   
   // WebSocket基础URL
-  WS_BASE_URL: import.meta.env.VITE_WS_BASE_URL || import.meta.env.VITE_API_BASE_URL || 'http://192.168.0.41:8211',
+  WS_BASE_URL: import.meta.env.VITE_WS_BASE_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
   
   // Continue接口专用URL（核算服务）
-  CONTINUE_API_BASE_URL: import.meta.env.VITE_CONTINUE_API_BASE_URL || 'http://192.168.1.51:8300',
+  CONTINUE_API_BASE_URL: import.meta.env.VITE_CONTINUE_API_BASE_URL || 'http://localhost:8000',
   
   // 完整的API地址
   get API_URL() {

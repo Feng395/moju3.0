@@ -41,9 +41,11 @@ class NCTimeAgent(BaseAgent):
     
     def __init__(self, nc_agent_url: str = None, progress_publisher=None):
         super().__init__("NCTimeAgent")
-        # 从环境变量读取配置，如果没有则使用默认值
-        self.nc_agent_url = nc_agent_url or os.getenv("NC_AGENT_URL", "http://192.168.0.65:8001")
-        self.timeout = int(os.getenv("NC_AGENT_TIMEOUT", "86400"))  # 默认24小时超时
+        # 从环境变量或配置文件读取配置
+        import os
+        from api_gateway.config import settings
+        self.nc_agent_url = nc_agent_url or os.getenv("NC_AGENT_URL", settings.NC_AGENT_URL)
+        self.timeout = int(os.getenv("NC_AGENT_TIMEOUT", str(settings.NC_AGENT_TIMEOUT)))
         self.progress_publisher = progress_publisher
         self.logger.info(f"[NCTimeAgent] 初始化完成: url={self.nc_agent_url}, timeout={self.timeout}秒")
     

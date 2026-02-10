@@ -70,8 +70,9 @@ class OrchestratorWorker:
             
             # 创建并注册各个 Agent
             try:
-                # 从环境变量读取统一的 MCP 服务地址
-                mcp_url = os.getenv("CAD_PRICE_SEARCH_MCP_URL", "http://localhost:8200")
+                # 从环境变量或配置文件读取统一的 MCP 服务地址
+                from api_gateway.config import settings
+                mcp_url = os.getenv("CAD_PRICE_SEARCH_MCP_URL", settings.CAD_PRICE_SEARCH_MCP_URL)
                 
                 logger.info(f"正在创建 MCP 客户端...")
                 logger.info(f"  CAD & Price Search MCP: {mcp_url}")

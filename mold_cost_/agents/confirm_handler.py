@@ -29,10 +29,17 @@ class ConfirmHandler:
     def __init__(self):
         """初始化 ConfirmHandler"""
         import os
+        from api_gateway.config import settings
         self._redis_client = None
         self._review_repo = None
-        self.api_timeout = float(os.getenv("API_TIMEOUT", "60"))  # 外部API超时，默认60秒
+        self.api_timeout = float(os.getenv("API_TIMEOUT", str(settings.API_TIMEOUT)))
+        self.feature_api_url = os.getenv("FEATURE_REPROCESS_API_URL", settings.FEATURE_REPROCESS_API_URL)
+        self.pricing_api_url = os.getenv("PRICING_RECALCULATE_API_URL", settings.PRICING_RECALCULATE_API_URL)
+        self.weight_price_api_url = os.getenv("WEIGHT_PRICE_API_URL", settings.WEIGHT_PRICE_API_URL)
         logger.info("✅ ConfirmHandler 初始化完成")
+        logger.info(f"   特征识别API: {self.feature_api_url}")
+        logger.info(f"   价格计算API: {self.pricing_api_url}")
+        logger.info(f"   按重量计算API: {self.weight_price_api_url}")
     
     @property
     def redis_client(self):
@@ -242,7 +249,7 @@ class ConfirmHandler:
                 }
             
             # 调用特征识别 API
-            api_url = "http://192.168.1.51:8300/api/features/reprocess"
+            api_url = self.feature_api_url
             
             logger.info(f"📤 调用特征识别 API: {api_url}")
             logger.info(f"📋 请求参数: {api_params}")
@@ -370,7 +377,7 @@ class ConfirmHandler:
                 }
             
             # 调用价格计算 API
-            api_url = "http://192.168.1.51:8300/api/pricing/recalculate"
+            api_url = self.pricing_api_url
             
             logger.info(f"📤 调用价格计算 API: {api_url}")
             logger.info(f"📋 请求参数: {api_params}")
@@ -495,7 +502,7 @@ class ConfirmHandler:
         try:
             # 获取 API 参数和 URL
             api_params = pending_action.get("api_params")
-            api_url = pending_action.get("api_url", "http://192.168.0.20:8201/api/price_wg")
+            api_url = pending_action.get("api_url", self.weight_price_api_url)
             
             if not api_params:
                 return {
