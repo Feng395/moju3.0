@@ -167,6 +167,10 @@ app.include_router(features.router)  # 特征识别路由
 app.include_router(pricing.router)   # 价格计算路由
 app.include_router(reports.router)   # 报表导出路由
 
+# 🆕 账户系统路由（从 mold_cost_account 迁移）
+from .routers.account import auth
+app.include_router(auth.router, tags=["认证"])
+
 
 @app.get("/")
 async def root():
@@ -185,6 +189,12 @@ async def root():
             "chat": "/api/chat",
             "files": "/api/files",
             "websocket": "/ws/{job_id}",
+            # 账户系统端点
+            "auth": {
+                "login": "/api/login",
+                "verify_token": "/api/verify-token",
+                "change_password": "/api/change-password"
+            },
             "docs": "/docs",
             "health": "/health"
         }
