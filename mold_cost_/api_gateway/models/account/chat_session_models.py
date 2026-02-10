@@ -1,4 +1,4 @@
- """聊天会话相关的Pydantic模型"""
+"""聊天会话相关的Pydantic模型"""
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime

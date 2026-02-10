@@ -168,8 +168,9 @@ app.include_router(pricing.router)   # 价格计算路由
 app.include_router(reports.router)   # 报表导出路由
 
 # 🆕 账户系统路由（从 mold_cost_account 迁移）
-from .routers.account import auth
+from .routers.account import auth, process_rules
 app.include_router(auth.router, tags=["认证"])
+app.include_router(process_rules.router, prefix="/api/process-rules", tags=["工艺规则"])
 
 
 @app.get("/")
@@ -195,6 +196,7 @@ async def root():
                 "verify_token": "/api/verify-token",
                 "change_password": "/api/change-password"
             },
+            "process_rules": "/api/process-rules",
             "docs": "/docs",
             "health": "/health"
         }

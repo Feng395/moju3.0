@@ -1,2 +1,4 @@
 """账户系统路由包"""
-# 路由将在后续阶段逐步添加
+from . import auth, process_rules
+
+__all__ = ['auth', 'process_rules']
