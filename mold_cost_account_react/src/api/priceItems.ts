@@ -1,7 +1,9 @@
 import axios from 'axios'
 import { getValidToken } from '../utils/auth'
+import { config } from '../config/env'
 
-const API_BASE_URL = 'http://192.168.0.14:8000'
+// 使用配置文件中的认证服务地址
+const API_BASE_URL = config.AUTH_BASE_URL
 
 // 创建axios实例
 const apiClient = axios.create({

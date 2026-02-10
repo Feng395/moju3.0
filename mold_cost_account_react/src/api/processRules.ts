@@ -1,7 +1,9 @@
 import axios from 'axios'
 import { getValidToken } from '../utils/auth'
+import { config } from '../config/env'
 
-const API_BASE_URL = 'http://192.168.0.14:8000'
+// 使用配置文件中的认证服务地址
+const API_BASE_URL = config.AUTH_BASE_URL
 
 // 创建axios实例
 const apiClient = axios.create({
@@ -61,18 +63,18 @@ export const FeatureTypeLabels: Record<FeatureType, string> = {
 // 辅助函数：获取特征类型显示名称（容错处理）
 export const getFeatureTypeLabel = (type: string | FeatureType | undefined | null): string => {
   if (!type) return '未知'
-  
+
   // 尝试直接匹配
   if (type in FeatureTypeLabels) {
     return FeatureTypeLabels[type as FeatureType]
   }
-  
+
   // 尝试转换为大写后匹配
   const upperType = String(type).toUpperCase()
   if (upperType in FeatureTypeLabels) {
     return FeatureTypeLabels[upperType as FeatureType]
   }
-  
+
   // 如果都不匹配，返回原值或未知
   return String(type) || '未知'
 }
