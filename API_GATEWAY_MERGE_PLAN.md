@@ -109,7 +109,7 @@ api_gateway/
 ---
 
 #### 3. `database.py` ⭐ mold_cost-main 独有
-**合并策略：** 
+**合并策略：**  TODO
 - 检查是否与 shared/database.py 重复
 - 如果重复，不复制
 - 如果有独特功能，需要合并
@@ -236,7 +236,7 @@ api_gateway/
 - [x] `reports.py` - 复制并添加头信息 ✅ 2026-02-10
 
 #### 3.2 对比合并共同文件
-- [ ] `__init__.py` - 合并导出
+- [x] `__init__.py` - 合并导出 ✅ 2026-02-10
 - [ ] `jobs.py` - 对比合并
 - [ ] `phase2.py` - 对比合并
 - [ ] `recalculations.py` - 对比合并
@@ -251,8 +251,8 @@ api_gateway/
 ### 阶段 4：utils/ 目录合并
 
 #### 4.1 对比合并共同文件
-- [ ] `__init__.py` - 合并导出
-- [ ] `minio_client.py` - 对比合并
+- [x] `__init__.py` - 合并导出 ✅ 2026-02-10
+- [x] `minio_client.py` - 对比合并 ✅ 2026-02-10
 
 #### 4.2 保留 mold_cost_ 独有工具（添加头信息）
 - [ ] `chat_logger.py`

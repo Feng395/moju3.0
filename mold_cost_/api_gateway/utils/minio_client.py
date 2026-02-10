@@ -1,6 +1,16 @@
 """
 MinIO客户端工具类
 处理文件上传、下载、删除等操作
+
+合并信息：
+- 合并日期：2026-02-10
+- 源文件：mold_cost_/api_gateway/utils/minio_client.py + mold_cost-main/api_gateway/utils/minio_client.py
+- 合并策略：使用 mold_cost_ 为基础，补充 mold_cost-main 的便捷函数
+- 主要功能：
+  1. 文件上传、下载、删除
+  2. 预签名URL生成
+  3. 支持外部访问地址配置
+  4. 提供便捷函数供其他模块使用
 """
 import uuid
 from datetime import datetime, timedelta
@@ -191,3 +201,78 @@ class MinIOClient:
 
 # 全局MinIO客户端实例
 minio_client = MinIOClient()
+
+
+
+# 🆕 补充便捷函数（来自 mold_cost-main）
+def upload_file_to_minio(bucket_name: str, object_name: str, file_data, content_type: str = None) -> bool:
+    """
+    上传文件到MinIO（便捷函数）
+    
+    Args:
+        bucket_name: 存储桶名称
+        object_name: 对象名称（文件路径）
+        file_data: 文件数据（可以是BytesIO或bytes）
+        content_type: 内容类型
+        
+    Returns:
+        是否成功
+    """
+    import io
+    
+    try:
+        # 确保bucket存在
+        if not minio_client.client.bucket_exists(bucket_name):
+            minio_client.client.make_bucket(bucket_name)
+        
+        # 处理不同类型的文件数据
+        if isinstance(file_data, bytes):
+            file_stream = io.BytesIO(file_data)
+            file_size = len(file_data)
+        elif hasattr(file_data, 'read'):
+            # BytesIO或文件对象
+            file_data.seek(0)
+            file_content = file_data.read()
+            file_stream = io.BytesIO(file_content)
+            file_size = len(file_content)
+        else:
+            raise ValueError("file_data必须是bytes或文件对象")
+        
+        minio_client.client.put_object(
+            bucket_name,
+            object_name,
+            file_stream,
+            length=file_size,
+            content_type=content_type
+        )
+        
+        logger.info(f"✅ 文件已上传到MinIO: {bucket_name}/{object_name} ({file_size} bytes)")
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ 上传文件到MinIO失败: {e}")
+        return False
+
+
+def get_file_url(bucket_name: str, object_name: str, expires: int = 3600) -> Optional[str]:
+    """
+    获取文件的预签名URL（便捷函数）
+    
+    Args:
+        bucket_name: 存储桶名称
+        object_name: 对象名称（文件路径）
+        expires: 过期时间（秒）
+        
+    Returns:
+        预签名URL
+    """
+    try:
+        url = minio_client.presigned_client.presigned_get_object(
+            bucket_name,
+            object_name,
+            expires=timedelta(seconds=expires)
+        )
+        return url
+    except Exception as e:
+        logger.error(f"❌ 获取文件URL失败: {e}")
+        return None
