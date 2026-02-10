@@ -2,6 +2,15 @@
 WebSocket 消息格式化器
 负责人：系统架构组
 
+合并信息：
+- 合并日期：2026-02-10
+- 源文件：mold_cost_/api_gateway/utils/message_formatter.py
+- 合并策略：保留原文件（mold_cost-main 无此文件）
+- 主要功能：
+  1. 将 WebSocket 消息转换为人类可读的富文本
+  2. 构建 metadata 结构
+  3. 支持多种消息类型的格式化
+
 职责：
 1. 将 WebSocket 消息转换为人类可读的富文本
 2. 构建 metadata 结构

@@ -1,6 +1,12 @@
 """
 加密解密工具（预留接口）
 第一期不实现，预留给后续扩展
+
+合并信息：
+- 合并日期：2026-02-10
+- 源文件：mold_cost_/api_gateway/utils/encryption.py
+- 合并策略：保留原文件（mold_cost-main 无此文件）
+- 说明：预留接口，第一期不实现
 """
 import logging
 from typing import BinaryIO, Optional

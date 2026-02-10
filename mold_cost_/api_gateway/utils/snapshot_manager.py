@@ -1,6 +1,15 @@
 """
 快照管理工具
 负责创建和管理价格快照、工艺规则快照
+
+合并信息：
+- 合并日期：2026-02-10
+- 源文件：mold_cost_/api_gateway/utils/snapshot_manager.py
+- 合并策略：保留原文件（mold_cost-main 无此文件）
+- 主要功能：
+  1. 创建价格快照
+  2. 创建工艺规则快照
+  3. 快照版本管理
 """
 import logging
 from typing import Dict, Any

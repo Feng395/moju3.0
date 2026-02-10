@@ -1,6 +1,15 @@
 """
 文件验证工具
 检查文件类型、大小等
+
+合并信息：
+- 合并日期：2026-02-10
+- 源文件：mold_cost_/api_gateway/utils/validators.py
+- 合并策略：保留原文件（mold_cost-main 无此文件）
+- 主要功能：
+  1. 文件扩展名验证
+  2. 文件大小验证
+  3. 文件内容验证
 """
 import logging
 from pathlib import Path

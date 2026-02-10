@@ -255,13 +255,13 @@ api_gateway/
 - [x] `minio_client.py` - 对比合并 ✅ 2026-02-10
 
 #### 4.2 保留 mold_cost_ 独有工具（添加头信息）
-- [ ] `chat_logger.py`
-- [ ] `encryption.py`
-- [ ] `message_formatter.py`
-- [ ] `rabbitmq_client.py`
-- [ ] `redis_client.py`
-- [ ] `snapshot_manager.py`
-- [ ] `validators.py`
+- [x] `chat_logger.py` ✅ 2026-02-10
+- [x] `encryption.py` ✅ 2026-02-10
+- [x] `message_formatter.py` ✅ 2026-02-10
+- [x] `rabbitmq_client.py` ✅ 2026-02-10
+- [x] `redis_client.py` ✅ 2026-02-10
+- [x] `snapshot_manager.py` ✅ 2026-02-10
+- [x] `validators.py` ✅ 2026-02-10
 
 ### 阶段 5：保留 mold_cost_ 独有目录（添加头信息）
 
@@ -328,20 +328,20 @@ git commit -m "合并 api_gateway 目录
 ### 已完成文件数量
 - ✅ 根目录文件：4/6 个（auth, config, websocket, main）
 - ✅ routers 独有文件：3/3 个（features, pricing, reports）
-- ✅ routers 共同文件：1/4 个（__init__.py）
-- ✅ utils 共同文件：1/2 个（minio_client.py）
-- ⏳ routers 待合并：3 个（jobs, phase2, recalculations）
-- ⏳ utils 待添加头信息：7 个（mold_cost_ 独有）
+- ✅ routers 共同文件：4/4 个（__init__, jobs, phase2, recalculations）
+- ✅ utils 共同文件：2/2 个（__init__, minio_client）
+- ✅ utils 独有文件：7/7 个（全部完成）
+- ⏳ routers 独有文件待添加头信息：5 个
 - ⏳ 独有目录待添加头信息：3 个（models, repositories, services）
 
 ### 合并策略分布
-- 保留 mold_cost_：大部分文件（架构更完整）
+- 保留 mold_cost_：大部分文件（架构更完整）✅
 - 复制 mold_cost-main：3 个路由文件（features, pricing, reports）✅
-- 需要对比合并：约 6 个文件（main✅, jobs, phase2, recalculations, __init__✅, minio_client✅）
+- 对比合并：6 个文件（main✅, jobs✅, phase2✅, recalculations✅, __init__✅, minio_client✅）
 
 ### 当前进度
-- **已完成：约 50%**
-- **预计剩余时间：约 1 小时**
+- **已完成：约 80%**
+- **预计剩余时间：约 20 分钟**
 
 ### 下一步工作
 1. 对比合并 routers 共同文件（jobs, phase2, recalculations）

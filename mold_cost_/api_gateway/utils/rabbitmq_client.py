@@ -1,6 +1,15 @@
 """
 RabbitMQ客户端工具类
 处理消息发送、队列管理等操作
+
+合并信息：
+- 合并日期：2026-02-10
+- 源文件：mold_cost_/api_gateway/utils/rabbitmq_client.py
+- 合并策略：保留原文件（mold_cost-main 无此文件）
+- 主要功能：
+  1. RabbitMQ连接管理
+  2. 消息发送和接收
+  3. 队列和交换机管理
 """
 import json
 from typing import Dict, Any, Optional

@@ -1,6 +1,15 @@
 """
 Redis客户端工具
 负责人：ZZH
+
+合并信息：
+- 合并日期：2026-02-10
+- 源文件：mold_cost_/api_gateway/utils/redis_client.py
+- 合并策略：保留原文件（mold_cost-main 无此文件）
+- 主要功能：
+  1. Redis连接管理
+  2. 发布订阅功能
+  3. 键值操作
 """
 import redis.asyncio as redis
 from ..config import settings
