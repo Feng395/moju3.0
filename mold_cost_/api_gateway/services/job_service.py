@@ -1,4 +1,12 @@
 """
+=== 文件合并信息 ===
+合并日期: 2026-02-10
+源文件: mold_cost_/api_gateway/services/job_service.py (独有文件)
+合并策略: 保留 mold_cost_ 版本（mold_cost-main 无此文件）
+主要改动: 无改动，直接保留
+说明: 任务服务，处理任务相关业务逻辑
+=====================
+
 Job Service
 负责任务相关的业务逻辑
 """

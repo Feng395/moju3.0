@@ -468,7 +468,7 @@ async def create_job(
     prt_file: Optional[UploadFile] = File(None),
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
-):
+): # TODO 后续需分析可用性
     """
     创建新任务（标准REST风格）
     

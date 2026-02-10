@@ -1,4 +1,12 @@
 """
+=== 文件合并信息 ===
+合并日期: 2026-02-10
+源文件: mold_cost_/api_gateway/routers/chat_router.py (独有文件)
+合并策略: 保留 mold_cost_ 版本（mold_cost-main 无此文件）
+主要改动: 无改动，直接保留
+说明: SSE 流式聊天路由，支持多轮对话和实时流式输出
+=====================
+
 SSE 流式聊天路由 (Chat Router)
 负责人：人员B2
 

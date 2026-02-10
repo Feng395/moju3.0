@@ -242,11 +242,11 @@ api_gateway/
 - [x] `recalculations.py` - 对比合并，补充实现 ✅ 2026-02-10
 
 #### 3.3 保留 mold_cost_ 独有路由（添加头信息）
-- [ ] `chat_router.py`
-- [ ] `file_router.py`
-- [ ] `interactions.py`
-- [ ] `review_router.py`
-- [ ] `websocket_router.py`
+- [x] `chat_router.py` ✅ 2026-02-10
+- [x] `file_router.py` ✅ 2026-02-10
+- [x] `interactions.py` ✅ 2026-02-10
+- [x] `review_router.py` ✅ 2026-02-10
+- [x] `websocket_router.py` ✅ 2026-02-10
 
 ### 阶段 4：utils/ 目录合并
 
@@ -266,24 +266,24 @@ api_gateway/
 ### 阶段 5：保留 mold_cost_ 独有目录（添加头信息）
 
 #### 5.1 models/
-- [ ] `__init__.py`
-- [ ] `interaction_models.py`
+- [x] `__init__.py` ✅ 2026-02-10
+- [x] `interaction_models.py` ✅ 2026-02-10
 
 #### 5.2 repositories/
-- [ ] `__init__.py`
-- [ ] `audit_repository.py`
-- [ ] `chat_history_repository.py`
-- [ ] `interaction_repository.py`
-- [ ] `job_repository.py`
-- [ ] `process_rules_repository.py`
-- [ ] `review_repository.py`
-- [ ] `snapshot_repository.py`
+- [x] `__init__.py` ✅ 2026-02-10
+- [x] `audit_repository.py` ✅ 2026-02-10
+- [x] `chat_history_repository.py` ✅ 2026-02-10
+- [x] `interaction_repository.py` ✅ 2026-02-10
+- [x] `job_repository.py` ✅ 2026-02-10
+- [x] `process_rules_repository.py` ✅ 2026-02-10
+- [x] `review_repository.py` ✅ 2026-02-10
+- [x] `snapshot_repository.py` ✅ 2026-02-10
 
 #### 5.3 services/
-- [ ] `__init__.py`
-- [ ] `file_service.py`
-- [ ] `interaction_service.py`
-- [ ] `job_service.py`
+- [x] `__init__.py` ✅ 2026-02-10
+- [x] `file_service.py` ✅ 2026-02-10
+- [x] `interaction_service.py` ✅ 2026-02-10
+- [x] `job_service.py` ✅ 2026-02-10
 
 ### 阶段 6：测试验证
 - [ ] 检查导入是否正常
@@ -329,10 +329,12 @@ git commit -m "合并 api_gateway 目录
 - ✅ 根目录文件：4/6 个（auth, config, websocket, main）
 - ✅ routers 独有文件：3/3 个（features, pricing, reports）
 - ✅ routers 共同文件：4/4 个（__init__, jobs, phase2, recalculations）
+- ✅ routers 独有文件（mold_cost_）：5/5 个（chat_router, file_router, interactions, review_router, websocket_router）
 - ✅ utils 共同文件：2/2 个（__init__, minio_client）
 - ✅ utils 独有文件：7/7 个（全部完成）
-- ⏳ routers 独有文件待添加头信息：5 个
-- ⏳ 独有目录待添加头信息：3 个（models, repositories, services）
+- ✅ models/ 目录：2/2 个（__init__, interaction_models）
+- ✅ repositories/ 目录：8/8 个（全部完成）
+- ✅ services/ 目录：4/4 个（全部完成）
 
 ### 合并策略分布
 - 保留 mold_cost_：大部分文件（架构更完整）✅
@@ -340,14 +342,14 @@ git commit -m "合并 api_gateway 目录
 - 对比合并：6 个文件（main✅, jobs✅, phase2✅, recalculations✅, __init__✅, minio_client✅）
 
 ### 当前进度
-- **已完成：约 80%**
-- **预计剩余时间：约 20 分钟**
+- **已完成：100%** ✅
+- **所有文件已添加合并头信息** ✅
 
 ### 下一步工作
-1. 对比合并 routers 共同文件（jobs, phase2, recalculations）
-2. 为 mold_cost_ 独有文件添加合并头信息
-3. 测试验证所有路由
-4. 提交最终版本
+1. ✅ 对比合并 routers 共同文件（jobs, phase2, recalculations）
+2. ✅ 为 mold_cost_ 独有文件添加合并头信息
+3. ⏳ 测试验证所有路由
+4. ⏳ 提交最终版本
 
 ---
 
