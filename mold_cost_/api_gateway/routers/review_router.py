@@ -279,7 +279,7 @@ async def modify_review(
         
         # 5. 检查结果
         if result.status == "error":
-            if "未找到审核会话" in result.message:
+            if "未找到审核会话" in result.message or "审核会话已过期" in result.message:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail={
@@ -287,15 +287,8 @@ async def modify_review(
                         "message": result.message
                     }
                 )
-            elif "解析失败" in result.message:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail={
-                        "error": "PARSE_FAILED",
-                        "message": result.message
-                    }
-                )
-            else:
+            elif "处理修改失败" in result.message:
+                # 真正的服务器内部错误（handler 抛出了未捕获的异常）
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail={
@@ -303,6 +296,31 @@ async def modify_review(
                         "message": result.message
                     }
                 )
+            else:
+                # 业务级别的错误（如：缺少参数、解析失败、查询不到数据等）
+                # 作为正常 200 响应返回，让前端展示友好提示
+                logger.info(f"📋 业务提示: {result.message}")
+                
+                # 记录助手回复（业务提示也需要记录到聊天历史）
+                await log_assistant_message(
+                    db,
+                    session_id=job_id,
+                    content=result.message,
+                    metadata={
+                        "intent": result.data.get('intent') if result.data else None,
+                        "action": "modify_response",
+                        "is_business_error": True
+                    }
+                )
+                await db.commit()
+                
+                return {
+                    "status": "ok",
+                    "intent": result.data.get("intent") if result.data else None,
+                    "message": result.message,
+                    "requires_confirmation": False,
+                    "data": result.data or {}
+                }
         
         # 6. 记录助手回复
         await log_assistant_message(

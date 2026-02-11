@@ -462,16 +462,12 @@ class InteractionAgent(BaseAgent):
                 data={
                     "intent": intent_result.intent_type,
                     "requires_confirmation": action_result.requires_confirmation,
-                    **action_result.data
+                    **(action_result.data or {})
                 }
             )
         
         except Exception as e:
             logger.error(f"❌ 处理修改失败: {e}", exc_info=True)
-            return OpResult(
-                status="error",
-                message=f"处理修改失败: {str(e)}"
-            )
             return OpResult(
                 status="error",
                 message=f"处理修改失败: {str(e)}"
