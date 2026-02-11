@@ -1,37 +1,76 @@
 # 快速开始 - 模具成本核算系统
 
-## ⚡ 一键启动
+## ⚡ 完整启动（两个终端）
 
-### Windows
+### ⚠️ 重要：需要启动两个服务
+
+系统需要在**两个终端窗口**中分别启动：
+
+#### 终端 1: 主服务（API + Worker）
+
+**Windows:**
 ```bash
+cd mold_cost_
 start.bat
 ```
 
-### Linux/macOS
+**Linux/macOS:**
 ```bash
+cd mold_cost_
 ./start.sh
 ```
 
-**这会启动：**
+#### 终端 2: MCP 服务（CAD 解析 + 价格计算）
+
+**Windows:**
+```bash
+cd mold_cost_/mcp_services
+start_mcp.bat
+```
+
+**Linux/macOS:**
+```bash
+cd mold_cost_/mcp_services
+chmod +x start_mcp.sh
+./start_mcp.sh
+```
+
+### 启动说明
+
+**终端 1 启动：**
 - ✅ API Gateway (端口 8000) - HTTP 接口
 - ✅ Orchestrator Worker - 后台任务处理
 
-**不会启动：**
-- ❌ MCP 服务 - 需要单独启动（可选）
+**终端 2 启动：**
+- ✅ MCP 服务 (端口 8200) - CAD 解析、价格计算
+
+**如果只启动终端 1：**
+- ✅ API 接口可用
+- ❌ CAD 解析失败（连接错误）
+- ❌ 价格计算失败（连接错误）
 
 ---
 
 ## 🎯 启动模式详解
 
-### 模式 1: 完整模式（推荐）
+### 模式 1: 完整模式（推荐）⭐
 
+**终端 1:**
 ```bash
 python main.py
+```
+
+**终端 2:**
+```bash
+cd mcp_services
+start_mcp.bat  # Windows
+./start_mcp.sh  # Linux/macOS
 ```
 
 **包含：**
 - ✅ API Gateway - 所有 HTTP 接口
 - ✅ Worker - CAD 解析、价格计算、任务处理
+- ✅ MCP 服务 - 高性能 CAD 和价格处理
 
 **适合：**
 - 完整功能测试
@@ -47,6 +86,7 @@ python main.py --api-only
 **包含：**
 - ✅ API Gateway - 所有 HTTP 接口
 - ❌ Worker - 不处理后台任务
+- ❌ MCP 服务 - 不需要
 
 **适合：**
 - 前端开发
@@ -75,38 +115,59 @@ python main.py --port 8211
 
 ---
 
-## 🔌 MCP 服务（可选）
+## 🔌 MCP 服务（必需）
 
 ### 什么是 MCP？
 
 MCP (Model Context Protocol) 是独立的微服务，提供：
-- CAD 文件解析
+- CAD 文件解析（DWG → DXF）
 - 特征识别
 - 价格搜索和计算
 
-### 是否需要启动？
+### ⚠️ 是否需要启动？
 
-**不是必需的，但推荐启动以获得最佳性能。**
+**是的，必须启动！** 否则会出现连接错误：
 
-| 场景 | 是否需要 MCP | 说明 |
-|------|-------------|------|
-| 前端开发 | ❌ 不需要 | 只需要 API 接口 |
-| 后端开发 | ⚠️ 可选 | Worker 会使用本地脚本 |
-| 完整测试 | ✅ 推荐 | 获得最佳性能 |
-| 生产环境 | ✅ 推荐 | 支持分布式部署 |
+```
+[WinError 10061] 由于目标计算机积极拒绝，无法连接。
+HTTPConnectionPool(host='localhost', port=8200): Max retries exceeded
+```
 
 ### 如何启动 MCP？
 
-**终端 1: 启动主服务**
+**方式 1: 使用启动脚本（推荐）**
+
+**Windows:**
 ```bash
-python main.py
+cd mold_cost_/mcp_services
+start_mcp.bat
 ```
 
-**终端 2: 启动 MCP 服务**
+**Linux/macOS:**
 ```bash
-cd mcp_services/cad_price_search_mcp
+cd mold_cost_/mcp_services
+chmod +x start_mcp.sh
+./start_mcp.sh
+```
+
+**方式 2: 直接启动**
+
+```bash
+cd mold_cost_/mcp_services/cad_price_search_mcp
 python server.py
 ```
+
+### 启动顺序
+
+**推荐顺序：**
+1. 先启动 MCP 服务（终端 2）
+2. 再启动主服务（终端 1）
+
+**也可以反过来：**
+1. 先启动主服务（终端 1）
+2. 再启动 MCP 服务（终端 2）
+
+Worker 会自动重试连接 MCP 服务。
 
 ---
 
@@ -115,7 +176,17 @@ python server.py
 - **API 文档**: http://localhost:8000/docs
 - **健康检查**: http://localhost:8000/health
 - **ReDoc**: http://localhost:8000/redoc
-- **MCP 服务**: http://localhost:8200 (如果启动)
+- **MCP 服务健康检查**: http://localhost:8200/health
+
+### 验证服务启动
+
+```bash
+# 检查主服务
+curl http://localhost:8000/health
+
+# 检查 MCP 服务
+curl http://localhost:8200/health
+```
 
 ---
 
@@ -169,16 +240,38 @@ CAD_PRICE_SEARCH_MCP_URL=http://localhost:8200
 
 ## 🚨 常见问题
 
+### 连接错误：端口 8200 被拒绝
+
+**错误信息：**
+```
+[WinError 10061] 由于目标计算机积极拒绝，无法连接。
+HTTPConnectionPool(host='localhost', port=8200): Max retries exceeded
+```
+
+**原因：** MCP 服务没有启动
+
+**解决：** 在新终端启动 MCP 服务
+```bash
+cd mold_cost_/mcp_services
+start_mcp.bat  # Windows
+./start_mcp.sh  # Linux/macOS
+```
+
 ### 端口被占用
 ```bash
-# 更换端口
+# 更换主服务端口
 python main.py --port 8001
+
+# 更换 MCP 端口（需要同步修改 .env）
+set CAD_PRICE_SEARCH_MCP_PORT=8201  # Windows
+export CAD_PRICE_SEARCH_MCP_PORT=8201  # Linux/macOS
 ```
 
 ### 服务连接失败
 ```bash
 # 检查基础设施服务
 curl http://localhost:8000/health
+curl http://localhost:8200/health
 ```
 
 ### 环境变量未加载
@@ -189,56 +282,61 @@ cat .env
 
 ### Worker 不处理任务
 
-**原因：** 可能没有启动 Worker
+**原因：** 可能没有启动 Worker 或 MCP 服务
 
 **解决：**
 ```bash
 # 确保启动了 Worker
 python main.py  # 默认包含 Worker
 
-# 或检查日志
-# 应该看到 "✅ 进度发布器初始化成功"
+# 确保启动了 MCP 服务
+cd mcp_services
+start_mcp.bat  # Windows
 ```
 
 ---
 
 ## 📊 功能对比
 
-| 功能 | API Only | API + Worker | + MCP |
-|------|----------|--------------|-------|
+| 功能 | API Only | API + Worker | API + Worker + MCP |
+|------|----------|--------------|-------------------|
 | 用户登录 | ✅ | ✅ | ✅ |
 | 文件上传 | ✅ | ✅ | ✅ |
-| CAD 解析 | ❌ | ⚠️ 本地 | ✅ 快速 |
-| 价格计算 | ❌ | ⚠️ 本地 | ✅ 快速 |
-| 任务处理 | ❌ | ✅ | ✅ |
+| CAD 解析 | ❌ | ❌ 连接错误 | ✅ 正常 |
+| 价格计算 | ❌ | ❌ 连接错误 | ✅ 正常 |
+| 任务处理 | ❌ | ⚠️ 部分失败 | ✅ 正常 |
+
+**结论：** 完整功能需要同时启动主服务和 MCP 服务
 
 ---
 
 ## 📚 详细文档
 
-- [架构组件说明](docs/ARCHITECTURE_COMPONENTS.md) - 详细了解各组件
+- [MCP 启动指南](docs/MCP_STARTUP_GUIDE.md) - **解决连接错误的完整指南**
+- [架构组件说明](docs/architecture/ARCHITECTURE_COMPONENTS.md) - 详细了解各组件
 - [统一启动文档](docs/UNIFIED_STARTUP.md) - 完整启动指南
-- [启动流程说明](docs/STARTUP_GUIDE.md) - 传统启动方式
+- [MCP 调用流程](docs/mcp/MCP_CALL_FLOW.md) - MCP 调用机制详解
 - [完整 README](README.md) - 项目概述
 
 ---
 
-## 🎉 就这么简单！
+## 🎉 快速启动总结
 
-**最简单的方式：**
+**最简单的方式（两个终端）：**
+
+**终端 1:**
 ```bash
-# Windows
-start.bat
-
-# Linux/macOS
-./start.sh
+cd mold_cost_
+start.bat  # Windows
+./start.sh  # Linux/macOS
 ```
 
-**一个命令，启动整个系统！**
-
-**如果需要最佳性能，再启动 MCP：**
+**终端 2:**
 ```bash
-cd mcp_services/cad_price_search_mcp
-python server.py
+cd mold_cost_/mcp_services
+start_mcp.bat  # Windows
+./start_mcp.sh  # Linux/macOS
 ```
+
+**两个命令，启动完整系统！** ✅
 

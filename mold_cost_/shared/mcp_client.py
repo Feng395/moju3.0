@@ -61,7 +61,17 @@ class MCPClient:
         )
     
     async def call_tool(self, server_name: str, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
-        """Call MCP tool"""
+        """
+        调用 MCP 工具
+        
+        Args:
+            server_name: 服务器名称（如 "cad_price_search"）
+            tool_name: 工具名称（如 "process_cad_and_features"）
+            arguments: 工具参数
+        
+        Returns:
+            工具执行结果
+        """
         try:
             logger.info(f"Calling MCP tool: {server_name}.{tool_name}")
             logger.debug(f"Arguments: {arguments}")
@@ -77,7 +87,16 @@ class MCPClient:
             }
     
     async def _call_tool_direct(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
-        """Direct tool call with connection pool"""
+        """
+        直接调用工具（使用连接池）
+        
+        流程：
+        1. 构造 HTTP 请求
+        2. 发送 POST 请求
+        3. 处理响应
+        4. 记录性能指标
+        5. 返回结果
+        """
         import time
         start_time = time.time()
         
