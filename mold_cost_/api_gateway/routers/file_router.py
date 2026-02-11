@@ -206,3 +206,69 @@ async def generate_presigned_url(
                 }
             }
         )
+
+
+@router.get("/proxy")
+async def proxy_file(
+    file_path: str,
+    bucket_name: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    文件代理接口 - 通过后端代理访问 MinIO 文件
+    
+    当前端无法直接访问 MinIO（如 MinIO 在内网）时使用此接口。
+    前端请求后端，后端从 MinIO 获取文件并流式返回。
+    
+    Args:
+        file_path: MinIO 中的文件路径
+        bucket_name: Bucket 名称（可选）
+        current_user: 当前用户
+    
+    Returns:
+        文件流响应
+    """
+    from fastapi.responses import StreamingResponse
+    import io
+    
+    try:
+        # 验证文件路径安全性
+        if '..' in file_path or file_path.startswith('/') or '\\' in file_path:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"error": "INVALID_PATH", "message": "文件路径包含非法字符"}
+            )
+        
+        bucket = bucket_name or settings.MINIO_BUCKET_FILES
+        
+        logger.info(f"📥 代理文件请求: {file_path}, bucket={bucket}")
+        
+        # 从 MinIO 获取文件
+        file_data = minio_client.get_file(file_path, bucket=bucket)
+        
+        # 推断 content-type
+        content_type = "application/octet-stream"
+        if file_path.endswith('.dxf'):
+            content_type = "application/dxf"
+        elif file_path.endswith('.dwg'):
+            content_type = "application/acad"
+        elif file_path.endswith('.json'):
+            content_type = "application/json"
+        
+        return StreamingResponse(
+            io.BytesIO(file_data),
+            media_type=content_type,
+            headers={
+                "Content-Disposition": f'inline; filename="{file_path.split("/")[-1]}"',
+                "Access-Control-Allow-Origin": "*"
+            }
+        )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ 代理文件失败: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": "PROXY_FAILED", "message": f"文件代理失败: {str(e)}"}
+        )
