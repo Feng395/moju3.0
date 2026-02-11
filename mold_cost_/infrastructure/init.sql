@@ -846,6 +846,7 @@ CACHE 1
   "additional_cost_total" numeric(12,2) DEFAULT 0,
   "final_cost" numeric(12,2),
   "calculation_steps" jsonb,
+  "weight_price_steps" jsonb,
   "calculated_at" timestamp(6) NOT NULL DEFAULT now(),
   "created_at" timestamp(6) NOT NULL DEFAULT now(),
   "heat_additional_cost" numeric(12,2),
@@ -890,6 +891,7 @@ COMMENT ON COLUMN "public"."processing_cost_calculation_details"."heat_treatment
 COMMENT ON COLUMN "public"."processing_cost_calculation_details"."additional_cost_total" IS '附加费合计';
 COMMENT ON COLUMN "public"."processing_cost_calculation_details"."final_cost" IS '最终费用';
 COMMENT ON COLUMN "public"."processing_cost_calculation_details"."calculation_steps" IS '计算步骤详情(JSON数组)';
+COMMENT ON COLUMN "public"."processing_cost_calculation_details"."weight_price_steps" IS '按重量计算步骤详情(JSON数组)';
 COMMENT ON COLUMN "public"."processing_cost_calculation_details"."calculated_at" IS '计算时间';
 COMMENT ON COLUMN "public"."processing_cost_calculation_details"."created_at" IS '创建时间';
 COMMENT ON COLUMN "public"."processing_cost_calculation_details"."heat_additional_cost" IS '热处理附加费';

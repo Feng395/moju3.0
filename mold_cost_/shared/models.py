@@ -544,6 +544,31 @@ class ProcessingCostCalculationDetail(Base):
     # 时间戳
     calculated_at = Column(TIMESTAMP, nullable=False, default=datetime.utcnow)
     created_at = Column(TIMESTAMP, nullable=False, default=datetime.utcnow)
+    
+    # 水磨相关费用
+    thread_ends_cost = Column(String(255))      # 线头费
+    hanging_table_cost = Column(String(255))     # 挂台费
+    chamfer_cost = Column(String(255))           # 倒角费
+    bevel_cost = Column(String(255))             # 斜面耗时
+    oil_tank_cost = Column(String(255))          # 油槽耗时
+    grinding_cost = Column(String(255))          # 研磨费
+    water_mill_cost = Column(String(255))        # 磨床费
+    high_cost = Column(String(255))              # 高度费
+    plate_cost = Column(String(255))             # 大水磨板费
+    long_strip_cost = Column(String(255))        # 大水磨长条费
+    component_cost = Column(String(255))         # 大水磨零件费
+    
+    # 放电/牙孔费用
+    tooth_hole_cost = Column(String(255))        # 放电牙孔费
+    tooth_hole_time_cost = Column(String(255))   # 放电时间
+    
+    # NC费用明细
+    nc_roughing_cost = Column(String(255))       # nc开粗费用
+    nc_milling_cost = Column(String(255))        # nc精铣费用
+    nc_drilling_cost = Column(String(255))       # nc钻床费用
+    nc_base_roughing_cost = Column(String(255))  # nc开粗基本费用
+    nc_base_milling_cost = Column(String(255))   # nc精铣基本费用
+    nc_base_drilling_cost = Column(String(255))  # nc钻床基本费用
 
 class LoginLog(Base):
     """登录日志?"""""
