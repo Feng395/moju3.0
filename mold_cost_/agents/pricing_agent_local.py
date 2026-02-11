@@ -111,19 +111,43 @@ class PricingAgentLocal:
             
             # ========== 阶段1: 并发搜索所有数据 ==========
             self.logger.info("[阶段1] 并发搜索所有数据")
+            if self.progress_publisher and publish_progress:
+                self.progress_publisher.publish_progress(
+                    job_id=job_id, stage="pricing_progress", progress=77,
+                    message="正在搜索价格数据...",
+                    details={"source": "local_script", "phase": "search"}
+                )
             search_data = await self._concurrent_search(job_id, subgraph_ids)
             
             # ========== 阶段2: 并发计算所有费用 ==========
             self.logger.info("[阶段2] 并发计算所有费用")
+            if self.progress_publisher and publish_progress:
+                self.progress_publisher.publish_progress(
+                    job_id=job_id, stage="pricing_progress", progress=80,
+                    message="正在计算各项费用...",
+                    details={"source": "local_script", "phase": "calculate"}
+                )
             calc_results = await self._concurrent_calculate(search_data, job_id, subgraph_ids)
             
             # ========== 阶段3: 汇总搜索 ==========
             self.logger.info("[阶段3] 汇总搜索")
+            if self.progress_publisher and publish_progress:
+                self.progress_publisher.publish_progress(
+                    job_id=job_id, stage="pricing_progress", progress=83,
+                    message="正在汇总搜索数据...",
+                    details={"source": "local_script", "phase": "total_search"}
+                )
             from scripts.search import total_search
             await total_search.search_by_job_id(job_id, subgraph_ids)
             
             # ========== 阶段4-6: 并发执行（与 MCP 模式一致） ==========
             self.logger.info("[阶段4-6] 并发执行: 线割总价 + 水磨总价 + 成本汇总检索")
+            if self.progress_publisher and publish_progress:
+                self.progress_publisher.publish_progress(
+                    job_id=job_id, stage="pricing_progress", progress=85,
+                    message="正在计算线割/水磨总价...",
+                    details={"source": "local_script", "phase": "wire_watermill"}
+                )
             from scripts.calculate import price_wire_total, price_water_mill_total
             from scripts.search import (
                 base_itemcode_search, total_search as ts, water_mill_search,
@@ -158,6 +182,12 @@ class PricingAgentLocal:
             
             # ========== 阶段7: 数据清理和校验 ==========
             self.logger.info("[阶段7] 数据清理和校验")
+            if self.progress_publisher and publish_progress:
+                self.progress_publisher.publish_progress(
+                    job_id=job_id, stage="pricing_progress", progress=87,
+                    message="正在清理和校验数据...",
+                    details={"source": "local_script", "phase": "judgment"}
+                )
             from scripts.calculate import judgment
             base_data_fresh = await base_itemcode_search.search_by_job_id(job_id, subgraph_ids)
             try:
@@ -168,6 +198,12 @@ class PricingAgentLocal:
             
             # ========== 阶段8: 最终总价计算 ==========
             self.logger.info("[阶段8] 最终总价计算")
+            if self.progress_publisher and publish_progress:
+                self.progress_publisher.publish_progress(
+                    job_id=job_id, stage="pricing_progress", progress=89,
+                    message="正在计算最终总价...",
+                    details={"source": "local_script", "phase": "total_price"}
+                )
             from scripts.calculate import price_total
             subgraphs_cost_data = await subgraphs_cost_search.search_by_job_id(job_id, subgraph_ids)
             final_result = await price_total.calculate(
@@ -284,6 +320,25 @@ class PricingAgentLocal:
                 self.logger.info(
                     f"[分批处理-本地] 批次 {batch_num}/{total_batches} 完成，耗时: {batch_time:.2f}s"
                 )
+                
+                # 发布批次进度（从 75% 到 90% 之间插值）
+                if self.progress_publisher:
+                    from shared.progress_stages import ProgressPercent
+                    start_pct = ProgressPercent.PRICING_STARTED
+                    end_pct = ProgressPercent.PRICING_COMPLETED
+                    current_pct = start_pct + int((end_pct - start_pct) * batch_num / total_batches)
+                    self.progress_publisher.publish_progress(
+                        job_id=job_id,
+                        stage="pricing_progress",
+                        progress=current_pct,
+                        message=f"价格计算中: 批次 {batch_num}/{total_batches} 完成",
+                        details={
+                            "source": "local_script",
+                            "batch_num": batch_num,
+                            "total_batches": total_batches,
+                            "batch_duration": round(batch_time, 2)
+                        }
+                    )
             
             # 所有批次完成后，统一更新 jobs.total_cost
             self.logger.info(f"[分批处理-本地] 所有批次完成，开始更新 jobs.total_cost")

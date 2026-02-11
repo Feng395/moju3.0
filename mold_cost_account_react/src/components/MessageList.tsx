@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { Card, Typography, Space, theme, Tag, Button, message as antdMessage } from 'antd'
-import { 
-  LoadingOutlined, 
-  CheckCircleOutlined, 
-  SyncOutlined, 
+import {
+  LoadingOutlined,
+  CheckCircleOutlined,
+  SyncOutlined,
   ExclamationCircleOutlined,
   FileTextOutlined,
   ToolOutlined,
@@ -107,11 +107,11 @@ const CountdownConfirmButton: React.FC<CountdownConfirmButtonProps> = ({
   style
 }) => {
   const { token } = theme.useToken()
-  
+
   // 计算消息创建后经过的时间
   const elapsedTime = Math.floor((Date.now() - messageTimestamp) / 1000)
   const remainingTime = Math.max(0, 300 - elapsedTime) // 5分钟 = 300秒
-  
+
   const { timeLeft, isExpired, formatTime, pause, resume } = useCountdown({
     initialTime: remainingTime,
     onExpired: () => {
@@ -122,7 +122,7 @@ const CountdownConfirmButton: React.FC<CountdownConfirmButtonProps> = ({
   // 处理点击事件
   const handleClick = async () => {
     pause() // 暂停倒计时
-    
+
     try {
       await onConfirm()
       // 确认成功，不需要恢复倒计时
@@ -136,7 +136,7 @@ const CountdownConfirmButton: React.FC<CountdownConfirmButtonProps> = ({
   // 如果已过期，不渲染按钮
   if (isExpired) {
     return (
-      <div style={{ 
+      <div style={{
         padding: '8px 12px',
         background: token.colorFillQuaternary,
         borderRadius: 6,
@@ -168,8 +168,8 @@ const CountdownConfirmButton: React.FC<CountdownConfirmButtonProps> = ({
     >
       <Space size={8}>
         <span>{children}</span>
-        <span style={{ 
-          fontSize: 12, 
+        <span style={{
+          fontSize: 12,
           opacity: 0.8,
           fontWeight: 400
         }}>
@@ -204,7 +204,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
   useEffect(() => {
     // 获取当前消息列表的第一条消息的 jobId
     const currentJobId = messages.length > 0 ? messages[0]?.jobId : undefined
-    
+
     // 如果 jobId 发生变化，说明切换了会话，需要重置初始化状态
     if (currentJobId !== lastJobIdRef.current) {
       // console.log('🔄 检测到会话切换，重置滚动状态', {
@@ -212,7 +212,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
       //   newJobId: currentJobId,
       //   messageCount: messages.length
       // })
-      
+
       lastJobIdRef.current = currentJobId
       initializedRef.current = false
       setIsInitialLoad(true)
@@ -238,17 +238,17 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
     try {
       // 调用确认接口，传递 comment 参数
       const result = await chatService.confirmModification(jobId, '确认操作');
-      
+
       // 更新消息状态，标记为已确认，并添加确认状态
       setMessages((prevMessages) => {
         const currentMessages = Array.isArray(prevMessages) ? prevMessages : [];
-        return currentMessages.map((msg) => 
-          msg.id === messageId 
-            ? { 
-                ...msg, 
-                requiresConfirmation: false,
-                confirmationStatus: 'confirmed' as const  // 标记为已确认
-              }
+        return currentMessages.map((msg) =>
+          msg.id === messageId
+            ? {
+              ...msg,
+              requiresConfirmation: false,
+              confirmationStatus: 'confirmed' as const  // 标记为已确认
+            }
             : msg
         );
       });
@@ -285,13 +285,13 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
 
     } catch (error: any) {
       console.error('确认操作失败:', error);
-      
+
       // 如果是重新识别或重新计算，确认失败时恢复发送按钮
       if (intent === 'FEATURE_RECOGNITION' || intent === 'PRICE_CALCULATION') {
         setIsReprocessing(false);
         console.log('🔓 确认失败，恢复发送按钮');
       }
-      
+
       // 如果不是 Network Error，则显示错误消息
       if (error.message !== 'Network Error') {
         antdMessage.error(error.message || '确认操作失败');
@@ -359,7 +359,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
 
   // 监听新的 assistant 消息，自动播放语音
   const lastAssistantMessageIdRef = useRef<string | null>(null)
-  
+
   useEffect(() => {
     // 如果没有消息，直接返回
     if (messages.length === 0) return
@@ -393,27 +393,27 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
     // 添加安全检查
     const safeStage = stage || ''
     const safeMessage = (typeof message === 'string' ? message : '') || ''
-    
+
     // 判断是否为完成状态：阶段名包含"completed"或进度为100%
     const isCompleted = safeStage.includes('completed') || progress === 100
-    
+
     // 判断是否为失败状态：阶段名包含"failed"，但排除"失败0个"这种成功的情况
-    const isFailed = safeStage.includes('failed') || 
-                     (safeMessage.includes('失败') && 
-                      !safeMessage.includes('失败0个') && 
-                      !safeMessage.includes('失败: 0') &&
-                      !safeMessage.match(/失败\s*0\s*个/))
-    
+    const isFailed = safeStage.includes('failed') ||
+      (safeMessage.includes('失败') &&
+        !safeMessage.includes('失败0个') &&
+        !safeMessage.includes('失败: 0') &&
+        !safeMessage.match(/失败\s*0\s*个/))
+
     // 检查是否有后续的进度消息，如果有则说明当前步骤已完成
-    const hasLaterProgress = allMessages.slice(currentIndex + 1).some(msg => 
+    const hasLaterProgress = allMessages.slice(currentIndex + 1).some(msg =>
       msg.type === 'progress' && msg.progressData
     )
-    
+
     // 基础图标样式（不根据完成状态改变颜色，保持原始颜色）
-    const iconStyle = { 
-      fontSize: 14, 
+    const iconStyle = {
+      fontSize: 14,
       marginRight: 8,
-      color: token.colorPrimary 
+      color: token.colorPrimary
     }
 
     // 优先处理失败状态：如果是失败状态，直接返回错误图标
@@ -427,28 +427,33 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
     }
 
     // 特殊处理：拆图和特征识别的 started 阶段使用语义图标
-    if (safeStage === 'cad_split_started' || 
-        (safeMessage.includes('拆图') && safeMessage.includes('开始'))) {
+    if (safeStage === 'cad_split_started' ||
+      (safeMessage.includes('拆图') && safeMessage.includes('开始'))) {
       // 拆图进行中：显示剪刀图标（不旋转）
       return <ScissorOutlined style={iconStyle} />
     }
-    
+
     // 拆图完成：显示对号图标
-    if (safeStage === 'cad_split_completed' || 
-        (safeMessage.includes('拆图完成'))) {
+    if (safeStage === 'cad_split_completed' ||
+      (safeMessage.includes('拆图完成'))) {
       return <CheckCircleOutlined style={{ ...iconStyle, color: token.colorSuccess }} />
     }
-    
-    if (safeStage === 'feature_recognition_started' || 
-        (safeMessage.includes('特征识别') && safeMessage.includes('开始'))) {
+
+    if (safeStage === 'feature_recognition_started' ||
+      (safeMessage.includes('特征识别') && safeMessage.includes('开始'))) {
       // 特征识别进行中：显示搜索图标（不旋转）
       return <SearchOutlined style={iconStyle} />
     }
-    
+
     // 特征识别完成：显示对号图标
-    if (safeStage === 'feature_recognition_completed' || 
-        (safeMessage.includes('特征识别完成'))) {
+    if (safeStage === 'feature_recognition_completed' ||
+      (safeMessage.includes('特征识别完成'))) {
       return <CheckCircleOutlined style={{ ...iconStyle, color: token.colorSuccess }} />
+    }
+
+    // 特征识别中间进度：显示搜索图标（与 started 一致）
+    if (safeStage === 'feature_recognition_progress') {
+      return <SearchOutlined style={iconStyle} />
     }
 
     // 特殊处理：continuing 阶段（用户确认完成，继续执行）
@@ -457,34 +462,39 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
     }
 
     // 特殊处理：pricing_started 阶段（正在计算价格）
-    if (safeStage === 'pricing_started' || 
-        (safeMessage.includes('计算价格') && safeMessage.includes('开始'))) {
+    if (safeStage === 'pricing_started' ||
+      (safeMessage.includes('计算价格') && safeMessage.includes('开始'))) {
       // 价格计算进行中：显示计算器图标（不旋转）
       return <CalculatorOutlined style={iconStyle} />
     }
-    
+
     // 价格计算完成：显示对号图标
-    if (safeStage === 'pricing_completed' || 
-        (safeMessage.includes('价格计算完成'))) {
+    if (safeStage === 'pricing_completed' ||
+      (safeMessage.includes('价格计算完成'))) {
       return <CheckCircleOutlined style={{ ...iconStyle, color: token.colorSuccess }} />
     }
 
+    // 价格计算中间进度：显示计算器图标
+    if (safeStage === 'pricing_progress') {
+      return <CalculatorOutlined style={iconStyle} />
+    }
+
     // 特殊处理：nc_calculation_started 阶段（NC 时间计算开始）
-    if (safeStage === 'nc_calculation_started' || 
-        (safeMessage.includes('NC') && safeMessage.includes('时间计算') && safeMessage.includes('开始'))) {
+    if (safeStage === 'nc_calculation_started' ||
+      (safeMessage.includes('NC') && safeMessage.includes('时间计算') && safeMessage.includes('开始'))) {
       // NC 时间计算进行中：显示时钟图标（不旋转）
       return <ClockCircleOutlined style={iconStyle} />
     }
-    
+
     // NC 时间计算完成：显示对号图标
-    if (safeStage === 'nc_calculation_completed' || 
-        (safeMessage.includes('NC') && safeMessage.includes('时间计算完成'))) {
+    if (safeStage === 'nc_calculation_completed' ||
+      (safeMessage.includes('NC') && safeMessage.includes('时间计算完成'))) {
       return <CheckCircleOutlined style={{ ...iconStyle, color: token.colorSuccess }} />
     }
 
     // 特殊处理：nc_calculation_skipped 阶段（跳过 NC 时间计算）
-    if (safeStage === 'nc_calculation_skipped' || 
-        (safeMessage.includes('跳过') && safeMessage.includes('NC'))) {
+    if (safeStage === 'nc_calculation_skipped' ||
+      (safeMessage.includes('跳过') && safeMessage.includes('NC'))) {
       // 跳过 NC 时间计算：显示减号圆圈图标，使用警告色
       return <MinusCircleOutlined style={{ ...iconStyle, color: token.colorWarning }} />
     }
@@ -494,8 +504,8 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
       // 初始化阶段：始终显示火箭图标（不旋转，不变化）
       return <RocketOutlined style={iconStyle} />
     }
-    
-    
+
+
     if (safeMessage.includes('计算价格') || safeMessage.includes('成本计算') || safeMessage.includes('价格')) {
       // 检查是否完成
       if (safeMessage.includes('完成')) {
@@ -504,7 +514,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
       // 显示计算器图标（不旋转）
       return <CalculatorOutlined style={iconStyle} />
     }
-    
+
     if (safeMessage.includes('报表') || safeMessage.includes('生成')) {
       return <BarChartOutlined style={iconStyle} />
     }
@@ -552,7 +562,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
   // 检查是否接近底部
   const isNearBottom = useCallback(() => {
     if (!scrollContainerRef.current) return true
-    
+
     const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current
     const threshold = 100 // 100px阈值
     return scrollHeight - scrollTop - clientHeight < threshold
@@ -564,18 +574,18 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
       console.log('❌ messagesEndRef.current 不存在')
       return
     }
-    
+
     // 检查是否真的需要滚动
     if (scrollContainerRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current
       const isAtBottom = scrollHeight - scrollTop - clientHeight < 10
-      
+
       // 如果已经在底部附近，不需要滚动
       if (isAtBottom && smooth) {
         return
       }
     }
-    
+
     // 使用 scrollTop 直接滚动到底部，确保完全贴底
     if (scrollContainerRef.current) {
       const container = scrollContainerRef.current
@@ -599,7 +609,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
   useEffect(() => {
     if (isInitialLoad && messages.length > 0 && !initializedRef.current) {
       initializedRef.current = true
-      
+
       // 使用 requestAnimationFrame 确保 DOM 已渲染
       requestAnimationFrame(() => {
         scrollToBottom(false) // 初始加载时不使用动画
@@ -619,13 +629,13 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
       const lastMessage = messages[messages.length - 1]
       const isUserMessage = lastMessage?.type === 'user'
       const isProgressMessage = lastMessage?.type === 'progress'
-      
+
       // 用户发送消息时强制滚动到底部，其他情况只在底部附近时滚动
       if (isUserMessage || shouldAutoScroll) {
         // 检查是否是包含表格的进度消息（需要更长的渲染时间）
         const hasTable = isProgressMessage && lastMessage.progressData?.type === 'review_display_view'
         const delay = hasTable ? 300 : 150 // 表格需要更长的延迟
-        
+
         // 使用 requestAnimationFrame + setTimeout 确保 DOM 完全渲染
         requestAnimationFrame(() => {
           setTimeout(() => {
@@ -662,23 +672,23 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
       // 如果最后一条消息是 AI 消息，确保滚动到底部
       if (lastMessage?.type === 'assistant' || lastMessage?.type === 'progress') {
         // 检查是否包含表格或复杂内容
-        const hasTable = lastMessage.type === 'progress' && 
-                        lastMessage.progressData?.type === 'review_display_view'
-        const hasMissingFields = lastMessage.type === 'assistant' && 
-                                lastMessage.missingFieldsData
+        const hasTable = lastMessage.type === 'progress' &&
+          lastMessage.progressData?.type === 'review_display_view'
+        const hasMissingFields = lastMessage.type === 'assistant' &&
+          lastMessage.missingFieldsData
         const delay = (hasTable || hasMissingFields) ? 400 : 200 // 复杂内容需要更长延迟
-        
+
         requestAnimationFrame(() => {
           setTimeout(() => {
             scrollToBottom(true)
-            
+
             // 额外的保险机制：再次检查并滚动（针对复杂内容）
             if (hasTable || hasMissingFields) {
               setTimeout(() => {
                 if (scrollContainerRef.current) {
                   const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current
                   const distanceFromBottom = scrollHeight - scrollTop - clientHeight
-                  
+
                   // 如果距离底部超过 50px，再次滚动
                   if (distanceFromBottom > 50) {
                     scrollToBottom(true)
@@ -706,20 +716,20 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
     const isSystem = message.type === 'system'
     const isProgress = message.type === 'progress'
     const isAssistant = message.type === 'assistant'
-    
+
     // 检查是否是最新的 AI 消息 - 需要考虑正在打字的状态
     const isLatestAIMessage = (isAssistant || isProgress) && (
       index === messages.length - 1 || // 是最后一条消息
       (isTyping && index === messages.length - 1) // 或者正在打字且是最后一条AI消息
     )
-    
+
     // 检查是否应该显示头像
     let showAvatar = false
     if (isAssistant || isProgress) {
       if (isProgress) {
         // 对于进度消息，检查是否是特定的重要阶段
         const stage = message.progressData?.stage || ''
-        
+
         // 检查是否是 continuing 或 pricing_started
         if (stage === 'continuing') {
           // continuing 始终显示头像
@@ -752,7 +762,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
       const stage = message.progressData.stage || 'processing'
       const progress = message.progressData.progress || 0
       let progressMessage = message.progressData.message || message.content || '处理中...'
-      
+
       // 对于失败消息，只显示简洁的错误信息，不显示技术细节
       if (stage.includes('_failed')) {
         // 提取冒号前的简洁错误描述
@@ -761,38 +771,38 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
           progressMessage = progressMessage.substring(0, colonIndex)
         }
       }
-      
+
       // 检查是否是审核数据展示类型
       const isReviewDisplayView = (message.progressData as any).type === 'review_display_view'
       const reviewData = isReviewDisplayView ? (message.progressData as any).data : null
-      
+
       // 检查是否是阶段的开始（started）或完成（completed）
       const isStageStart = stage.includes('_started')
       const isStageComplete = stage.includes('_completed')
-      
+
       // 检查下一条消息是否是不同阶段的开始（需要添加分隔线）
       const nextMessage = messages[index + 1]
-      const shouldShowDivider = nextMessage && 
-        nextMessage.type === 'progress' && 
+      const shouldShowDivider = nextMessage &&
+        nextMessage.type === 'progress' &&
         nextMessage.progressData &&
         (nextMessage.progressData.stage || '').includes('_started') &&
         isStageComplete
-      
+
       return (
-        <div 
-          key={message.id} 
-          style={{ 
+        <div
+          key={message.id}
+          style={{
             marginBottom: shouldShowDivider ? 0 : 8,
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'flex-start',
           }}
         >
-          <div style={{ 
+          <div style={{
             display: 'flex',
             justifyContent: 'flex-start',
           }}>
-            <div style={{ 
+            <div style={{
               maxWidth: isReviewDisplayView ? '100%' : '85%',
               display: 'flex',
               alignItems: 'flex-start',
@@ -800,21 +810,21 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
             }}>
               {showAvatar && (
                 <div style={{ marginTop: -16 }}>
-                  <AIAvatar 
-                    size={32} 
-                    isTyping={isTyping && isLatestAIMessage} 
+                  <AIAvatar
+                    size={32}
+                    isTyping={isTyping && isLatestAIMessage}
                     isLatest={isLatestAIMessage}
                   />
                 </div>
               )}
-              
+
               {/* 当不显示头像时，添加占位空间以保持对齐 */}
               {!showAvatar && (
                 <div style={{ width: 48, flexShrink: 0 }} />
               )}
-              
-              <div style={{ 
-                flex: 1, 
+
+              <div style={{
+                flex: 1,
                 minWidth: 0,
                 padding: '8px 0',
               }}>
@@ -840,10 +850,10 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
               </div>
             </div>
           </div>
-          
+
           {/* 阶段分隔线 */}
           {(shouldShowDivider || stage === 'feature_recognition_completed' || stage === 'cad_split_completed' || stage === 'nc_calculation_skipped' || stage === 'nc_calculation_started' || stage === 'nc_calculation_completed') && (
-            <div style={{ 
+            <div style={{
               display: 'flex',
               alignItems: 'center',
               margin: '12px 0',
@@ -864,15 +874,15 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
     // 审核数据展示消息（从历史记录加载）
     if (message.type === 'system' && message.reviewData && Array.isArray(message.reviewData)) {
       return (
-        <div 
-          key={message.id} 
-          style={{ 
+        <div
+          key={message.id}
+          style={{
             marginBottom: 12,
             display: 'flex',
             justifyContent: 'flex-start',
           }}
         >
-          <div style={{ 
+          <div style={{
             maxWidth: '100%',
             display: 'flex',
             alignItems: 'flex-start',
@@ -880,20 +890,20 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
           }}>
             {showAvatar && (
               <div style={{ marginTop: -16 }}>
-                <AIAvatar 
-                  size={32} 
-                  isTyping={isTyping && isLatestAIMessage} 
+                <AIAvatar
+                  size={32}
+                  isTyping={isTyping && isLatestAIMessage}
                   isLatest={isLatestAIMessage}
                 />
               </div>
             )}
-            
+
             {!showAvatar && (
               <div style={{ width: 48, flexShrink: 0 }} />
             )}
-            
-            <div style={{ 
-              flex: 1, 
+
+            <div style={{
+              flex: 1,
               minWidth: 0,
               padding: '8px 0',
             }}>
@@ -907,15 +917,15 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
     // 审核数据消息的特殊渲染
     if (message.type === 'system' && message.content && message.content.includes('特征识别完成！审核流程已启动')) {
       return (
-        <div 
-          key={message.id} 
-          style={{ 
+        <div
+          key={message.id}
+          style={{
             marginBottom: 12,
             display: 'flex',
             justifyContent: 'flex-start',
           }}
         >
-          <div style={{ 
+          <div style={{
             maxWidth: '100%',
             display: 'flex',
             alignItems: 'flex-start',
@@ -923,18 +933,18 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
           }}>
             {showAvatar && (
               <div style={{ marginTop: -16 }}>
-                <AIAvatar 
-                  size={32} 
-                  isTyping={isTyping && isLatestAIMessage} 
+                <AIAvatar
+                  size={32}
+                  isTyping={isTyping && isLatestAIMessage}
                   isLatest={isLatestAIMessage}
                 />
               </div>
             )}
-            
+
             {!showAvatar && (
               <div style={{ width: 48, flexShrink: 0 }} />
             )}
-            
+
             <div style={{ flex: 1, minWidth: 0 }}>
               <Card
                 size="small"
@@ -946,7 +956,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
                 }}
                 styles={{ body: { padding: '8px 12px' } }}
               >
-                <Text style={{ 
+                <Text style={{
                   fontSize: 13,
                   color: token.colorInfo,
                   fontStyle: 'italic',
@@ -954,7 +964,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
                   {message.content}
                 </Text>
               </Card>
-              
+
               {/* 显示审核界面 */}
               {message.jobId && (
                 <ReviewInterface
@@ -976,17 +986,17 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
     // 修改确认消息的特殊渲染（历史消息中不显示）
     if (message.type === 'system' && (message as any).modificationData && !message.id.startsWith('history-')) {
       const modificationData = (message as any).modificationData
-      
+
       return (
-        <div 
-          key={message.id} 
-          style={{ 
+        <div
+          key={message.id}
+          style={{
             marginBottom: 12,
             display: 'flex',
             justifyContent: 'flex-start',
           }}
         >
-          <div style={{ 
+          <div style={{
             maxWidth: '100%',
             display: 'flex',
             alignItems: 'flex-start',
@@ -994,18 +1004,18 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
           }}>
             {showAvatar && (
               <div style={{ marginTop: -16 }}>
-                <AIAvatar 
-                  size={32} 
-                  isTyping={isTyping && isLatestAIMessage} 
+                <AIAvatar
+                  size={32}
+                  isTyping={isTyping && isLatestAIMessage}
                   isLatest={isLatestAIMessage}
                 />
               </div>
             )}
-            
+
             {!showAvatar && (
               <div style={{ width: 48, flexShrink: 0 }} />
             )}
-            
+
             <div style={{ flex: 1, minWidth: 0 }}>
               <ModificationCard
                 modificationId={modificationData.modification_id}
@@ -1023,16 +1033,16 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
     }
 
     return (
-      <div 
-        key={message.id} 
-        style={{ 
+      <div
+        key={message.id}
+        style={{
           marginBottom: isUser ? 12 : 40, // AI消息40px下边距，用户消息12px
           marginTop: isUser ? 0 : 30, // AI消息添加30px上边距
           display: 'flex',
           justifyContent: isUser ? 'flex-end' : 'flex-start',
         }}
       >
-        <div style={{ 
+        <div style={{
           maxWidth: isUser ? '80%' : '100%', // AI消息100%，用户消息80%
           display: 'flex',
           flexDirection: isUser ? 'row-reverse' : 'row',
@@ -1041,19 +1051,19 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
         }}>
           {showAvatar && (
             <div style={{ marginTop: -16 }}>
-              <AIAvatar 
-                size={32} 
-                isTyping={isTyping && isLatestAIMessage} 
+              <AIAvatar
+                size={32}
+                isTyping={isTyping && isLatestAIMessage}
                 isLatest={isLatestAIMessage}
               />
             </div>
           )}
-          
+
           {/* 当AI消息或系统消息不显示头像时，添加占位空间以保持对齐 */}
           {(isAssistant || isSystem) && !showAvatar && (
             <div style={{ width: 48, flexShrink: 0 }} />
           )}
-          
+
           <div style={{ flex: 1, minWidth: 0 }}>
             {/* 用户消息的文件附件 - 显示在文字上方，不使用Card */}
             {isUser && message.attachments && message.attachments.length > 0 && (
@@ -1065,7 +1075,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
                 </Space>
               </div>
             )}
-            
+
             {/* 只有在有内容时才显示消息卡片 */}
             {/* 排除"请确认以下修改："这类应该由ModificationCard显示的内容 */}
             {message.content.trim() && !message.content.includes('请确认以下修改') && (
@@ -1080,7 +1090,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
                     }}
                     styles={{ body: { padding: '8px 12px' } }}
                   >
-                    <Text style={{ 
+                    <Text style={{
                       fontSize: 13,
                       color: token.colorInfo,
                       fontStyle: 'italic',
@@ -1105,7 +1115,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
                         code({ className, children }) {
                           const match = /language-(\w+)/.exec(className || '')
                           const isInline = !match
-                          
+
                           return isInline ? (
                             <Tag
                               style={{
@@ -1136,7 +1146,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
                           )
                         },
                         p: ({ children }) => (
-                          <div style={{ 
+                          <div style={{
                             marginBottom: 0,
                             color: token.colorText,
                             fontSize: 16,
@@ -1148,8 +1158,8 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
                           </div>
                         ),
                         ul: ({ children }) => (
-                          <ul style={{ 
-                            marginLeft: 16, 
+                          <ul style={{
+                            marginLeft: 16,
                             marginBottom: 8,
                             color: token.colorText,
                           }}>
@@ -1157,8 +1167,8 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
                           </ul>
                         ),
                         ol: ({ children }) => (
-                          <ol style={{ 
-                            marginLeft: 16, 
+                          <ol style={{
+                            marginLeft: 16,
                             marginBottom: 8,
                             color: token.colorText,
                           }}>
@@ -1169,9 +1179,9 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
                           <li style={{ marginBottom: 4 }}>{children}</li>
                         ),
                         h1: ({ children }) => (
-                          <h1 style={{ 
-                            fontSize: '1.5em', 
-                            fontWeight: 'bold', 
+                          <h1 style={{
+                            fontSize: '1.5em',
+                            fontWeight: 'bold',
                             marginBottom: 8,
                             color: token.colorText,
                           }}>
@@ -1179,9 +1189,9 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
                           </h1>
                         ),
                         h2: ({ children }) => (
-                          <h2 style={{ 
-                            fontSize: '1.3em', 
-                            fontWeight: 'bold', 
+                          <h2 style={{
+                            fontSize: '1.3em',
+                            fontWeight: 'bold',
                             marginBottom: 8,
                             color: token.colorText,
                           }}>
@@ -1189,9 +1199,9 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
                           </h2>
                         ),
                         h3: ({ children }) => (
-                          <h3 style={{ 
-                            fontSize: '1.1em', 
-                            fontWeight: 'bold', 
+                          <h3 style={{
+                            fontSize: '1.1em',
+                            fontWeight: 'bold',
                             marginBottom: 8,
                             color: token.colorText,
                           }}>
@@ -1210,7 +1220,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
                           </blockquote>
                         ),
                         hr: () => (
-                          <div style={{ 
+                          <div style={{
                             display: 'flex',
                             alignItems: 'center',
                             margin: '12px 0',
@@ -1227,7 +1237,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
                           </div>
                         ),
                         table: ({ children }) => (
-                          <div style={{ 
+                          <div style={{
                             overflowX: 'auto',
                             margin: '12px 0',
                           }}>
@@ -1288,20 +1298,20 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
                     </ReactMarkdown>
                   </Card>
                 ) : (
-                  <div style={{ 
+                  <div style={{
                     display: 'flex',
                     alignItems: 'flex-start',
                     gap: 8,
                   }}>
                     {/* 当正在打字且是最新AI消息时，显示旋转图标 */}
                     {isTyping && isLatestAIMessage && (
-                      <LoadingOutlined style={{ 
-                        color: '#000000', 
+                      <LoadingOutlined style={{
+                        color: '#000000',
                         fontSize: 16,
                         marginTop: 4, // 与文字对齐
                       }} />
                     )}
-                    
+
                     <div style={{ flex: 1, minWidth: 0 }}>
                       {/* 只有在不需要确认且没有缺失字段数据时才显示消息内容，或者是历史消息时也显示 */}
                       {(!message.requiresConfirmation || message.id.startsWith('history-')) && !message.missingFieldsData && (
@@ -1312,7 +1322,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
                               code({ className, children }) {
                                 const match = /language-(\w+)/.exec(className || '')
                                 const isInline = !match
-                                
+
                                 return isInline ? (
                                   <Tag
                                     style={{
@@ -1343,7 +1353,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
                                 )
                               },
                               p: ({ children }) => (
-                                <div style={{ 
+                                <div style={{
                                   marginBottom: 8,
                                   color: token.colorText,
                                   fontSize: 16,
@@ -1353,8 +1363,8 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
                                 </div>
                               ),
                               ul: ({ children }) => (
-                                <ul style={{ 
-                                  marginLeft: 16, 
+                                <ul style={{
+                                  marginLeft: 16,
                                   marginBottom: 8,
                                   color: token.colorText,
                                   fontSize: 16,
@@ -1363,8 +1373,8 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
                                 </ul>
                               ),
                               ol: ({ children }) => (
-                                <ol style={{ 
-                                  marginLeft: 16, 
+                                <ol style={{
+                                  marginLeft: 16,
                                   marginBottom: 8,
                                   color: token.colorText,
                                   fontSize: 16,
@@ -1376,9 +1386,9 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
                                 <li style={{ marginBottom: 4 }}>{children}</li>
                               ),
                               h1: ({ children }) => (
-                                <h1 style={{ 
-                                  fontSize: '1.5em', 
-                                  fontWeight: 'bold', 
+                                <h1 style={{
+                                  fontSize: '1.5em',
+                                  fontWeight: 'bold',
                                   marginBottom: 8,
                                   color: token.colorText,
                                 }}>
@@ -1386,9 +1396,9 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
                                 </h1>
                               ),
                               h2: ({ children }) => (
-                                <h2 style={{ 
-                                  fontSize: '1.3em', 
-                                  fontWeight: 'bold', 
+                                <h2 style={{
+                                  fontSize: '1.3em',
+                                  fontWeight: 'bold',
                                   marginBottom: 8,
                                   color: token.colorText,
                                 }}>
@@ -1396,9 +1406,9 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
                                 </h2>
                               ),
                               h3: ({ children }) => (
-                                <h3 style={{ 
-                                  fontSize: '1.1em', 
-                                  fontWeight: 'bold', 
+                                <h3 style={{
+                                  fontSize: '1.1em',
+                                  fontWeight: 'bold',
                                   marginBottom: 8,
                                   color: token.colorText,
                                 }}>
@@ -1417,7 +1427,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
                                 </blockquote>
                               ),
                               hr: () => (
-                                <div style={{ 
+                                <div style={{
                                   display: 'flex',
                                   alignItems: 'center',
                                   margin: '12px 0',
@@ -1434,7 +1444,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
                                 </div>
                               ),
                               table: ({ children }) => (
-                                <div style={{ 
+                                <div style={{
                                   overflowX: 'auto',
                                   margin: '12px 0',
                                 }}>
@@ -1493,7 +1503,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
                           >
                             {message.content}
                           </ReactMarkdown>
-                          
+
                           {/* 语音播放按钮 - 只在 assistant 消息且有内容时显示 */}
                           {message.type === 'assistant' && message.content && message.content.trim() && (
                             <div style={{ marginTop: 8 }}>
@@ -1506,7 +1516,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
                               />
                             </div>
                           )}
-                          
+
                           {/* 显示确认状态标签 */}
                           {message.confirmationStatus && (
                             <div style={{ marginTop: 8 }}>
@@ -1523,118 +1533,118 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
                           )}
                         </>
                       )}
-                    
-                    {/* AI消息的文件附件 */}
-                    {message.attachments && message.attachments.length > 0 && (
-                      <div style={{ marginTop: 12 }}>
-                        <Space direction="vertical" size={8} style={{ width: '100%' }}>
-                          {message.attachments.map((file) => (
-                            <FileAttachmentDisplay key={file.id} file={file} />
-                          ))}
-                        </Space>
-                      </div>
-                    )}
-                    
-                    {/* 图纸查看器 - 当消息包含图纸信息时显示 */}
-                    {(hasDrawingContent(message.content) || (message.progressData?.type === 'review_display_view')) && (
-                      <MessageDrawingViewer
-                        content={message.content}
-                        progressData={message.progressData}
-                      />
-                    )}
-                    
-                    {/* 缺失字段卡片 - 当有缺失字段数据时显示 */}
-                    {message.missingFieldsData && (
-                      <div style={{ marginTop: message.content ? 12 : 0 }}>
-                        <MissingFieldsCard
-                          message={message.missingFieldsData.message}
-                          summary={message.missingFieldsData.summary}
-                          missingFields={message.missingFieldsData.missing_fields}
+
+                      {/* AI消息的文件附件 */}
+                      {message.attachments && message.attachments.length > 0 && (
+                        <div style={{ marginTop: 12 }}>
+                          <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                            {message.attachments.map((file) => (
+                              <FileAttachmentDisplay key={file.id} file={file} />
+                            ))}
+                          </Space>
+                        </div>
+                      )}
+
+                      {/* 图纸查看器 - 当消息包含图纸信息时显示 */}
+                      {(hasDrawingContent(message.content) || (message.progressData?.type === 'review_display_view')) && (
+                        <MessageDrawingViewer
+                          content={message.content}
+                          progressData={message.progressData}
                         />
-                      </div>
-                    )}
-                    
-                    {/* 确认按钮 - 当需要确认时显示（历史消息不显示） */}
-                    {/* 历史消息：隐藏所有确认卡片和ModificationCard */}
-                    {message.requiresConfirmation && message.intent && !message.id.startsWith('history-') && (
-                      <div style={{ marginTop: message.content ? 0 : 0 }}>
-                        {/* 数据修改：使用 ModificationCard 显示详细表格（仅非历史消息） */}
-                        {message.intent === 'DATA_MODIFICATION' && message.intentData?.parsed_changes && (
-                          <ModificationCard
-                            modificationId={message.intentData.modification_id || message.id}
-                            changes={message.intentData.parsed_changes}
-                            displayView={message.intentData.display_view}
-                            messageTimestamp={message.timestamp instanceof Date ? message.timestamp.getTime() : message.timestamp}
-                            onConfirm={async () => {
-                              if (message.jobId) {
-                                await handleConfirm(message.id, message.jobId, message.intent)
-                              }
-                            }}
-                            loading={confirmingMessageId === message.id}
+                      )}
+
+                      {/* 缺失字段卡片 - 当有缺失字段数据时显示 */}
+                      {message.missingFieldsData && (
+                        <div style={{ marginTop: message.content ? 12 : 0 }}>
+                          <MissingFieldsCard
+                            message={message.missingFieldsData.message}
+                            summary={message.missingFieldsData.summary}
+                            missingFields={message.missingFieldsData.missing_fields}
                           />
-                        )}
-                        
-                        {/* 其他意图类型：使用简单的确认卡片 */}
-                        {message.intent !== 'DATA_MODIFICATION' && (
-                          <div
-                            style={{
-                              background: message.intent === 'FEATURE_RECOGNITION'
-                                ? 'linear-gradient(135deg, #f6f8ff 0%, #faf7ff 100%)'
-                                : message.intent === 'PRICE_CALCULATION'
-                                ? 'linear-gradient(135deg, #fff5fc 0%, #fff0f6 100%)'
-                                : '#f8f9fa',
-                              borderRadius: 10,
-                              padding: '18px 20px',
-                              borderLeft: message.intent === 'FEATURE_RECOGNITION'
-                                ? '4px solid #667eea'
-                                : message.intent === 'PRICE_CALCULATION'
-                                ? '4px solid #f093fb'
-                                : `4px solid ${token.colorPrimary}`,
-                              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
-                              transition: 'all 0.2s ease',
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.08)'
-                              e.currentTarget.style.transform = 'translateY(-1px)'
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)'
-                              e.currentTarget.style.transform = 'translateY(0)'
-                            }}
-                          >
-                            <Space direction="vertical" size={14} style={{ width: '100%' }}>
-                              {/* 内容区域 */}
-                              {message.content && (
-                                <div>
-                                  <Text style={{ 
-                                    fontSize: 14, 
-                                    color: '#1f1f1f',
-                                    lineHeight: 1.7,
-                                  }}>
-                                    {message.content}
-                                  </Text>
+                        </div>
+                      )}
+
+                      {/* 确认按钮 - 当需要确认时显示（历史消息不显示） */}
+                      {/* 历史消息：隐藏所有确认卡片和ModificationCard */}
+                      {message.requiresConfirmation && message.intent && !message.id.startsWith('history-') && (
+                        <div style={{ marginTop: message.content ? 0 : 0 }}>
+                          {/* 数据修改：使用 ModificationCard 显示详细表格（仅非历史消息） */}
+                          {message.intent === 'DATA_MODIFICATION' && message.intentData?.parsed_changes && (
+                            <ModificationCard
+                              modificationId={message.intentData.modification_id || message.id}
+                              changes={message.intentData.parsed_changes}
+                              displayView={message.intentData.display_view}
+                              messageTimestamp={message.timestamp instanceof Date ? message.timestamp.getTime() : message.timestamp}
+                              onConfirm={async () => {
+                                if (message.jobId) {
+                                  await handleConfirm(message.id, message.jobId, message.intent)
+                                }
+                              }}
+                              loading={confirmingMessageId === message.id}
+                            />
+                          )}
+
+                          {/* 其他意图类型：使用简单的确认卡片 */}
+                          {message.intent !== 'DATA_MODIFICATION' && (
+                            <div
+                              style={{
+                                background: message.intent === 'FEATURE_RECOGNITION'
+                                  ? 'linear-gradient(135deg, #f6f8ff 0%, #faf7ff 100%)'
+                                  : message.intent === 'PRICE_CALCULATION'
+                                    ? 'linear-gradient(135deg, #fff5fc 0%, #fff0f6 100%)'
+                                    : '#f8f9fa',
+                                borderRadius: 10,
+                                padding: '18px 20px',
+                                borderLeft: message.intent === 'FEATURE_RECOGNITION'
+                                  ? '4px solid #667eea'
+                                  : message.intent === 'PRICE_CALCULATION'
+                                    ? '4px solid #f093fb'
+                                    : `4px solid ${token.colorPrimary}`,
+                                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+                                transition: 'all 0.2s ease',
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.08)'
+                                e.currentTarget.style.transform = 'translateY(-1px)'
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)'
+                                e.currentTarget.style.transform = 'translateY(0)'
+                              }}
+                            >
+                              <Space direction="vertical" size={14} style={{ width: '100%' }}>
+                                {/* 内容区域 */}
+                                {message.content && (
+                                  <div>
+                                    <Text style={{
+                                      fontSize: 14,
+                                      color: '#1f1f1f',
+                                      lineHeight: 1.7,
+                                    }}>
+                                      {message.content}
+                                    </Text>
+                                  </div>
+                                )}
+
+                                {/* 按钮区域 */}
+                                <div style={{
+                                  display: 'flex',
+                                  justifyContent: 'flex-end',
+                                }}>
+                                  <CountdownConfirmButton
+                                    messageId={message.id}
+                                    messageTimestamp={message.timestamp instanceof Date ? message.timestamp.getTime() : message.timestamp}
+                                    loading={confirmingMessageId === message.id}
+                                    onConfirm={() => handleConfirm(message.id, message.jobId, message.intent)}
+                                  >
+                                    确认执行
+                                  </CountdownConfirmButton>
                                 </div>
-                              )}
-                              
-                              {/* 按钮区域 */}
-                              <div style={{ 
-                                display: 'flex', 
-                                justifyContent: 'flex-end',
-                              }}>
-                                <CountdownConfirmButton
-                                  messageId={message.id}
-                                  messageTimestamp={message.timestamp instanceof Date ? message.timestamp.getTime() : message.timestamp}
-                                  loading={confirmingMessageId === message.id}
-                                  onConfirm={() => handleConfirm(message.id, message.jobId, message.intent)}
-                                >
-                                  确认执行
-                                </CountdownConfirmButton>
-                              </div>
-                            </Space>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                              </Space>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1649,21 +1659,21 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
   return (
     <div>
       {messages.map((message, index) => renderMessage(message, index))}
-      
+
       {/* 打字指示器 - 只在没有AI消息或最后一条不是AI消息时显示 */}
       {isTyping && (() => {
         const lastMessage = messages[messages.length - 1]
         const lastIsAI = lastMessage && (lastMessage.type === 'assistant' || lastMessage.type === 'progress')
-        
+
         // 如果最后一条消息不是AI消息，显示完整的打字指示器
         if (!lastIsAI) {
           return (
-            <div style={{ 
+            <div style={{
               marginBottom: 12,
               display: 'flex',
               justifyContent: 'flex-start',
             }}>
-              <div style={{ 
+              <div style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: 12,
@@ -1676,7 +1686,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, isTyping, scrollCon
         }
         return null
       })()}
-      
+
       <div ref={messagesEndRef} />
     </div>
   )

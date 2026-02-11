@@ -1,8 +1,8 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react'
 import { Progress, Typography, theme } from 'antd'
-import { 
-  CheckCircleOutlined, 
-  LoadingOutlined, 
+import {
+  CheckCircleOutlined,
+  LoadingOutlined,
   CloseCircleOutlined,
   ScissorOutlined,
   SearchOutlined,
@@ -27,10 +27,10 @@ interface GlobalProgressBarProps {
   isTyping: boolean
 }
 
-const GlobalProgressBar: React.FC<GlobalProgressBarProps> = ({ 
-  messages, 
+const GlobalProgressBar: React.FC<GlobalProgressBarProps> = ({
+  messages,
   currentJobId,
-  isTyping 
+  isTyping
 }) => {
   const { token } = theme.useToken()
   const [completedJobs, setCompletedJobs] = useState<Set<string>>(new Set())
@@ -42,10 +42,10 @@ const GlobalProgressBar: React.FC<GlobalProgressBarProps> = ({
   const getProgressIcon = (stage: string, progress: number, message: string, isFailed: boolean, isCompleted: boolean) => {
     const safeStage = stage || ''
     const safeMessage = (typeof message === 'string' ? message : '') || ''
-    
-    const iconStyle = { 
+
+    const iconStyle = {
       fontSize: 16,
-      color: isFailed ? token.colorError : isCompleted ? token.colorSuccess : token.colorPrimary 
+      color: isFailed ? token.colorError : isCompleted ? token.colorSuccess : token.colorPrimary
     }
 
     // 优先处理失败状态
@@ -59,25 +59,30 @@ const GlobalProgressBar: React.FC<GlobalProgressBarProps> = ({
     }
 
     // 特殊处理：拆图阶段
-    if (safeStage === 'cad_split_started' || 
-        (safeMessage.includes('拆图') && safeMessage.includes('开始'))) {
+    if (safeStage === 'cad_split_started' ||
+      (safeMessage.includes('拆图') && safeMessage.includes('开始'))) {
       return <ScissorOutlined style={iconStyle} />
     }
-    
-    if (safeStage === 'cad_split_completed' || 
-        (safeMessage.includes('拆图完成'))) {
+
+    if (safeStage === 'cad_split_completed' ||
+      (safeMessage.includes('拆图完成'))) {
       return <CheckCircleOutlined style={{ ...iconStyle, color: token.colorSuccess }} />
     }
-    
+
     // 特殊处理：特征识别阶段
-    if (safeStage === 'feature_recognition_started' || 
-        (safeMessage.includes('特征识别') && safeMessage.includes('开始'))) {
+    if (safeStage === 'feature_recognition_started' ||
+      (safeMessage.includes('特征识别') && safeMessage.includes('开始'))) {
       return <SearchOutlined style={iconStyle} />
     }
-    
-    if (safeStage === 'feature_recognition_completed' || 
-        (safeMessage.includes('特征识别完成'))) {
+
+    if (safeStage === 'feature_recognition_completed' ||
+      (safeMessage.includes('特征识别完成'))) {
       return <CheckCircleOutlined style={{ ...iconStyle, color: token.colorSuccess }} />
+    }
+
+    // 特征识别中间进度
+    if (safeStage === 'feature_recognition_progress') {
+      return <SearchOutlined style={iconStyle} />
     }
 
     // 特殊处理：continuing 阶段（用户确认完成，继续执行）
@@ -86,30 +91,35 @@ const GlobalProgressBar: React.FC<GlobalProgressBarProps> = ({
     }
 
     // 特殊处理：价格计算阶段
-    if (safeStage === 'pricing_started' || 
-        (safeMessage.includes('计算价格') && safeMessage.includes('开始'))) {
+    if (safeStage === 'pricing_started' ||
+      (safeMessage.includes('计算价格') && safeMessage.includes('开始'))) {
       return <CalculatorOutlined style={iconStyle} />
     }
-    
-    if (safeStage === 'pricing_completed' || 
-        (safeMessage.includes('价格计算完成'))) {
+
+    if (safeStage === 'pricing_completed' ||
+      (safeMessage.includes('价格计算完成'))) {
       return <CheckCircleOutlined style={{ ...iconStyle, color: token.colorSuccess }} />
     }
 
+    // 价格计算中间进度
+    if (safeStage === 'pricing_progress') {
+      return <CalculatorOutlined style={iconStyle} />
+    }
+
     // 特殊处理：NC 时间计算阶段
-    if (safeStage === 'nc_calculation_started' || 
-        (safeMessage.includes('NC') && safeMessage.includes('时间计算') && safeMessage.includes('开始'))) {
+    if (safeStage === 'nc_calculation_started' ||
+      (safeMessage.includes('NC') && safeMessage.includes('时间计算') && safeMessage.includes('开始'))) {
       return <ClockCircleOutlined style={iconStyle} />
     }
-    
-    if (safeStage === 'nc_calculation_completed' || 
-        (safeMessage.includes('NC') && safeMessage.includes('时间计算完成'))) {
+
+    if (safeStage === 'nc_calculation_completed' ||
+      (safeMessage.includes('NC') && safeMessage.includes('时间计算完成'))) {
       return <CheckCircleOutlined style={{ ...iconStyle, color: token.colorSuccess }} />
     }
 
     // 特殊处理：跳过 NC 时间计算
-    if (safeStage === 'nc_calculation_skipped' || 
-        (safeMessage.includes('跳过') && safeMessage.includes('NC'))) {
+    if (safeStage === 'nc_calculation_skipped' ||
+      (safeMessage.includes('跳过') && safeMessage.includes('NC'))) {
       return <MinusCircleOutlined style={{ ...iconStyle, color: token.colorWarning }} />
     }
 
@@ -117,14 +127,14 @@ const GlobalProgressBar: React.FC<GlobalProgressBarProps> = ({
     if (safeMessage.includes('任务初始化') || safeMessage.includes('初始化') || safeStage === 'initializing') {
       return <RocketOutlined style={iconStyle} />
     }
-    
+
     if (safeMessage.includes('计算价格') || safeMessage.includes('成本计算') || safeMessage.includes('价格')) {
       if (safeMessage.includes('完成')) {
         return <CheckCircleOutlined style={{ ...iconStyle, color: token.colorSuccess }} />
       }
       return <CalculatorOutlined style={iconStyle} />
     }
-    
+
     if (safeMessage.includes('报表') || safeMessage.includes('生成')) {
       return <BarChartOutlined style={iconStyle} />
     }
@@ -172,10 +182,10 @@ const GlobalProgressBar: React.FC<GlobalProgressBarProps> = ({
   const globalProgress = useMemo(() => {
     // 只考虑当前任务的进度消息，并且必须有 progress 字段
     const progressMessages = messages.filter(
-      msg => msg.type === 'progress' && 
-             msg.jobId === currentJobId && 
-             msg.progressData &&
-             typeof msg.progressData.progress === 'number' // 必须有 progress 字段
+      msg => msg.type === 'progress' &&
+        msg.jobId === currentJobId &&
+        msg.progressData &&
+        typeof msg.progressData.progress === 'number' // 必须有 progress 字段
     )
 
     if (progressMessages.length === 0) {
@@ -195,35 +205,35 @@ const GlobalProgressBar: React.FC<GlobalProgressBarProps> = ({
 
     // 获取该任务的历史最大进度
     const maxProgress = maxProgressRef.current.get(currentJobId || '') || 0
-    
+
     // 策略：优先使用最新的消息，但进度值使用历史最大值（确保进度条不回退）
     // 这样可以确保文字显示最新状态，但进度条保持递增
     const latestMessage = progressMessages[progressMessages.length - 1]
     const latestProgress = latestMessage.progressData?.progress || 0
-    
+
     // 进度值：取最新进度和历史最大进度的较大值
     let progress = Math.max(latestProgress, maxProgress)
-    
+
     // 特殊处理：检查是否有明确的完成标记
     // 如果有 stage 为 'completed' 或 progress 为 100 的消息，强制设置为 100%
-    const hasCompletedStage = progressMessages.some(msg => 
-      msg.progressData?.stage === 'completed' || 
+    const hasCompletedStage = progressMessages.some(msg =>
+      msg.progressData?.stage === 'completed' ||
       msg.progressData?.progress === 100
     )
-    
+
     if (hasCompletedStage) {
       // console.log('✅ 检测到任务已完成，强制设置进度为 100%')
       progress = 100
       // 如果检测到完成状态，使用完成消息
-      const completedMessage = progressMessages.find(msg => 
-        msg.progressData?.stage === 'completed' || 
+      const completedMessage = progressMessages.find(msg =>
+        msg.progressData?.stage === 'completed' ||
         msg.progressData?.progress === 100
       )
       if (completedMessage) {
         // 使用完成消息替换最新消息
         const finalStage = completedMessage.progressData?.stage || ''
         const finalMessage = completedMessage.progressData?.message || completedMessage.content || '处理中...'
-        
+
         return {
           progress: 100,
           stage: finalStage,
@@ -233,7 +243,7 @@ const GlobalProgressBar: React.FC<GlobalProgressBarProps> = ({
         }
       }
     }
-    
+
     // 更新最大进度
     if (currentJobId && progress > maxProgress) {
       maxProgressRef.current.set(currentJobId, progress)
@@ -242,16 +252,16 @@ const GlobalProgressBar: React.FC<GlobalProgressBarProps> = ({
     // 使用最新消息的数据（文字内容）
     const finalStage = latestMessage.progressData?.stage || ''
     const finalMessage = latestMessage.progressData?.message || latestMessage.content || '处理中...'
-    
+
     // 判断是否失败 - 更严格的判断，排除"失败0个"这种成功情况
-    const isFailed = 
+    const isFailed =
       // 阶段包含失败关键词
-      finalStage?.toLowerCase().includes('failed') || 
+      finalStage?.toLowerCase().includes('failed') ||
       finalStage?.toLowerCase().includes('error') ||
       (finalStage?.includes('失败') && !finalStage?.includes('失败0个')) ||
       // 消息明确表示失败（排除"失败0个"、"失败: 0"等成功情况）
-      (finalMessage?.includes('处理失败') && !finalMessage?.includes('失败0个') && !finalMessage?.includes('失败: 0')) || 
-      (finalMessage?.includes('识别失败') && !finalMessage?.includes('失败0个') && !finalMessage?.includes('失败: 0')) || 
+      (finalMessage?.includes('处理失败') && !finalMessage?.includes('失败0个') && !finalMessage?.includes('失败: 0')) ||
+      (finalMessage?.includes('识别失败') && !finalMessage?.includes('失败0个') && !finalMessage?.includes('失败: 0')) ||
       (finalMessage?.includes('计算失败') && !finalMessage?.includes('失败0个') && !finalMessage?.includes('失败: 0')) ||
       (finalMessage?.includes('上传失败') && !finalMessage?.includes('失败0个') && !finalMessage?.includes('失败: 0')) ||
       (finalMessage?.includes('核算失败') && !finalMessage?.includes('失败0个') && !finalMessage?.includes('失败: 0')) ||
@@ -279,7 +289,7 @@ const GlobalProgressBar: React.FC<GlobalProgressBarProps> = ({
       if (hideTimerRef.current) {
         clearTimeout(hideTimerRef.current)
       }
-      
+
       // 注释掉自动隐藏逻辑 - 进度条到100%后不自动消失
       // if (globalProgress.isCompleted && globalProgress.progress >= 100) {
       //   console.log('✅ 进度达到100%，2秒后隐藏进度条')
@@ -295,7 +305,7 @@ const GlobalProgressBar: React.FC<GlobalProgressBarProps> = ({
       //   console.log('🔴 检测到失败，但保持显示进度条')
       // }
     }
-    
+
     return () => {
       if (hideTimerRef.current) {
         clearTimeout(hideTimerRef.current)
@@ -322,11 +332,11 @@ const GlobalProgressBar: React.FC<GlobalProgressBarProps> = ({
       }}
     >
       <div style={{ maxWidth: 768, margin: '0 auto' }}>
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
           gap: 12,
-          marginBottom: 8 
+          marginBottom: 8
         }}>
           {getProgressIcon(
             globalProgress.stage,
@@ -335,7 +345,7 @@ const GlobalProgressBar: React.FC<GlobalProgressBarProps> = ({
             globalProgress.isFailed,
             globalProgress.isCompleted
           )}
-          <Text strong style={{ 
+          <Text strong style={{
             fontSize: 14,
             color: globalProgress.isFailed ? token.colorError : token.colorText,
             whiteSpace: 'nowrap',
@@ -349,21 +359,21 @@ const GlobalProgressBar: React.FC<GlobalProgressBarProps> = ({
         <Progress
           percent={globalProgress.progress}
           status={
-            globalProgress.isFailed 
-              ? 'exception' 
-              : globalProgress.isCompleted 
-                ? 'success' 
+            globalProgress.isFailed
+              ? 'exception'
+              : globalProgress.isCompleted
+                ? 'success'
                 : 'active'
           }
           strokeColor={
             globalProgress.isFailed
               ? token.colorError
-              : globalProgress.isCompleted 
-                ? token.colorSuccess 
+              : globalProgress.isCompleted
+                ? token.colorSuccess
                 : {
-                    '0%': token.colorPrimary,
-                    '100%': token.colorPrimaryActive,
-                  }
+                  '0%': token.colorPrimary,
+                  '100%': token.colorPrimaryActive,
+                }
           }
           showInfo={true}
           format={(percent) => `${Math.round(percent || 0)}%`}

@@ -821,13 +821,14 @@ def save_features_to_db(subgraph_id: str, job_id: str, features: Dict[str, Any])
             conn.close()
 
 
-def batch_feature_recognition_process(job_id: str, subgraph_id: Optional[str] = None) -> Dict[str, Any]:
+def batch_feature_recognition_process(job_id: str, subgraph_id: Optional[str] = None, progress_callback=None) -> Dict[str, Any]:
     """
     批量特征识别处理函数（使用并行下载优化）
     
     Args:
         job_id: 任务ID
         subgraph_id: 子图ID（可选，如果不提供则处理所有子图）
+        progress_callback: 进度回调函数（可选），签名: callback(completed, total, success_count, failed_count)
     
     Returns:
         Dict: {
@@ -882,6 +883,7 @@ def batch_feature_recognition_process(job_id: str, subgraph_id: Optional[str] = 
         results = []
         success_count = 0
         failed_count = 0
+        total_count = len(download_results)
         
         for sg_id, download_result in download_results.items():
             part_code = subgraph_map[sg_id]['part_code']
@@ -896,6 +898,12 @@ def batch_feature_recognition_process(job_id: str, subgraph_id: Optional[str] = 
                     'message': f"下载失败: {download_result.get('error', '未知错误')}"
                 })
                 failed_count += 1
+                # 发布中间进度
+                if progress_callback:
+                    try:
+                        progress_callback(success_count + failed_count, total_count, success_count, failed_count)
+                    except Exception:
+                        pass
                 continue
             
             try:
@@ -912,28 +920,27 @@ def batch_feature_recognition_process(job_id: str, subgraph_id: Optional[str] = 
                         'message': '特征识别失败'
                     })
                     failed_count += 1
-                    continue
-                
-                # 保存到数据库
-                save_success = save_features_to_db(sg_id, job_id, features)
-                
-                if save_success:
-                    results.append({
-                        'subgraph_id': sg_id,
-                        'part_code': part_code,
-                        'success': True,
-                        'features': features
-                    })
-                    success_count += 1
-                    logging.info(f"✅ {sg_id} 处理成功")
                 else:
-                    results.append({
-                        'subgraph_id': sg_id,
-                        'part_code': part_code,
-                        'success': False,
-                        'message': '保存到数据库失败'
-                    })
-                    failed_count += 1
+                    # 保存到数据库
+                    save_success = save_features_to_db(sg_id, job_id, features)
+                    
+                    if save_success:
+                        results.append({
+                            'subgraph_id': sg_id,
+                            'part_code': part_code,
+                            'success': True,
+                            'features': features
+                        })
+                        success_count += 1
+                        logging.info(f"✅ {sg_id} 处理成功")
+                    else:
+                        results.append({
+                            'subgraph_id': sg_id,
+                            'part_code': part_code,
+                            'success': False,
+                            'message': '保存到数据库失败'
+                        })
+                        failed_count += 1
                 
             except Exception as e:
                 logging.error(f"处理子图 {sg_id} 时出错: {e}")
@@ -944,6 +951,13 @@ def batch_feature_recognition_process(job_id: str, subgraph_id: Optional[str] = 
                     'message': str(e)
                 })
                 failed_count += 1
+            
+            # 发布中间进度
+            if progress_callback:
+                try:
+                    progress_callback(success_count + failed_count, total_count, success_count, failed_count)
+                except Exception:
+                    pass
         
         # 返回结果
         logging.info(f"批量处理完成: 成功 {success_count}, 失败 {failed_count}")

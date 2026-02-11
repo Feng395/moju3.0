@@ -155,10 +155,38 @@ class CADAgentLocal:
                     details={"source": "local_script"}
                 )
             
-            # 调用本地脚本（同步函数，positional args: job_id, subgraph_id=None）
+            # 构建进度回调（在子线程中调用，ProgressPublisher 使用同步 Redis）
+            # 控制发布频率：每 10% 或至少每 10 个子图发布一次
+            _last_published_pct = [0]  # 用列表包装以便在闭包中修改
+            
+            def _progress_callback(completed, total, success_count, failed_count):
+                if self.progress_publisher and total > 0:
+                    pct_done = int(completed * 100 / total)
+                    # 每 10% 发布一次，或者是最后一个
+                    if pct_done - _last_published_pct[0] >= 10 or completed == total:
+                        _last_published_pct[0] = pct_done
+                        from shared.progress_stages import ProgressPercent
+                        start_pct = ProgressPercent.FEATURE_RECOGNITION_STARTED
+                        end_pct = ProgressPercent.FEATURE_RECOGNITION_COMPLETED
+                        current_pct = start_pct + int((end_pct - start_pct) * completed / total)
+                        self.progress_publisher.publish_progress(
+                            job_id=job_id,
+                            stage="feature_recognition_progress",
+                            progress=current_pct,
+                            message=f"特征识别中: {completed}/{total}（成功 {success_count}，失败 {failed_count}）",
+                            details={
+                                "source": "local_script",
+                                "completed": completed,
+                                "total": total,
+                                "success_count": success_count,
+                                "failed_count": failed_count
+                            }
+                        )
+            
+            # 调用本地脚本（同步函数，带进度回调）
             result = await asyncio.to_thread(
                 batch_feature_recognition_process,
-                job_id, None
+                job_id, None, _progress_callback
             )
             
             # batch_feature_recognition_process 返回格式:
