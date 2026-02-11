@@ -320,6 +320,10 @@ class QueryDetailsHandler(BaseActionHandler):
         else:
             steps = calculation_steps
         
+        # 防止 steps 为 None
+        if not steps:
+            return f"{subgraph_id} 暂无计算详情数据。"
+        
         # 如果指定了 query_type，只提取对应的 category
         if query_type:
             filtered_steps = []
@@ -1381,6 +1385,10 @@ class QueryDetailsHandler(BaseActionHandler):
                 steps = json.loads(calculation_steps)
             else:
                 steps = calculation_steps
+            
+            # 防止 steps 为 None
+            if not steps:
+                return f"{subgraph_id} 暂无 {query_type} 相关的计算详情数据。"
             
             # 查找对应的 category
             target_item = None
