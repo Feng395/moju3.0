@@ -122,7 +122,7 @@ class InteractionAgent(BaseAgent):
         try:
             # 1. 获取分布式锁（防止并发）
             lock_key = f"review:lock:{job_id}"
-            lock_acquired = await self._acquire_lock(lock_key, timeout=300)
+            lock_acquired = await self._acquire_lock(lock_key, timeout=1800)
             
             if not lock_acquired:
                 return OpResult(
@@ -273,14 +273,14 @@ class InteractionAgent(BaseAgent):
             if not await self._check_lock(lock_key):
                 # 锁不存在或已过期，尝试重新获取
                 logger.warning(f"⚠️  锁已过期，尝试重新获取: job_id={job_id}")
-                if not await self._acquire_lock(lock_key, timeout=300):
+                if not await self._acquire_lock(lock_key, timeout=1800):
                     return OpResult(
                         status="error",
                         message="会话已被其他用户占用或已过期，请重新启动审核"
                     )
             else:
                 # 锁存在，续期
-                await self._renew_lock(lock_key, timeout=300)
+                await self._renew_lock(lock_key, timeout=1800)
                 # 🆕 同时续期数据，防止数据过期但锁还在
                 await self._renew_review_state(job_id, timeout=3600)
             
@@ -528,7 +528,7 @@ class InteractionAgent(BaseAgent):
             logger.info(f"🔐 检查数据版本冲突...")
             
             # 续期锁（确认前）
-            await self._renew_lock(lock_key, timeout=300)
+            await self._renew_lock(lock_key, timeout=1800)
             # 🆕 同时续期数据
             await self._renew_review_state(job_id, timeout=3600)
             
@@ -589,7 +589,7 @@ class InteractionAgent(BaseAgent):
                 )
             
             # 🆕 5. 续期锁（不释放，保持会话活跃）
-            await self._renew_lock(lock_key, timeout=300)
+            await self._renew_lock(lock_key, timeout=1800)
             # 🆕 同时续期数据
             await self._renew_review_state(job_id, timeout=3600)
             logger.info(f"🔄 锁和数据已续期，审核会话保持活跃")
@@ -662,24 +662,37 @@ class InteractionAgent(BaseAgent):
         logger.info(f"🔄 刷新审核数据: job_id={job_id}")
         
         try:
-            # 1. 检查锁是否存在
+            # 1. 检查锁是否存在，过期则自动重新获取
             lock_key = f"review:lock:{job_id}"
             if not await self._check_lock(lock_key):
-                return OpResult(
-                    status="error",
-                    message="审核会话不存在或已过期，请重新启动审核"
-                )
+                logger.warning(f"⚠️  锁已过期，尝试重新获取: job_id={job_id}")
+                lock_acquired = await self._acquire_lock(lock_key, timeout=1800)
+                if not lock_acquired:
+                    return OpResult(
+                        status="error",
+                        message="该任务正在被其他用户审核中，无法刷新"
+                    )
+                logger.info(f"✅ 锁重新获取成功")
             
-            # 2. 获取当前状态
+            # 2. 获取当前状态，不存在则重新加载
             logger.info(f"📊 获取当前状态...")
             state = await self._get_review_state(job_id)
             if not state:
-                return OpResult(
-                    status="error",
-                    message="未找到审核状态"
-                )
+                logger.warning(f"⚠️  审核状态已过期，重新加载初始数据...")
+                reload_result = await self._reload_initial_data(job_id, db_session)
+                if reload_result.status != "ok":
+                    return OpResult(
+                        status="error",
+                        message=f"重新加载数据失败: {reload_result.message}"
+                    )
+                state = await self._get_review_state(job_id)
+                if not state:
+                    return OpResult(
+                        status="error",
+                        message="未找到审核状态"
+                    )
             
-            # 🆕 2.5. 检查是否有未确认的修改
+            # 2.5. 检查是否有未确认的修改
             modifications = state.get("modifications", [])
             if modifications:
                 logger.warning(f"⚠️  存在 {len(modifications)} 个未确认的修改，不能刷新数据")
@@ -726,7 +739,7 @@ class InteractionAgent(BaseAgent):
             await self._save_review_state(job_id, state)
             
             # 7. 续期锁
-            await self._renew_lock(lock_key, timeout=300)
+            await self._renew_lock(lock_key, timeout=1800)
             # 🆕 数据已经通过 _save_review_state 重新保存，不需要额外续期
             
             # 8. 推送最新数据到前端
@@ -1066,13 +1079,13 @@ class InteractionAgent(BaseAgent):
     
     # ========== 分布式锁管理 ==========
     
-    async def _acquire_lock(self, lock_key: str, timeout: int = 300) -> bool:
+    async def _acquire_lock(self, lock_key: str, timeout: int = 1800) -> bool:
         """
         获取分布式锁
         
         Args:
             lock_key: 锁的键
-            timeout: 超时时间（秒）
+            timeout: 超时时间（秒），默认 30 分钟
         
         Returns:
             是否成功获取锁
@@ -1107,7 +1120,7 @@ class InteractionAgent(BaseAgent):
         await self.redis_client.delete(lock_key)
         logger.info(f"🔓 释放锁: {lock_key}")
     
-    async def _renew_lock(self, lock_key: str, timeout: int = 300) -> bool:
+    async def _renew_lock(self, lock_key: str, timeout: int = 1800) -> bool:
         """
         续期锁（阶段2：锁自动续期）
         
@@ -1115,7 +1128,7 @@ class InteractionAgent(BaseAgent):
         
         Args:
             lock_key: 锁的键
-            timeout: 超时时间（秒），默认 5 分钟
+            timeout: 超时时间（秒），默认 30 分钟
         
         Returns:
             是否成功续期

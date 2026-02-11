@@ -551,11 +551,11 @@ async def refresh_review_data(
         
         # 检查结果
         if result.status == "error":
-            if "不存在或已过期" in result.message:
+            if "正在被其他用户审核" in result.message:
                 raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
+                    status_code=status.HTTP_409_CONFLICT,
                     detail={
-                        "error": "SESSION_NOT_FOUND",
+                        "error": "REVIEW_LOCKED",
                         "message": result.message
                     }
                 )
