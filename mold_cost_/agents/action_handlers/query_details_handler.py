@@ -131,12 +131,28 @@ class QueryDetailsHandler(BaseActionHandler):
             )
             
             if not detail:
-                return ActionResult(
-                    status="ok",
-                    message=f"{subgraph_id} 暂无计算详情。\n\n可能原因：\n1. 该子图还未进行价格计算\n2. 计算详情尚未保存到数据库\n\n建议：先执行价格计算，然后再查询详情。",
-                    requires_confirmation=False,
-                    data={}
-                )
+                # 核算前没有计算详情，尝试查询特征识别的基本数据（features + subgraphs）
+                logger.info(f"📋 未找到计算详情，尝试查询特征基本数据: {subgraph_id}")
+                basic_info = await self._query_basic_info(db_session, job_id, subgraph_id)
+                
+                if basic_info:
+                    # 有特征数据，格式化返回
+                    formatted_message = self._format_basic_info(
+                        subgraph_id, basic_info, intent_result.raw_message
+                    )
+                    return ActionResult(
+                        status="ok",
+                        message=formatted_message,
+                        requires_confirmation=False,
+                        data={"subgraph_id": subgraph_id, "basic_info": basic_info}
+                    )
+                else:
+                    return ActionResult(
+                        status="ok",
+                        message=f"{subgraph_id} 暂无数据。\n\n可能原因：\n1. 该子图不存在\n2. 特征识别尚未完成",
+                        requires_confirmation=False,
+                        data={}
+                    )
             
             # 4. 格式化 calculation_steps
             # 优先使用 LLM 格式化
@@ -200,6 +216,176 @@ class QueryDetailsHandler(BaseActionHandler):
                 message=f"查询详情失败：{str(e)}",
                 data={}
             )
+    
+    async def _query_basic_info(
+        self,
+        db_session,
+        job_id: str,
+        subgraph_id: str
+    ) -> Optional[Dict[str, Any]]:
+        """
+        查询子图的基本信息（特征识别后即可用，无需核算）
+        从 features 表和 subgraphs 表获取数据
+        
+        Args:
+            db_session: 数据库会话
+            job_id: 任务ID
+            subgraph_id: 子图ID（支持短名称）
+        
+        Returns:
+            基本信息字典，如果不存在返回 None
+        """
+        try:
+            from shared.models import Feature, Subgraph
+            
+            # 先尝试精确匹配 subgraph
+            result = await db_session.execute(
+                select(Subgraph).where(
+                    Subgraph.subgraph_id == subgraph_id,
+                    Subgraph.job_id == job_id
+                )
+            )
+            subgraph = result.scalar_one_or_none()
+            
+            # 后缀匹配
+            if not subgraph:
+                result = await db_session.execute(
+                    select(Subgraph).where(
+                        Subgraph.subgraph_id.like(f'%_{subgraph_id}'),
+                        Subgraph.job_id == job_id
+                    )
+                )
+                all_matches = result.scalars().all()
+                if all_matches:
+                    subgraph = min(all_matches, key=lambda x: len(x.subgraph_id))
+            
+            if not subgraph:
+                return None
+            
+            actual_subgraph_id = subgraph.subgraph_id
+            
+            # 查询 feature
+            result = await db_session.execute(
+                select(Feature).where(
+                    Feature.subgraph_id == actual_subgraph_id,
+                    Feature.job_id == job_id
+                )
+            )
+            feature = result.scalar_one_or_none()
+            
+            info = {
+                "subgraph_id": actual_subgraph_id,
+                "part_name": subgraph.part_name,
+                "part_code": subgraph.part_code,
+                "process_description": subgraph.process_description,
+                "weight_kg": float(subgraph.weight_kg) if subgraph.weight_kg else None,
+                "material_unit_price": float(subgraph.material_unit_price) if subgraph.material_unit_price else None,
+                "material_cost": float(subgraph.material_cost) if subgraph.material_cost else None,
+                "heat_treatment_unit_price": float(subgraph.heat_treatment_unit_price) if subgraph.heat_treatment_unit_price else None,
+                "heat_treatment_cost": float(subgraph.heat_treatment_cost) if subgraph.heat_treatment_cost else None,
+                "wire_process": subgraph.wire_process,
+                "status": subgraph.status,
+            }
+            
+            if feature:
+                info.update({
+                    "material": feature.material,
+                    "length_mm": float(feature.length_mm) if feature.length_mm else None,
+                    "width_mm": float(feature.width_mm) if feature.width_mm else None,
+                    "thickness_mm": float(feature.thickness_mm) if feature.thickness_mm else None,
+                    "quantity": feature.quantity,
+                    "heat_treatment": feature.heat_treatment,
+                    "calculated_weight_kg": float(feature.calculated_weight_kg) if feature.calculated_weight_kg else None,
+                    "has_auto_material": feature.has_auto_material,
+                    "boring_length_mm": float(feature.boring_length_mm) if feature.boring_length_mm else None,
+                    "processing_instructions": feature.processing_instructions,
+                })
+            
+            logger.info(f"✅ 查询到基本信息: {actual_subgraph_id}")
+            return info
+            
+        except Exception as e:
+            logger.error(f"❌ 查询基本信息失败: {e}", exc_info=True)
+            return None
+    
+    def _format_basic_info(
+        self,
+        subgraph_id: str,
+        info: Dict[str, Any],
+        user_question: str
+    ) -> str:
+        """
+        格式化基本信息为友好文本
+        
+        Args:
+            subgraph_id: 子图ID（用户输入的短名称）
+            info: 基本信息字典
+            user_question: 用户原始问题
+        
+        Returns:
+            格式化后的文本
+        """
+        # 提取短名称用于显示
+        display_id = subgraph_id
+        actual_id = info.get("subgraph_id", subgraph_id)
+        if "_" in actual_id:
+            display_id = actual_id.split("_", 1)[-1]
+        
+        lines = [f"📋 {display_id} 的基本信息：\n"]
+        
+        # 零件信息
+        if info.get("part_name"):
+            lines.append(f"  名称：{info['part_name']}")
+        if info.get("part_code"):
+            lines.append(f"  编号：{info['part_code']}")
+        
+        # 材质和规格
+        if info.get("material"):
+            lines.append(f"  材质：{info['material']}")
+        
+        dims = []
+        if info.get("length_mm"):
+            dims.append(str(info["length_mm"]))
+        if info.get("width_mm"):
+            dims.append(str(info["width_mm"]))
+        if info.get("thickness_mm"):
+            dims.append(str(info["thickness_mm"]))
+        if dims:
+            lines.append(f"  规格：{'×'.join(dims)} mm")
+        
+        if info.get("quantity"):
+            lines.append(f"  数量：{info['quantity']}")
+        
+        # 重量
+        if info.get("calculated_weight_kg"):
+            lines.append(f"  计算重量：{info['calculated_weight_kg']} kg")
+        if info.get("weight_kg"):
+            lines.append(f"  实际重量：{info['weight_kg']} kg")
+        
+        # 热处理
+        if info.get("heat_treatment"):
+            lines.append(f"  热处理：{info['heat_treatment']}")
+        
+        # 工艺
+        if info.get("process_description"):
+            lines.append(f"  工艺说明：{info['process_description']}")
+        if info.get("wire_process"):
+            lines.append(f"  线割工艺：{info['wire_process']}")
+        
+        # 费用（如果已有）
+        if info.get("material_cost"):
+            lines.append(f"  材料费：{info['material_cost']} 元")
+        if info.get("heat_treatment_cost"):
+            lines.append(f"  热处理费：{info['heat_treatment_cost']} 元")
+        
+        # 镗孔
+        if info.get("boring_length_mm"):
+            lines.append(f"  镗孔长度：{info['boring_length_mm']} mm")
+        
+        # 状态提示
+        lines.append(f"\n⏳ 尚未进行价格核算，以上为特征识别数据。")
+        
+        return "\n".join(lines)
     
     async def _query_calculation_detail(
         self,
