@@ -113,6 +113,9 @@ class Settings(BaseSettings):
     NC_AGENT_URL: str = "http://192.168.0.65:8001"
     NC_AGENT_TIMEOUT: int = 86400  # 24小时超时
     
+    # ODA File Converter 配置
+    ODA_FILE_CONVERTER_PATH: str = ""  # DWG 文件转换工具路径
+    
     # 外部API配置
     FEATURE_REPROCESS_API_URL: str = "http://192.168.1.51:8300/api/features/reprocess"
     PRICING_RECALCULATE_API_URL: str = "http://192.168.1.51:8300/api/pricing/recalculate"
