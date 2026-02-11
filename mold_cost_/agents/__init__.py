@@ -7,13 +7,16 @@ Agent 模块
 - 源文件：mold_cost-main/agents/__init__.py
 - 合并策略：直接使用 mold_cost-main 版本（mold_cost_ 无此文件）
 - 主要功能：
-  1. 全局单例管理
+  1. 全局单例管理（支持 MCP 动态切换）
   2. MCP 客户端统一获取
   3. 各 Agent 实例获取接口
 """
+import logging
 from typing import Optional
 from shared.mcp_client import MCPClient
 from shared.progress_publisher import ProgressPublisher
+
+logger = logging.getLogger(__name__)
 
 # 全局单例
 _cad_mcp_client: Optional[MCPClient] = None
@@ -24,13 +27,37 @@ _pricing_agent = None
 _nc_time_agent = None
 _orchestrator_agent = None
 
+# 记录上次创建 agent 时的 MCP 状态，用于检测变化
+_cad_agent_mcp_mode: Optional[bool] = None
+_pricing_agent_mcp_mode: Optional[bool] = None
+
+
+def check_mcp_health() -> bool:
+    """
+    检测 MCP 服务是否可用（实时检测，不缓存）
+    
+    Returns:
+        bool: True 表示 MCP 可用
+    """
+    try:
+        import requests
+        mcp_client = get_mcp_client()
+        response = requests.get(f"{mcp_client.base_url}/health", timeout=3)
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("status") == "healthy":
+                return True
+    except Exception:
+        pass
+    return False
+
 
 def get_mcp_client() -> MCPClient:
     """获取统一的 MCP 客户端单例（CAD + 价格搜索 + 计算）"""
     global _cad_mcp_client
     if _cad_mcp_client is None:
         import os
-        mcp_url = os.getenv("CAD_PRICE_SEARCH_MCP_URL", "http://localhost:8200") # TODO 端口统一
+        mcp_url = os.getenv("CAD_PRICE_SEARCH_MCP_URL", "http://localhost:8200")
         _cad_mcp_client = MCPClient(base_url=mcp_url, timeout=7200)  # 2小时超时
     return _cad_mcp_client
 
@@ -55,81 +82,79 @@ def get_progress_publisher() -> ProgressPublisher:
 
 def get_cad_agent():
     """
-    获取 CAD Agent 单例
-    自动检测 MCP 可用性，不可用时降级到本地脚本模式
+    获取 CAD Agent
+    每次调用都检测 MCP 可用性，MCP 状态变化时自动切换 agent
     """
-    global _cad_agent
+    global _cad_agent, _cad_agent_mcp_mode
     
-    if _cad_agent is None:
-        import os
-        import requests
-        
-        progress_publisher = get_progress_publisher()
-        
-        # 检测 MCP 可用性
-        mcp_available = False
-        try:
-            mcp_client = get_mcp_client()
-            response = requests.get(f"{mcp_client.base_url}/health", timeout=3)
-            if response.status_code == 200:
-                data = response.json()
-                if data.get("status") == "healthy":
-                    mcp_available = True
-        except Exception:
-            pass
-        
-        if mcp_available:
-            from .cad_agent import CADAgent
-            _cad_agent = CADAgent(
-                mcp_client=get_mcp_client(),
-                progress_publisher=progress_publisher
-            )
-        else:
-            from .cad_agent_local import CADAgentLocal
-            _cad_agent = CADAgentLocal(
-                progress_publisher=progress_publisher
-            )
+    mcp_available = check_mcp_health()
     
+    # 如果 MCP 状态没变且 agent 已存在，直接返回
+    if _cad_agent is not None and _cad_agent_mcp_mode == mcp_available:
+        return _cad_agent
+    
+    # MCP 状态变化或首次创建，重新创建 agent
+    if _cad_agent is not None:
+        old_mode = "MCP" if _cad_agent_mcp_mode else "本地脚本"
+        new_mode = "MCP" if mcp_available else "本地脚本"
+        logger.info(f"🔄 CADAgent 模式切换: {old_mode} → {new_mode}")
+    
+    progress_publisher = get_progress_publisher()
+    
+    if mcp_available:
+        from .cad_agent import CADAgent
+        _cad_agent = CADAgent(
+            mcp_client=get_mcp_client(),
+            progress_publisher=progress_publisher
+        )
+        logger.info("✅ CADAgent 创建成功（MCP 模式）")
+    else:
+        from .cad_agent_local import CADAgentLocal
+        _cad_agent = CADAgentLocal(
+            progress_publisher=progress_publisher
+        )
+        logger.info("✅ CADAgent 创建成功（本地脚本模式）")
+    
+    _cad_agent_mcp_mode = mcp_available
     return _cad_agent
 
 
 def get_pricing_agent():
     """
-    获取 Pricing Agent 单例
-    自动检测 MCP 可用性，不可用时降级到本地脚本模式
+    获取 Pricing Agent
+    每次调用都检测 MCP 可用性，MCP 状态变化时自动切换 agent
     """
-    global _pricing_agent
+    global _pricing_agent, _pricing_agent_mcp_mode
     
-    if _pricing_agent is None:
-        import os
-        import requests
-        
-        progress_publisher = get_progress_publisher()
-        
-        # 检测 MCP 可用性
-        mcp_available = False
-        try:
-            mcp_client = get_mcp_client()
-            response = requests.get(f"{mcp_client.base_url}/health", timeout=3)
-            if response.status_code == 200:
-                data = response.json()
-                if data.get("status") == "healthy":
-                    mcp_available = True
-        except Exception:
-            pass
-        
-        if mcp_available:
-            from .pricing_agent import PricingAgent
-            _pricing_agent = PricingAgent(
-                price_search_mcp_client=get_mcp_client(),
-                progress_publisher=progress_publisher
-            )
-        else:
-            from .pricing_agent_local import PricingAgentLocal
-            _pricing_agent = PricingAgentLocal(
-                progress_publisher=progress_publisher
-            )
+    mcp_available = check_mcp_health()
     
+    # 如果 MCP 状态没变且 agent 已存在，直接返回
+    if _pricing_agent is not None and _pricing_agent_mcp_mode == mcp_available:
+        return _pricing_agent
+    
+    # MCP 状态变化或首次创建，重新创建 agent
+    if _pricing_agent is not None:
+        old_mode = "MCP" if _pricing_agent_mcp_mode else "本地脚本"
+        new_mode = "MCP" if mcp_available else "本地脚本"
+        logger.info(f"🔄 PricingAgent 模式切换: {old_mode} → {new_mode}")
+    
+    progress_publisher = get_progress_publisher()
+    
+    if mcp_available:
+        from .pricing_agent import PricingAgent
+        _pricing_agent = PricingAgent(
+            price_search_mcp_client=get_mcp_client(),
+            progress_publisher=progress_publisher
+        )
+        logger.info("✅ PricingAgent 创建成功（MCP 模式）")
+    else:
+        from .pricing_agent_local import PricingAgentLocal
+        _pricing_agent = PricingAgentLocal(
+            progress_publisher=progress_publisher
+        )
+        logger.info("✅ PricingAgent 创建成功（本地脚本模式）")
+    
+    _pricing_agent_mcp_mode = mcp_available
     return _pricing_agent
 
 
@@ -184,6 +209,7 @@ __all__ = [
     "get_orchestrator_agent",
     "get_mcp_client",
     "get_progress_publisher",
+    "check_mcp_health",
     
     # Agent 类
     "BaseAgent",

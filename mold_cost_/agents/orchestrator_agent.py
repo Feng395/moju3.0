@@ -75,6 +75,20 @@ class OrchestratorAgent(BaseAgent):
         self.decision_agent = decision_agent
         self.pricing_agent = pricing_agent
     
+    def _refresh_agents(self):
+        """
+        动态刷新 Agent 实例
+        检测 MCP 可用性变化，自动切换 MCP/本地脚本模式
+        """
+        try:
+            from agents import get_cad_agent, get_pricing_agent, get_nc_time_agent
+            
+            self.cad_agent = get_cad_agent()
+            self.nc_time_agent = get_nc_time_agent()
+            self.pricing_agent = get_pricing_agent()
+        except Exception as e:
+            self.logger.warning(f"[编排器] 动态刷新 Agent 失败，保持当前 Agent: {e}")
+    
     async def process(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
         编排器不使用 process 方法
@@ -122,6 +136,9 @@ class OrchestratorAgent(BaseAgent):
                     self.logger.error(f"[编排器] Job 不存在: job_id={job_id}")
                     return {"status": "error", "message": "Job 不存在", "error_code": "JOB_NOT_FOUND"}
                 break  # 只需要第一次迭代
+            
+            # 动态刷新 Agent（检测 MCP 可用性变化）
+            self._refresh_agents()
             
             # 2. 更新状态：开始处理
             await self._update_job_status(
@@ -371,6 +388,9 @@ class OrchestratorAgent(BaseAgent):
         start_time = datetime.utcnow()
         
         try:
+            # 动态刷新 Agent（检测 MCP 可用性变化）
+            self._refresh_agents()
+            
             # 1. 验证 Job 状态
             import uuid
             try:

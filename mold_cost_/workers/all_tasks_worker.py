@@ -125,6 +125,9 @@ class AllTasksWorker:
         )
         
         try:
+            # 每次处理前刷新 agent（检测 MCP 可用性变化）
+            self.orchestrator_agent = get_orchestrator_agent()
+            
             if action == "start":
                 # 开始新任务
                 result = await self.orchestrator_agent.start(job_id)
@@ -171,6 +174,9 @@ class AllTasksWorker:
         )
         
         try:
+            # 每次处理前刷新 agent（检测 MCP 可用性变化）
+            self.pricing_agent = get_pricing_agent()
+            
             # 调用 PricingAgent 重新计算
             result = await self.pricing_agent.process({
                 "job_id": job_id,

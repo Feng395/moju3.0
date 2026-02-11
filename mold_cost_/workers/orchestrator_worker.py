@@ -7,7 +7,6 @@ import asyncio
 import logging
 import sys
 import os
-import requests  # 用于测试 MCP 连接
 from typing import Dict, Any
 from dotenv import load_dotenv
 
@@ -20,9 +19,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from shared.message_queue import MessageQueue, QUEUE_JOB_PROCESSING
 from shared.progress_publisher import ProgressPublisher
 from agents.orchestrator_agent import OrchestratorAgent
-from agents.cad_agent import CADAgent
-from agents.pricing_agent import PricingAgent
-from shared.mcp_client import MCPClient  # 使用真实的 MCP 客户端
 
 # 配置日志
 logging.basicConfig(
@@ -69,79 +65,9 @@ class OrchestratorWorker:
             self.orchestrator = OrchestratorAgent(progress_publisher=self.progress_publisher)
             logger.info("编排器对象创建完成")
             
-            # 创建并注册各个 Agent
+            # 动态注册 Agent（每次处理任务前会重新检测 MCP 可用性）
             try:
-                # 从环境变量或配置文件读取统一的 MCP 服务地址
-                from api_gateway.config import settings
-                mcp_url = os.getenv("CAD_PRICE_SEARCH_MCP_URL", settings.CAD_PRICE_SEARCH_MCP_URL)
-                
-                logger.info(f"正在创建 MCP 客户端...")
-                logger.info(f"  CAD & Price Search MCP: {mcp_url}")
-                
-                # 创建统一的 MCP 客户端（CAD + 价格搜索 + 计算）
-                mcp_client = MCPClient(base_url=mcp_url, timeout=7200)  # 2小时超时
-                
-                # 测试 MCP 连接
-                mcp_available = await self._test_mcp_connection(mcp_client)
-                
-                if mcp_available:
-                    logger.info("✅ MCP 客户端创建成功，MCP 服务可用")
-                    use_mcp = True
-                else:
-                    logger.warning("⚠️  MCP 服务不可用，将使用本地脚本模式")
-                    logger.warning("   提示：启动 MCP 服务可获得更好的性能")
-                    logger.warning("   启动命令：cd mcp_services && start_mcp.bat")
-                    use_mcp = False
-                    mcp_client = None
-                
-                # 创建 CADAgent
-                if use_mcp:
-                    logger.info("正在创建 CADAgent（MCP 模式）...")
-                    cad_agent = CADAgent(
-                        mcp_client=mcp_client,
-                        progress_publisher=self.progress_publisher
-                    )
-                    logger.info("✅ CADAgent 创建成功（MCP 模式）")
-                else:
-                    logger.info("正在创建 CADAgent（本地脚本模式）...")
-                    # 导入本地脚本版本的 CADAgent
-                    from agents.cad_agent_local import CADAgentLocal
-                    cad_agent = CADAgentLocal(
-                        progress_publisher=self.progress_publisher
-                    )
-                    logger.info("✅ CADAgent 创建成功（本地脚本模式）")
-                
-                logger.info("正在创建 NCTimeAgent...")
-                from agents.nc_time_agent import NCTimeAgent
-                nc_time_agent = NCTimeAgent(
-                    progress_publisher=self.progress_publisher
-                )
-                logger.info("✅ NCTimeAgent 创建成功")
-                
-                # 创建 PricingAgent
-                if use_mcp:
-                    logger.info("正在创建 PricingAgent（MCP 模式）...")
-                    pricing_agent = PricingAgent(
-                        price_search_mcp_client=mcp_client,  # 使用同一个 MCP 客户端
-                        progress_publisher=self.progress_publisher
-                    )
-                    logger.info("✅ PricingAgent 创建成功（MCP 模式）")
-                else:
-                    logger.info("正在创建 PricingAgent（本地脚本模式）...")
-                    # 导入本地脚本版本的 PricingAgent
-                    from agents.pricing_agent_local import PricingAgentLocal
-                    pricing_agent = PricingAgentLocal(
-                        progress_publisher=self.progress_publisher
-                    )
-                    logger.info("✅ PricingAgent 创建成功（本地脚本模式）")
-                
-                logger.info("正在注册 Agent 到编排器...")
-                self.orchestrator.register_agents(
-                    cad_agent=cad_agent,
-                    nc_time_agent=nc_time_agent,
-                    pricing_agent=pricing_agent
-                )
-                logger.info("✅ 编排器已初始化，已注册 CADAgent、NCTimeAgent 和 PricingAgent")
+                self._register_agents_dynamic()
             except Exception as e:
                 logger.error(f"❌ Agent 注册失败: {e}", exc_info=True)
                 raise
@@ -150,6 +76,7 @@ class OrchestratorWorker:
             self.running = True
             logger.info(f"开始监听队列: {QUEUE_JOB_PROCESSING}")
             logger.info("⚡ 使用尽早 ACK 模式，避免 Consumer Timeout")
+            logger.info("🔄 MCP 动态检测已启用：每次处理任务前会检测 MCP 可用性")
             
             # 使用 early_ack=True，避免长时间处理导致超时
             await self.mq.consume(QUEUE_JOB_PROCESSING, self.handle_message, early_ack=True)
@@ -158,40 +85,31 @@ class OrchestratorWorker:
             logger.error(f"Worker 启动失败: {e}", exc_info=True)
             raise
     
-    async def _test_mcp_connection(self, mcp_client) -> bool:
+    def _register_agents_dynamic(self):
         """
-        测试 MCP 连接是否可用
+        动态注册 Agent 到编排器
+        使用 agents/__init__.py 的工厂函数，每次调用都会检测 MCP 可用性
+        """
+        from agents import get_cad_agent, get_pricing_agent, get_nc_time_agent, check_mcp_health
         
-        Returns:
-            bool: True 表示 MCP 可用，False 表示不可用
-        """
-        try:
-            import requests
-            
-            # 尝试访问 MCP 健康检查端点
-            response = requests.get(
-                f"{mcp_client.base_url}/health",
-                timeout=3  # 3秒超时
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                if data.get("status") == "healthy":
-                    logger.info(f"✅ MCP 服务健康检查通过: {data}")
-                    return True
-            
-            logger.warning(f"⚠️  MCP 服务健康检查失败: status={response.status_code}")
-            return False
-            
-        except requests.exceptions.ConnectionError:
-            logger.warning("⚠️  无法连接到 MCP 服务（连接被拒绝）")
-            return False
-        except requests.exceptions.Timeout:
-            logger.warning("⚠️  MCP 服务连接超时")
-            return False
-        except Exception as e:
-            logger.warning(f"⚠️  MCP 服务健康检查异常: {e}")
-            return False
+        mcp_available = check_mcp_health()
+        if mcp_available:
+            logger.info("✅ MCP 服务可用，Agent 将使用 MCP 模式")
+        else:
+            logger.warning("⚠️  MCP 服务不可用，Agent 将使用本地脚本模式")
+            logger.warning("   提示：启动 MCP 服务可获得更好的性能")
+            logger.warning("   启动命令：cd mcp_services && start_mcp.bat")
+        
+        cad_agent = get_cad_agent()
+        nc_time_agent = get_nc_time_agent()
+        pricing_agent = get_pricing_agent()
+        
+        self.orchestrator.register_agents(
+            cad_agent=cad_agent,
+            nc_time_agent=nc_time_agent,
+            pricing_agent=pricing_agent
+        )
+        logger.info("✅ 编排器已初始化，已注册 CADAgent、NCTimeAgent 和 PricingAgent")
     
     async def handle_message(self, message: Dict[str, Any]):
         """
@@ -292,6 +210,9 @@ class OrchestratorWorker:
         
         # ========== 执行任务 ==========
         try:
+            # 每次处理任务前重新检测 MCP 可用性，动态切换 agent
+            self._register_agents_dynamic()
+            
             # 调用编排器处理任务
             result = await self.orchestrator.start(job_id)
             
