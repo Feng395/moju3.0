@@ -713,28 +713,20 @@ async def handle_price_tool(name: str, arguments: dict) -> list[TextContent]:
     return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, cls=DecimalEncoder))]
 
 # ============================================================================
-# HTTP 端点
+# 应用创建函数（供 mcp_services/main.py 调用）
 # ============================================================================
 
-if __name__ == "__main__":
-    if sys.platform == 'win32':
-        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+def create_app(host: str = "0.0.0.0", port: int = 8200):
+    """
+    创建 MCP ASGI 应用
     
-    HOST = os.getenv("CAD_PRICE_SEARCH_MCP_HOST", "0.0.0.0")
-    PORT = int(os.getenv("CAD_PRICE_SEARCH_MCP_PORT", "8200"))
+    Args:
+        host: 监听地址
+        port: 监听端口
     
-    logger.info("=" * 60)
-    logger.info("CAD 和价格搜索 MCP 服务启动中...")
-    logger.info("=" * 60)
-    logger.info(f"地址: http://{HOST}:{PORT}")
-    logger.info(f"调用端点: http://{HOST}:{PORT}/call_tool")
-    if CAD_AVAILABLE:
-        logger.info(f"包含工具: 3个CAD工具 + 12个搜索工具 + 23个计算工具 = 38个工具")
-    else:
-        logger.info(f"包含工具: 12个搜索工具 + 23个计算工具 = 35个工具")
-        logger.info(f"注意: CAD 功能不可用（缺少依赖包）")
-    logger.info("=" * 60)
-    
+    Returns:
+        ASGI 应用（供 uvicorn 使用）
+    """
     # 创建 SSE 传输层
     sse = SseServerTransport("/messages")
     
@@ -743,7 +735,7 @@ if __name__ == "__main__":
         return JSONResponse({
             "status": "healthy",
             "service": "cad-price-search-mcp",
-            "port": PORT,
+            "port": port,
             "features": {
                 "cad": CAD_AVAILABLE,
                 "pricing": True
@@ -756,7 +748,7 @@ if __name__ == "__main__":
             }
         })
     
-    # 直接调用工具的端点
+    # 直接调用工具的 HTTP 端点
     async def call_tool_http(request):
         try:
             body = await request.json()
@@ -768,10 +760,8 @@ if __name__ == "__main__":
             
             logger.info(f"[HTTP] 调用工具: {tool_name}")
             
-            # 调用 MCP 工具处理函数
             result_list = await call_tool(tool_name, arguments)
             
-            # 解析结果
             if result_list and len(result_list) > 0:
                 result_text = result_list[0].text
                 result = json.loads(result_text)
@@ -789,7 +779,7 @@ if __name__ == "__main__":
                 "traceback": traceback.format_exc()
             }, status_code=500)
     
-    # 创建 Starlette 应用
+    # Starlette 路由
     starlette_app = Starlette(
         routes=[
             Route("/health", health_check),
@@ -797,7 +787,7 @@ if __name__ == "__main__":
         ]
     )
     
-    # 主应用（合并 SSE 和 HTTP 端点）
+    # 主 ASGI 应用（合并 SSE 和 HTTP 端点）
     async def main_app(scope, receive, send):
         path = scope.get("path", "")
         
@@ -814,4 +804,4 @@ if __name__ == "__main__":
             await send({"type": "http.response.start", "status": 404, "headers": [[b"content-type", b"text/plain"]]})
             await send({"type": "http.response.body", "body": b"Not Found"})
     
-    uvicorn.run(main_app, host=HOST, port=PORT)
+    return main_app

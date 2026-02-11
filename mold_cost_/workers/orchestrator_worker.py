@@ -7,6 +7,7 @@ import asyncio
 import logging
 import sys
 import os
+import requests  # 用于测试 MCP 连接
 from typing import Dict, Any
 from dotenv import load_dotenv
 
@@ -79,14 +80,36 @@ class OrchestratorWorker:
                 
                 # 创建统一的 MCP 客户端（CAD + 价格搜索 + 计算）
                 mcp_client = MCPClient(base_url=mcp_url, timeout=7200)  # 2小时超时
-                logger.info("✅ MCP 客户端创建成功")
                 
-                logger.info("正在创建 CADAgent（MCP 模式）...")
-                cad_agent = CADAgent(
-                    mcp_client=mcp_client,
-                    progress_publisher=self.progress_publisher
-                )
-                logger.info("✅ CADAgent 创建成功（MCP 模式）")
+                # 测试 MCP 连接
+                mcp_available = await self._test_mcp_connection(mcp_client)
+                
+                if mcp_available:
+                    logger.info("✅ MCP 客户端创建成功，MCP 服务可用")
+                    use_mcp = True
+                else:
+                    logger.warning("⚠️  MCP 服务不可用，将使用本地脚本模式")
+                    logger.warning("   提示：启动 MCP 服务可获得更好的性能")
+                    logger.warning("   启动命令：cd mcp_services && start_mcp.bat")
+                    use_mcp = False
+                    mcp_client = None
+                
+                # 创建 CADAgent
+                if use_mcp:
+                    logger.info("正在创建 CADAgent（MCP 模式）...")
+                    cad_agent = CADAgent(
+                        mcp_client=mcp_client,
+                        progress_publisher=self.progress_publisher
+                    )
+                    logger.info("✅ CADAgent 创建成功（MCP 模式）")
+                else:
+                    logger.info("正在创建 CADAgent（本地脚本模式）...")
+                    # 导入本地脚本版本的 CADAgent
+                    from agents.cad_agent_local import CADAgentLocal
+                    cad_agent = CADAgentLocal(
+                        progress_publisher=self.progress_publisher
+                    )
+                    logger.info("✅ CADAgent 创建成功（本地脚本模式）")
                 
                 logger.info("正在创建 NCTimeAgent...")
                 from agents.nc_time_agent import NCTimeAgent
@@ -95,12 +118,22 @@ class OrchestratorWorker:
                 )
                 logger.info("✅ NCTimeAgent 创建成功")
                 
-                logger.info("正在创建 PricingAgent（Agent 层并发模式）...")
-                pricing_agent = PricingAgent(
-                    price_search_mcp_client=mcp_client,  # 使用同一个 MCP 客户端
-                    progress_publisher=self.progress_publisher
-                )
-                logger.info("✅ PricingAgent 创建成功（Agent 层并发模式）")
+                # 创建 PricingAgent
+                if use_mcp:
+                    logger.info("正在创建 PricingAgent（MCP 模式）...")
+                    pricing_agent = PricingAgent(
+                        price_search_mcp_client=mcp_client,  # 使用同一个 MCP 客户端
+                        progress_publisher=self.progress_publisher
+                    )
+                    logger.info("✅ PricingAgent 创建成功（MCP 模式）")
+                else:
+                    logger.info("正在创建 PricingAgent（本地脚本模式）...")
+                    # 导入本地脚本版本的 PricingAgent
+                    from agents.pricing_agent_local import PricingAgentLocal
+                    pricing_agent = PricingAgentLocal(
+                        progress_publisher=self.progress_publisher
+                    )
+                    logger.info("✅ PricingAgent 创建成功（本地脚本模式）")
                 
                 logger.info("正在注册 Agent 到编排器...")
                 self.orchestrator.register_agents(
@@ -124,6 +157,41 @@ class OrchestratorWorker:
         except Exception as e:
             logger.error(f"Worker 启动失败: {e}", exc_info=True)
             raise
+    
+    async def _test_mcp_connection(self, mcp_client) -> bool:
+        """
+        测试 MCP 连接是否可用
+        
+        Returns:
+            bool: True 表示 MCP 可用，False 表示不可用
+        """
+        try:
+            import requests
+            
+            # 尝试访问 MCP 健康检查端点
+            response = requests.get(
+                f"{mcp_client.base_url}/health",
+                timeout=3  # 3秒超时
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("status") == "healthy":
+                    logger.info(f"✅ MCP 服务健康检查通过: {data}")
+                    return True
+            
+            logger.warning(f"⚠️  MCP 服务健康检查失败: status={response.status_code}")
+            return False
+            
+        except requests.exceptions.ConnectionError:
+            logger.warning("⚠️  无法连接到 MCP 服务（连接被拒绝）")
+            return False
+        except requests.exceptions.Timeout:
+            logger.warning("⚠️  MCP 服务连接超时")
+            return False
+        except Exception as e:
+            logger.warning(f"⚠️  MCP 服务健康检查异常: {e}")
+            return False
     
     async def handle_message(self, message: Dict[str, Any]):
         """
