@@ -49,7 +49,12 @@ class PriceItemService:
         # 转换Decimal为字符串（保持精度）
         for key in ['price', 'work_hours', 'min_num', 'add_price', 'weight_num']:
             if key in formatted_item and formatted_item[key] is not None:
-                formatted_item[key] = str(formatted_item[key])
+                formatted_item[key] = str(formatted_item[key]).strip()
+        
+        # trim 所有字符串字段，清除数据库中可能存在的前导/尾随空白字符
+        for key in formatted_item:
+            if isinstance(formatted_item[key], str):
+                formatted_item[key] = formatted_item[key].strip()
         
         return formatted_item
     
@@ -74,17 +79,22 @@ class PriceItemService:
             """
             
             now = datetime.now()
+            
+            # Decimal 类型字段需要转为 str（数据库列为 text 类型）
+            def _to_str(val):
+                return str(val) if isinstance(val, Decimal) else val
+            
             params = (
                 item_data['id'],
                 item_data.get('version_id'),
                 item_data.get('category'),
                 item_data.get('sub_category'),
-                item_data.get('price'),
+                _to_str(item_data.get('price')),
                 item_data.get('unit'),
-                item_data.get('work_hours'),
-                item_data.get('min_num'),
-                item_data.get('add_price'),
-                item_data.get('weight_num'),
+                _to_str(item_data.get('work_hours')),
+                _to_str(item_data.get('min_num')),
+                _to_str(item_data.get('add_price')),
+                _to_str(item_data.get('weight_num')),
                 item_data.get('note'),
                 item_data.get('instruction'),
                 item_data.get('is_active', True),
@@ -215,10 +225,17 @@ class PriceItemService:
                             'work_hours', 'min_num', 'add_price', 'weight_num', 'note', 
                             'instruction', 'is_active', 'created_by']
             
+            # Decimal 类型字段需要转为 str（数据库列为 text 类型）
+            decimal_fields = {'price', 'work_hours', 'min_num', 'add_price', 'weight_num'}
+            
             for field in allowed_fields:
                 if field in update_data:
+                    value = update_data[field]
+                    # 将 Decimal 转为 str，asyncpg 期望 str 而非 Decimal
+                    if field in decimal_fields and isinstance(value, Decimal):
+                        value = str(value)
                     update_fields.append(f"{field} = ${param_index}")
-                    params.append(update_data[field])
+                    params.append(value)
                     param_index += 1
             
             if not update_fields:

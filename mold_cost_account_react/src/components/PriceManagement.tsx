@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { 
-  Typography, 
-  Button, 
-  Space, 
+import {
+  Typography,
+  Button,
+  Space,
   Flex,
   theme,
   Table,
@@ -16,7 +16,7 @@ import {
   Tooltip,
   Pagination,
 } from 'antd'
-import { 
+import {
   PlusOutlined,
   DollarOutlined,
   MenuOutlined,
@@ -55,7 +55,7 @@ const LOAD_DEBOUNCE_TIME = 300 // 300ms 内的重复请求会被忽略
 const PriceManagement: React.FC = () => {
   const { token } = theme.useToken()
   const { setMobileDrawerVisible, setCurrentView } = useAppStore()
-  
+
   const [loading, setLoading] = useState(false)
   const [items, setItems] = useState<PriceItem[]>([])
   const [total, setTotal] = useState(0)
@@ -65,18 +65,18 @@ const PriceManagement: React.FC = () => {
   const [isSmallScreen, setIsSmallScreen] = useState(window.innerWidth < 960)
   const [collapsed, setCollapsed] = useState(true) // 搜索表单折叠状态
   const [gridCols, setGridCols] = useState(3) // Grid 列数
-  
+
   // 筛选条件
   const [filters, setFilters] = useState<QueryPriceItemsParams>({})
-  
+
   // 弹窗状态
   const [modalVisible, setModalVisible] = useState(false)
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create')
   const [editingItem, setEditingItem] = useState<PriceItem | null>(null)
   const [submitting, setSubmitting] = useState(false) // 提交状态
-  
+
   const [form] = Form.useForm()
-  
+
   // 用于跟踪是否是首次加载
   const isFirstLoad = useRef(true)
 
@@ -94,10 +94,10 @@ const PriceManagement: React.FC = () => {
       setIsSmallScreen(width < 960)
       setGridCols(calculateGridCols(width))
     }
-    
+
     // 初始化时计算一次
     handleResize()
-    
+
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
@@ -110,18 +110,18 @@ const PriceManagement: React.FC = () => {
       console.log('防止重复请求：忽略本次加载')
       return
     }
-    
+
     isLoadingCache = true
     lastLoadTime = now
     setLoading(true)
-    
+
     try {
       const response = await getPriceItems({
         page: currentPage,
         page_size: pageSize,
         ...filters,
       })
-      
+
       if (response.success && response.data) {
         setItems(response.data.data)
         setTotal(response.data.total)
@@ -141,7 +141,7 @@ const PriceManagement: React.FC = () => {
       loadItems()
     }
   }, [])
-  
+
   // 监听分页和筛选条件变化
   useEffect(() => {
     if (!isFirstLoad.current) {
@@ -164,7 +164,15 @@ const PriceManagement: React.FC = () => {
   const handleEdit = (record: PriceItem) => {
     setModalMode('edit')
     setEditingItem(record)
-    form.setFieldsValue(record)
+    // trim 所有字符串字段，避免数据库中的前导/尾随空白字符显示在输入框中
+    const trimmedRecord = { ...record }
+    for (const key of Object.keys(trimmedRecord) as (keyof PriceItem)[]) {
+      const val = trimmedRecord[key]
+      if (typeof val === 'string') {
+        (trimmedRecord as any)[key] = val.trim()
+      }
+    }
+    form.setFieldsValue(trimmedRecord)
     setModalVisible(true)
   }
 
@@ -172,9 +180,9 @@ const PriceManagement: React.FC = () => {
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields()
-      
+
       setSubmitting(true)
-      
+
       if (modalMode === 'create') {
         await createPriceItem(values as CreatePriceItemParams)
         message.success('价格项创建成功')
@@ -182,7 +190,7 @@ const PriceManagement: React.FC = () => {
         await updatePriceItem(editingItem!.id, values as UpdatePriceItemParams)
         message.success('价格项更新成功')
       }
-      
+
       setModalVisible(false)
       form.resetFields()
       loadItems()
@@ -214,7 +222,7 @@ const PriceManagement: React.FC = () => {
       message.warning('请选择要删除的价格项')
       return
     }
-    
+
     Modal.confirm({
       title: '批量删除',
       content: `确定要删除选中的 ${selectedRowKeys.length} 条价格项吗？`,
@@ -357,7 +365,7 @@ const PriceManagement: React.FC = () => {
   ]
 
   return (
-    <div style={{ 
+    <div style={{
       height: '100vh',
       width: '100%',
       maxWidth: '100vw',
@@ -420,7 +428,7 @@ const PriceManagement: React.FC = () => {
         borderBottom: `1px solid ${token.colorBorderSecondary}`,
         overflow: 'hidden',
       }}>
-        <div style={{ 
+        <div style={{
           display: 'grid',
           gridTemplateColumns: `repeat(${gridCols}, 1fr)`,
           gap: '20px 20px',
@@ -430,7 +438,7 @@ const PriceManagement: React.FC = () => {
         }}>
           {/* 子类 - 始终显示 */}
           <div style={{ gridColumn: 'span 1' }}>
-            <Form.Item 
+            <Form.Item
               label="子类"
               colon={true}
               style={{ marginBottom: 0 }}
@@ -449,7 +457,7 @@ const PriceManagement: React.FC = () => {
           {/* 类别 - 根据折叠状态和列数显示 */}
           {(!collapsed || gridCols >= 3) && (
             <div style={{ gridColumn: 'span 1' }}>
-              <Form.Item 
+              <Form.Item
                 label="类别"
                 colon={true}
                 style={{ marginBottom: 0 }}
@@ -472,15 +480,15 @@ const PriceManagement: React.FC = () => {
           )}
 
           {/* 操作按钮区域 - 始终在最右侧 */}
-          <div style={{ 
+          <div style={{
             gridColumn: '-2 / -1',
-            display: 'flex', 
+            display: 'flex',
             justifyContent: 'flex-end',
             alignItems: 'flex-start'
           }}>
             <Space>
-              <Button 
-                type="primary" 
+              <Button
+                type="primary"
                 icon={<SearchOutlined />}
                 onClick={() => {
                   setCurrentPage(1)
@@ -489,7 +497,7 @@ const PriceManagement: React.FC = () => {
               >
                 搜索
               </Button>
-              <Button 
+              <Button
                 icon={<ReloadOutlined />}
                 onClick={async () => {
                   setFilters({})
@@ -498,13 +506,13 @@ const PriceManagement: React.FC = () => {
                   isLoadingCache = false
                   lastLoadTime = 0
                   setLoading(true)
-                  
+
                   try {
                     const response = await getPriceItems({
                       page: 1,
                       page_size: pageSize,
                     })
-                    
+
                     if (response.success && response.data) {
                       setItems(response.data.data)
                       setTotal(response.data.total)
@@ -521,7 +529,7 @@ const PriceManagement: React.FC = () => {
               </Button>
               {/* 当类别被隐藏且不是3列时显示展开/合并按钮 */}
               {collapsed && gridCols < 3 && (
-                <Button 
+                <Button
                   type="link"
                   icon={<DownOutlined />}
                   onClick={() => setCollapsed(!collapsed)}
@@ -531,7 +539,7 @@ const PriceManagement: React.FC = () => {
                 </Button>
               )}
               {!collapsed && gridCols < 3 && (
-                <Button 
+                <Button
                   type="link"
                   icon={<UpOutlined />}
                   onClick={() => setCollapsed(!collapsed)}
@@ -546,7 +554,7 @@ const PriceManagement: React.FC = () => {
       </div>
 
       {/* 内容区域 */}
-      <div style={{ 
+      <div style={{
         flex: 1,
         padding: 24,
         overflow: 'hidden',
@@ -574,7 +582,7 @@ const PriceManagement: React.FC = () => {
               新增价格项
             </Button>
           </Space>
-          
+
           {selectedRowKeys.length > 0 && (
             <Button
               danger
@@ -587,8 +595,8 @@ const PriceManagement: React.FC = () => {
         </Flex>
 
         {/* 表格容器 */}
-        <div style={{ 
-          flex: 1, 
+        <div style={{
+          flex: 1,
           minHeight: 0,
           display: 'flex',
           flexDirection: 'column',
@@ -619,9 +627,9 @@ const PriceManagement: React.FC = () => {
               style={{ marginBottom: 0 }}
             />
           </div>
-          
+
           {/* 分页器 - 固定在底部 */}
-          <div style={{ 
+          <div style={{
             padding: '16px 0',
             borderTop: `1px solid ${token.colorBorderSecondary}`,
             background: '#fff',
@@ -704,7 +712,7 @@ const PriceManagement: React.FC = () => {
             name="price"
             rules={[
               { required: true, message: '请输入单价' },
-              { pattern: /^\d+(\.\d{1,2})?$/, message: '请输入有效的价格（最多两位小数）' }
+              { pattern: /^\d+(\.\d+)?$/, message: '请输入有效的价格' }
             ]}
           >
             <Input placeholder="例如: 100.00" />
