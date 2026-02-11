@@ -184,6 +184,9 @@ class Subgraph(Base):
     updated_at = Column(TIMESTAMP, nullable=False, default=now_shanghai, onupdate=now_shanghai)
     meta_data = Column("metadata", JSONB)
     
+    # 小磨床数量
+    small_grinding_count = Column(Integer)
+    
     # 关系定义（来自 mold_cost-main）
     job = relationship("Job", back_populates="subgraphs")
 
