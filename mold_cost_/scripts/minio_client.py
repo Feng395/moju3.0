@@ -23,12 +23,14 @@ class MinIOClient:
     
     def __init__(self):
         """初始化 MinIO 客户端"""
-        self.endpoint = os.getenv('MINIO_ENDPOINT')
-        self.access_key = os.getenv('MINIO_ACCESS_KEY')
-        self.secret_key = os.getenv('MINIO_SECRET_KEY')
-        self.region = os.getenv('MINIO_REGION')
-        self.use_https = os.getenv('MINIO_USE_HTTPS').lower() == 'true'
-        self.bucket_files = os.getenv('MINIO_BUCKET_FILES')
+        self.endpoint = os.getenv('MINIO_ENDPOINT', 'localhost:9000')
+        self.access_key = os.getenv('MINIO_ACCESS_KEY', 'minioadmin')
+        self.secret_key = os.getenv('MINIO_SECRET_KEY', 'minioadmin')
+        self.region = os.getenv('MINIO_REGION', 'us-east-1')
+        # 支持两种环境变量名：MINIO_SECURE（新）和 MINIO_USE_HTTPS（旧）
+        use_https_str = os.getenv('MINIO_SECURE', os.getenv('MINIO_USE_HTTPS', 'false'))
+        self.use_https = use_https_str.lower() == 'true'
+        self.bucket_files = os.getenv('MINIO_BUCKET_FILES', os.getenv('MINIO_BUCKET', 'files'))
         
         # 上传性能配置
         self.upload_part_size = int(os.getenv('MINIO_UPLOAD_PART_SIZE', str(10 * 1024 * 1024)))  # 默认 10MB

@@ -15,6 +15,7 @@
 import os
 from typing import List
 from pydantic_settings import BaseSettings
+from pydantic import field_validator
 from functools import lru_cache
 
 
@@ -54,9 +55,35 @@ class Settings(BaseSettings):
     MINIO_ACCESS_KEY: str = "minioadmin"
     MINIO_SECRET_KEY: str = "minioadmin"
     MINIO_REGION: str = "us-east-1"
-    MINIO_USE_HTTPS: bool = False
+    MINIO_USE_HTTPS: bool = False  # 支持旧变量名
     MINIO_BUCKET_FILES: str = "files"
     MINIO_EXTERNAL_ENDPOINT: str = ""  # 外部访问地址（用于生成预签名URL）
+    
+    @field_validator('MINIO_USE_HTTPS', mode='before')
+    @classmethod
+    def validate_minio_use_https(cls, v):
+        """支持 MINIO_SECURE 和 MINIO_USE_HTTPS 两种环境变量名"""
+        # 优先使用 MINIO_SECURE，如果不存在则使用 MINIO_USE_HTTPS
+        minio_secure = os.getenv('MINIO_SECURE')
+        if minio_secure is not None:
+            return minio_secure.lower() in ('true', '1', 'yes')
+        # 如果 v 是字符串，转换为布尔值
+        if isinstance(v, str):
+            return v.lower() in ('true', '1', 'yes')
+        return v
+    
+    @field_validator('MINIO_BUCKET_FILES', mode='before')
+    @classmethod
+    def validate_minio_bucket_files(cls, v):
+        """支持 MINIO_BUCKET 和 MINIO_BUCKET_FILES 两种环境变量名"""
+        # 优先使用 MINIO_BUCKET_FILES，如果不存在则使用 MINIO_BUCKET
+        minio_bucket_files = os.getenv('MINIO_BUCKET_FILES')
+        if minio_bucket_files is not None:
+            return minio_bucket_files
+        minio_bucket = os.getenv('MINIO_BUCKET')
+        if minio_bucket is not None:
+            return minio_bucket
+        return v if v is not None else "files"
     
     @property
     def MINIO_PRESIGNED_ENDPOINT(self) -> str:

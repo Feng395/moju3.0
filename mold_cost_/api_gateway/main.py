@@ -119,7 +119,7 @@ async def lifespan(app: FastAPI):
 # 创建FastAPI应用
 app = FastAPI(
     title="模具成本核算系统 API",
-    version="1.0.0",
+    version="2.1.0",
     description="基于AI Agent的模具成本核算系统",
     lifespan=lifespan
 )
