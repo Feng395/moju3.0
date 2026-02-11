@@ -54,37 +54,81 @@ def get_progress_publisher() -> ProgressPublisher:
 
 
 def get_cad_agent():
-    """获取 CAD Agent 单例（MCP 模式）"""
+    """
+    获取 CAD Agent 单例
+    自动检测 MCP 可用性，不可用时降级到本地脚本模式
+    """
     global _cad_agent
     
     if _cad_agent is None:
-        from .cad_agent import CADAgent
+        import os
+        import requests
         
-        mcp_client = get_mcp_client()  # 使用统一的 MCP 客户端
         progress_publisher = get_progress_publisher()
         
-        _cad_agent = CADAgent(
-            mcp_client=mcp_client,
-            progress_publisher=progress_publisher
-        )
+        # 检测 MCP 可用性
+        mcp_available = False
+        try:
+            mcp_client = get_mcp_client()
+            response = requests.get(f"{mcp_client.base_url}/health", timeout=3)
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("status") == "healthy":
+                    mcp_available = True
+        except Exception:
+            pass
+        
+        if mcp_available:
+            from .cad_agent import CADAgent
+            _cad_agent = CADAgent(
+                mcp_client=get_mcp_client(),
+                progress_publisher=progress_publisher
+            )
+        else:
+            from .cad_agent_local import CADAgentLocal
+            _cad_agent = CADAgentLocal(
+                progress_publisher=progress_publisher
+            )
     
     return _cad_agent
 
 
 def get_pricing_agent():
-    """获取 Pricing Agent 单例"""
+    """
+    获取 Pricing Agent 单例
+    自动检测 MCP 可用性，不可用时降级到本地脚本模式
+    """
     global _pricing_agent
     
     if _pricing_agent is None:
-        from .pricing_agent import PricingAgent
+        import os
+        import requests
         
-        mcp_client = get_mcp_client()  # 使用统一的 MCP 客户端
         progress_publisher = get_progress_publisher()
         
-        _pricing_agent = PricingAgent(
-            price_search_mcp_client=mcp_client,
-            progress_publisher=progress_publisher
-        )
+        # 检测 MCP 可用性
+        mcp_available = False
+        try:
+            mcp_client = get_mcp_client()
+            response = requests.get(f"{mcp_client.base_url}/health", timeout=3)
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("status") == "healthy":
+                    mcp_available = True
+        except Exception:
+            pass
+        
+        if mcp_available:
+            from .pricing_agent import PricingAgent
+            _pricing_agent = PricingAgent(
+                price_search_mcp_client=get_mcp_client(),
+                progress_publisher=progress_publisher
+            )
+        else:
+            from .pricing_agent_local import PricingAgentLocal
+            _pricing_agent = PricingAgentLocal(
+                progress_publisher=progress_publisher
+            )
     
     return _pricing_agent
 
