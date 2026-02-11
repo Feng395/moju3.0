@@ -109,6 +109,149 @@
 
 ---
 
+## 🚀 快速开始
+
+### 前置要求
+
+- Python 3.11+
+- PostgreSQL 14+
+- Redis 6+
+- RabbitMQ 3.8+
+- MinIO (或兼容S3的对象存储)
+
+### 统一启动（推荐）⭐
+
+系统已集成所有服务到单一启动入口，一键启动所有功能。
+
+#### Windows
+
+```bash
+# 1. 克隆项目
+git clone <repository-url>
+cd mold_cost_
+
+# 2. 安装依赖
+pip install -r requirements.txt
+
+# 3. 配置环境变量
+copy .env.example .env
+# 编辑 .env 文件，配置数据库、Redis、RabbitMQ、MinIO等
+
+# 4. 启动所有服务（默认端口 8000）
+start.bat
+
+# 或指定端口
+start.bat --port 8211
+
+# 仅启动 API Gateway（适合前端开发）
+start.bat --api-only
+```
+
+#### Linux/macOS
+
+```bash
+# 1. 克隆项目
+git clone <repository-url>
+cd mold_cost_
+
+# 2. 安装依赖
+pip install -r requirements.txt
+
+# 3. 配置环境变量
+cp .env.example .env
+# 编辑 .env 文件，配置数据库、Redis、RabbitMQ、MinIO等
+
+# 4. 添加执行权限
+chmod +x start.sh
+
+# 5. 启动所有服务（默认端口 8000）
+./start.sh
+
+# 或指定端口
+./start.sh --port 8211
+
+# 仅启动 API Gateway（适合前端开发）
+./start.sh --api-only
+```
+
+#### 直接使用 Python
+
+```bash
+# 启动所有服务（API Gateway + Worker）
+python main.py
+
+# 指定端口
+python main.py --port 8000
+
+# 仅启动 API Gateway
+python main.py --api-only
+
+# 仅启动 Worker
+python main.py --worker-only
+```
+
+### 验证服务
+
+```bash
+# 健康检查
+curl http://localhost:8000/health
+
+# 访问 API 文档
+# http://localhost:8000/docs
+
+# 访问 ReDoc
+# http://localhost:8000/redoc
+```
+
+### 传统启动方式（不推荐）
+
+如果需要分别启动各个服务：
+
+**终端 1 - API Gateway:**
+```bash
+cd mold_cost_
+uvicorn api_gateway.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+**终端 2 - Orchestrator Worker:**
+```bash
+cd mold_cost_
+python workers/orchestrator_worker.py
+```
+
+---
+
+## 🔌 端口说明
+
+### 统一端口方案（推荐）
+
+| 服务 | 端口 | 说明 |
+|------|------|------|
+| **统一入口** | **8000** | API Gateway + Worker（推荐） |
+| API 文档 | 8000/docs | Swagger UI |
+| ReDoc | 8000/redoc | API 文档（ReDoc风格） |
+| 健康检查 | 8000/health | 服务状态检查 |
+
+### 基础设施端口
+
+| 服务 | 端口 | 说明 |
+|------|------|------|
+| PostgreSQL | 5432 | 数据库 |
+| Redis | 6379 | 缓存和会话 |
+| RabbitMQ | 5672 | 消息队列 |
+| RabbitMQ 管理界面 | 15672 | Web管理界面 |
+| MinIO | 9000 | 对象存储 |
+| MinIO 控制台 | 9001 | Web控制台 |
+
+### 旧端口方案（已废弃）
+
+| 服务 | 旧端口 | 新端口 | 状态 |
+|------|--------|--------|------|
+| API Gateway | 8211 | 8000 | ✅ 已迁移 |
+| CAD Price Search MCP | 8200 | - | ✅ 已集成 |
+
+---
+
 
 ## 🏗️ 技术架构
 
