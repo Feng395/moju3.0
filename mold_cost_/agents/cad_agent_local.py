@@ -58,6 +58,17 @@ class CADAgentLocal:
         try:
             self.logger.info(f"[本地脚本模式] 调用 cad_chaitu 脚本")
             
+            # 发布拆图开始进度
+            if self.progress_publisher:
+                from shared.progress_stages import ProgressStage, ProgressPercent
+                self.progress_publisher.publish_progress(
+                    job_id=job_id,
+                    stage=ProgressStage.CAD_SPLIT_STARTED,
+                    progress=ProgressPercent.CAD_SPLIT_STARTED,
+                    message="正在拆图...（本地脚本模式）",
+                    details={"source": "local_script"}
+                )
+            
             # 导入本地脚本
             from scripts.cad_chaitu.main import chaitu_process
             
@@ -68,6 +79,16 @@ class CADAgentLocal:
             result = await chaitu_process(dwg_url, job_id)
             
             if result.get("status") != "ok":
+                # 发布拆图失败进度
+                if self.progress_publisher:
+                    from shared.progress_stages import ProgressStage, ProgressPercent
+                    self.progress_publisher.publish_progress(
+                        job_id=job_id,
+                        stage=ProgressStage.CAD_SPLIT_FAILED,
+                        progress=ProgressPercent.CAD_SPLIT_STARTED,
+                        message=f"拆图失败: {result.get('message', '未知错误')}",
+                        details={"source": "local_script"}
+                    )
                 return {
                     "status": "error",
                     "message": f"拆图失败: {result.get('message', '未知错误')}",
@@ -77,6 +98,17 @@ class CADAgentLocal:
             # 提取子图数量
             data = result.get("data", {})
             subgraph_count = data.get("total_count", 0)
+            
+            # 发布拆图完成进度
+            if self.progress_publisher:
+                from shared.progress_stages import ProgressStage, ProgressPercent
+                self.progress_publisher.publish_progress(
+                    job_id=job_id,
+                    stage=ProgressStage.CAD_SPLIT_COMPLETED,
+                    progress=ProgressPercent.CAD_SPLIT_COMPLETED,
+                    message=f"拆图完成，生成{subgraph_count}个子图",
+                    details={"source": "local_script", "subgraph_count": subgraph_count}
+                )
             
             return {
                 "status": "ok",
