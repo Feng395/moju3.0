@@ -30,7 +30,7 @@ class MinIOClient:
         # 支持两种环境变量名：MINIO_SECURE（新）和 MINIO_USE_HTTPS（旧）
         use_https_str = os.getenv('MINIO_SECURE', os.getenv('MINIO_USE_HTTPS', 'false'))
         self.use_https = use_https_str.lower() == 'true'
-        self.bucket_files = os.getenv('MINIO_BUCKET_FILES', os.getenv('MINIO_BUCKET', 'files'))
+        self.bucket_files = os.getenv('MINIO_BUCKET_FILES', os.getenv('MINIO_BUCKET', 'mold-cost'))
         
         # 上传性能配置
         self.upload_part_size = int(os.getenv('MINIO_UPLOAD_PART_SIZE', str(10 * 1024 * 1024)))  # 默认 10MB

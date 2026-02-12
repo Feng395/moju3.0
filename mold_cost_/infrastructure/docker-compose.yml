@@ -89,10 +89,11 @@ services:
       - mold_cost_network
     restart: unless-stopped
 
-  # MinIO初始化（创建bucket）
+  # MinIO初始化（创建bucket）- 一次性任务，执行完自动退出
   minio-init:
     image: minio/mc:latest
     container_name: mold_cost_minio_init
+    restart: "no"
     depends_on:
       minio:
         condition: service_healthy

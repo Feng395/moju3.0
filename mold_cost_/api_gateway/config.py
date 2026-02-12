@@ -56,7 +56,7 @@ class Settings(BaseSettings):
     MINIO_SECRET_KEY: str = "minioadmin"
     MINIO_REGION: str = "us-east-1"
     MINIO_USE_HTTPS: bool = False  # 支持旧变量名
-    MINIO_BUCKET_FILES: str = "files"
+    MINIO_BUCKET_FILES: str = "mold-cost"
     MINIO_EXTERNAL_ENDPOINT: str = ""  # 外部访问地址（用于生成预签名URL）
     
     @field_validator('MINIO_USE_HTTPS', mode='before')
