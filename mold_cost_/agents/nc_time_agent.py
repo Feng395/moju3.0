@@ -44,10 +44,17 @@ class NCTimeAgent(BaseAgent):
         # 从环境变量或配置文件读取配置
         import os
         from api_gateway.config import settings
+        
+        # 检查是否启用NC Agent
+        self.nc_agent_enabled = os.getenv("NC_AGENT_ENABLED", str(settings.NC_AGENT_ENABLED)).lower() == "true"
         self.nc_agent_url = nc_agent_url or os.getenv("NC_AGENT_URL", settings.NC_AGENT_URL)
         self.timeout = int(os.getenv("NC_AGENT_TIMEOUT", str(settings.NC_AGENT_TIMEOUT)))
         self.progress_publisher = progress_publisher
-        self.logger.info(f"[NCTimeAgent] 初始化完成: url={self.nc_agent_url}, timeout={self.timeout}秒")
+        
+        if self.nc_agent_enabled:
+            self.logger.info(f"[NCTimeAgent] 初始化完成: url={self.nc_agent_url}, timeout={self.timeout}秒")
+        else:
+            self.logger.warning(f"[NCTimeAgent] NC Agent 已禁用，将跳过NC时间计算")
     
     async def process(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -74,6 +81,32 @@ class NCTimeAgent(BaseAgent):
         job_id = context.get("job_id")
         if not job_id:
             return {"status": "error", "message": "缺少 job_id 参数"}
+        
+        # 检查是否启用NC Agent
+        if not self.nc_agent_enabled:
+            self.logger.info(f"[NCTimeAgent] NC Agent 已禁用，跳过NC时间计算: job_id={job_id}")
+            
+            # 发布进度：NC 时间计算跳过
+            if self.progress_publisher:
+                from shared.progress_stages import ProgressStage, ProgressPercent
+                self.progress_publisher.publish_progress(
+                    job_id=job_id,
+                    stage=ProgressStage.NC_CALCULATION_STARTED,
+                    progress=ProgressPercent.NC_CALCULATION_STARTED,
+                    message="NC 时间计算已禁用（本地开发模式）",
+                    details={"nc_agent_enabled": False}
+                )
+            
+            return {
+                "status": "ok",
+                "message": "NC Agent 已禁用，跳过NC时间计算",
+                "summary": {
+                    "total_subgraphs": 0,
+                    "success_count": 0,
+                    "failed_count": 0,
+                    "skipped": True
+                }
+            }
         
         self.logger.info(f"[NCTimeAgent] 开始处理 NC 时间计算: job_id={job_id}")
         

@@ -1,205 +1,427 @@
-# InteractionAgent - 用户交互Agent
+# AI Agents 模块
 
-## 📚 概述
+## 📋 概述
 
-InteractionAgent 是基于 LangGraph 框架实现的用户交互Agent，负责检查参数完整性和生成交互需求。
+AI Agents 模块是模具成本核算系统的核心智能层，负责处理用户交互、任务编排、CAD解析、特征识别和价格计算等复杂业务逻辑。采用 LangChain 和 LangGraph 框架构建多Agent协作系统。
 
-## 🎯 核心特性
+## 🏗️ 架构设计
 
-- ✅ **智能参数检查** - 自动检测缺失参数
-- ✅ **状态管理** - 基于 LangGraph 的状态管理
-- ✅ **可选 LLM 增强** - AI 生成友好提示
-- ✅ **向后兼容** - 保持原有接口
-- ✅ **生产就绪** - 稳定、高性能
+### Agent 层次结构
 
-## 🚀 快速开始
-
-### 安装依赖
-
-```bash
-pip install "langchain>=1.0,<2.0" "langgraph>=1.0,<2.0" "langchain-openai>=0.1.0,<1.0" "openai>=1.0,<2.0"
+```
+OrchestratorAgent (编排层)
+    ├── InteractionAgent (交互层)
+    │   ├── IntentRecognizer (意图识别)
+    │   └── NLPParser (自然语言解析)
+    ├── DecisionAgent (决策层)
+    ├── CADAgent (CAD处理)
+    ├── PricingAgent (价格计算)
+    └── NCTimeAgent (NC时间计算)
 ```
 
-### 基础使用
+## 📁 目录结构
+
+```
+agents/
+├── action_handlers/              # 动作处理器
+│   ├── base_handler.py          # 基础处理器抽象类
+│   ├── feature_recognition_handler.py  # 特征识别处理
+│   ├── price_calculation_handler.py    # 价格计算处理
+│   ├── data_modification_handler.py    # 数据修改处理
+│   ├── query_details_handler.py        # 详情查询处理
+│   ├── general_chat_handler.py         # 通用对话处理
+│   ├── weight_price_calculation_handler.py  # 重量价格计算
+│   └── weight_price_query_handler.py   # 重量价格查询
+├── orchestrator_agent.py        # 编排Agent（核心）
+├── interaction_agent.py         # 交互Agent
+├── decision_agent.py            # 决策Agent
+├── cad_agent.py                 # CAD处理Agent
+├── cad_agent_local.py          # 本地CAD处理
+├── pricing_agent.py            # 价格计算Agent
+├── pricing_agent_local.py      # 本地价格计算
+├── nc_time_agent.py            # NC时间计算Agent
+├── intent_recognizer.py        # 意图识别器
+├── intent_types.py             # 意图类型定义
+├── nlp_parser.py               # NLP解析器
+├── confirm_handler.py          # 确认处理器
+├── data_view_builder.py        # 数据视图构建器
+├── message_persistence_manager.py  # 消息持久化管理
+├── review_status.py            # 审核状态管理
+└── phase2/                     # 第二期功能
+    └── sheet_line_agent.py     # 板材线Agent
+```
+
+## 🤖 核心 Agents
+
+### 1. OrchestratorAgent (编排Agent)
+
+**职责**: 任务编排和流程控制
+
+**主要功能**:
+- 接收用户消息并分发给相应的Agent
+- 协调多个Agent之间的协作
+- 管理任务状态和进度
+- 处理异常和错误恢复
+
+**关键方法**:
+```python
+async def process_message(message: str, job_id: str) -> dict
+async def handle_interaction(interaction_data: dict) -> dict
+async def get_job_status(job_id: str) -> dict
+```
+
+### 2. InteractionAgent (交互Agent)
+
+**职责**: 用户交互和对话管理
+
+**主要功能**:
+- 解析用户输入的自然语言
+- 识别用户意图
+- 生成友好的响应消息
+- 处理多轮对话上下文
+
+**支持的意图类型**:
+- `FEATURE_RECOGNITION` - 特征识别
+- `PRICE_CALCULATION` - 价格计算
+- `DATA_MODIFICATION` - 数据修改
+- `QUERY_DETAILS` - 查询详情
+- `GENERAL_CHAT` - 通用对话
+
+### 3. CADAgent (CAD处理Agent)
+
+**职责**: CAD文件解析和特征提取
+
+**主要功能**:
+- DWG/PRT文件格式转换
+- CAD图纸解析
+- 特征识别和提取
+- 尺寸信息提取
+
+**处理流程**:
+1. 文件格式验证
+2. DWG → DXF 转换
+3. 图层分析
+4. 特征识别
+5. 结果存储
+
+### 4. PricingAgent (价格计算Agent)
+
+**职责**: 成本计算和价格估算
+
+**主要功能**:
+- 材料成本计算
+- 加工成本计算
+- NC时间计算
+- 水磨、线割等工艺成本
+- 总成本汇总
+
+**计算模块**:
+- 材料价格 (`price_material.py`)
+- NC基础价格 (`price_nc_base.py`)
+- NC时间价格 (`price_nc_time.py`)
+- 水磨价格 (`price_water_mill_*.py`)
+- 线割价格 (`price_wire_*.py`)
+- 热处理价格 (`price_heat.py`)
+
+### 5. DecisionAgent (决策Agent)
+
+**职责**: 业务决策和规则匹配
+
+**主要功能**:
+- 工艺规则匹配
+- 参数验证
+- 业务逻辑判断
+- 异常情况处理
+
+## 🎯 Action Handlers (动作处理器)
+
+### BaseHandler (基础处理器)
+
+所有处理器的抽象基类，定义统一接口:
 
 ```python
-from agents.interaction_agent import InteractionAgent
-
-# 初始化（不使用 LLM，推荐生产环境）
-agent = InteractionAgent(use_llm=False)
-
-# 检查参数
-context = {
-    "job_id": "job-123",
-    "features": [
-        {
-            "subgraph_id": "UP01",
-            "volume_mm3": 1000,
-            # thickness_mm 和 material 缺失
-        }
-    ]
-}
-
-result = await agent.process(context)
-
-if result.status == "need_input":
-    print(result.data["prompt"])  # 友好的提示
-    print(result.data["missing_params"])  # 缺失参数列表
+class BaseHandler(ABC):
+    @abstractmethod
+    async def handle(self, context: dict) -> dict:
+        """处理业务逻辑"""
+        pass
+    
+    @abstractmethod
+    async def validate(self, data: dict) -> bool:
+        """验证输入数据"""
+        pass
 ```
 
-### 处理用户输入
+### FeatureRecognitionHandler (特征识别处理器)
 
-```python
-# 用户填写参数后
-context["user_input"] = {
-    "UP01": {
-        "thickness_mm": 30,
-        "material": "P20"
-    }
-}
+**功能**: 处理CAD特征识别请求
 
-result = await agent.process(context)
-
-if result.status == "ok":
-    print("✅ 参数完整，可以继续处理")
-    updated_features = result.data["features"]
-```
-
-## 📖 详细文档
-
-- [快速开始](QUICKSTART_V2.md) - 3分钟上手指南
-- [完整文档](INTERACTION_AGENT_V2.md) - 技术细节和 API 参考
-- [迁移指南](MIGRATION_GUIDE.md) - 从旧版本迁移（如果需要）
-
-## 🔧 配置选项
-
-### 简单模式（默认）
-
-```python
-agent = InteractionAgent(use_llm=False)
-```
-
-- 响应快（< 10ms）
-- 无 API 成本
-- 推荐生产环境
-
-### AI 模式（可选）
-
-```python
-# 需要设置环境变量: OPENAI_API_KEY
-agent = InteractionAgent(use_llm=True)
-```
-
-- AI 生成友好提示
-- 响应较慢（~300ms）
-- 有 API 成本
-
-## 📊 参数类型
-
-支持的参数类型：
-
+**输入**:
 ```python
 {
-    "subgraph_id": "UP01",
-    "param_name": "thickness_mm",
-    "param_label": "厚度(mm)",
-    "param_type": "number",  # number | select | text
-    "required": True,
-    "options": ["P20", "718"]  # 仅 select 类型需要
+    "job_id": "uuid",
+    "file_path": "path/to/cad/file.dwg",
+    "recognition_type": "auto"  # auto, manual, specific
 }
+```
+
+**输出**:
+```python
+{
+    "success": True,
+    "features": {
+        "dimensions": {...},
+        "holes": [...],
+        "threads": [...],
+        "surfaces": [...]
+    }
+}
+```
+
+### PriceCalculationHandler (价格计算处理器)
+
+**功能**: 处理价格计算请求
+
+**输入**:
+```python
+{
+    "job_id": "uuid",
+    "calculation_type": "full",  # full, material, processing
+    "parameters": {...}
+}
+```
+
+**输出**:
+```python
+{
+    "success": True,
+    "total_price": 1234.56,
+    "breakdown": {
+        "material": 500.00,
+        "processing": 734.56
+    }
+}
+```
+
+### DataModificationHandler (数据修改处理器)
+
+**功能**: 处理用户数据修改请求
+
+**支持的修改类型**:
+- 单个字段修改
+- 批量修改
+- 工艺参数调整
+- 价格项更新
+
+### QueryDetailsHandler (详情查询处理器)
+
+**功能**: 查询任务详情和状态
+
+**查询类型**:
+- 任务基本信息
+- 特征识别结果
+- 价格计算明细
+- 处理进度
+
+## 🔄 工作流程
+
+### 典型任务处理流程
+
+```
+1. 用户上传CAD文件
+   ↓
+2. OrchestratorAgent 接收任务
+   ↓
+3. CADAgent 解析文件
+   ↓
+4. FeatureRecognitionHandler 识别特征
+   ↓
+5. PricingAgent 计算价格
+   ↓
+6. InteractionAgent 生成报告
+   ↓
+7. 返回结果给用户
+```
+
+### 交互式对话流程
+
+```
+1. 用户发送消息
+   ↓
+2. InteractionAgent 解析意图
+   ↓
+3. IntentRecognizer 识别意图类型
+   ↓
+4. 路由到对应的 Handler
+   ↓
+5. Handler 处理业务逻辑
+   ↓
+6. 生成响应消息
+   ↓
+7. 返回给用户
+```
+
+## 🛠️ 开发指南
+
+### 添加新的 Agent
+
+1. 继承 `BaseAgent` 类
+2. 实现必要的方法
+3. 在 `OrchestratorAgent` 中注册
+4. 添加相应的测试
+
+示例:
+```python
+from agents.base_agent import BaseAgent
+
+class MyNewAgent(BaseAgent):
+    def __init__(self):
+        super().__init__()
+        self.name = "MyNewAgent"
+    
+    async def process(self, data: dict) -> dict:
+        # 实现处理逻辑
+        return {"success": True}
+```
+
+### 添加新的 Handler
+
+1. 继承 `BaseHandler` 类
+2. 实现 `handle()` 和 `validate()` 方法
+3. 在对应的 Agent 中注册
+4. 添加单元测试
+
+示例:
+```python
+from agents.action_handlers.base_handler import BaseHandler
+
+class MyNewHandler(BaseHandler):
+    async def handle(self, context: dict) -> dict:
+        # 实现处理逻辑
+        return {"success": True}
+    
+    async def validate(self, data: dict) -> bool:
+        # 实现验证逻辑
+        return True
+```
+
+### 添加新的意图类型
+
+1. 在 `intent_types.py` 中定义新意图
+2. 在 `IntentRecognizer` 中添加识别规则
+3. 创建对应的 Handler
+4. 更新文档
+
+## 📊 性能优化
+
+### 异步处理
+
+所有 Agent 和 Handler 都使用异步方法，提高并发性能:
+
+```python
+async def process_multiple_jobs(job_ids: list):
+    tasks = [process_job(job_id) for job_id in job_ids]
+    results = await asyncio.gather(*tasks)
+    return results
+```
+
+### 缓存策略
+
+使用 Redis 缓存频繁访问的数据:
+
+```python
+# 缓存特征识别结果
+await redis_client.set(f"features:{job_id}", features, expire=3600)
+
+# 缓存价格计算结果
+await redis_client.set(f"price:{job_id}", price_data, expire=3600)
+```
+
+### 消息队列
+
+使用 RabbitMQ 处理耗时任务:
+
+```python
+# 发送任务到队列
+await rabbitmq_client.publish(
+    queue="cad_processing",
+    message={"job_id": job_id, "file_path": file_path}
+)
 ```
 
 ## 🧪 测试
 
+### 单元测试
+
 ```bash
-# 运行测试
-pytest tests/test_interaction_agent.py -v
+# 测试所有 Agents
+pytest tests/agents/
 
-# 运行示例
-python examples/interaction_agent_example.py
+# 测试特定 Agent
+pytest tests/agents/test_orchestrator_agent.py
+
+# 测试 Handlers
+pytest tests/agents/test_handlers.py
 ```
 
-## 🔄 工作流程
+### 集成测试
 
-```mermaid
-graph LR
-    A[检查参数] --> B{完整?}
-    B -->|是| C[完成]
-    B -->|否| D[生成提示]
-    D --> E[等待输入]
-    E --> F[验证输入]
-    F --> A
+```bash
+# 端到端测试
+pytest tests/integration/test_agent_workflow.py
 ```
 
-## 💡 使用场景
+## 📝 配置
 
-### 场景 1: 基础参数检查
+### Agent 配置
+
+在 `.env` 文件中配置:
+
+```bash
+# Agent 配置
+AGENT_TIMEOUT=300
+AGENT_MAX_RETRIES=3
+AGENT_LOG_LEVEL=INFO
+
+# LLM 配置
+OPENAI_API_KEY=your-api-key
+OPENAI_MODEL=gpt-4
+OPENAI_TEMPERATURE=0.7
+```
+
+## 🔍 调试
+
+### 启用详细日志
 
 ```python
-result = await agent.process(context)
+from shared.logging_config import get_logger
 
-if result.status == "need_input":
-    # 显示给用户
-    show_form(result.data["missing_params"])
+logger = get_logger(__name__)
+logger.setLevel("DEBUG")
 ```
 
-### 场景 2: 与 Orchestrator 集成
+### 查看 Agent 执行轨迹
 
 ```python
-class OrchestratorAgent:
-    async def execute(self, job_id, features):
-        result = await self.interaction_agent.process({
-            "job_id": job_id,
-            "features": features
-        })
-        
-        if result.status == "need_input":
-            await self.notify_user(result.data)
-            return "waiting"
-        
-        return await self.continue_processing()
+# 在 OrchestratorAgent 中启用追踪
+orchestrator.enable_tracing = True
 ```
 
-## 📈 性能指标
+## 📚 相关文档
 
-| 指标 | 简单模式 | AI 模式 |
-|------|---------|---------|
-| 响应时间 | < 10ms | ~300ms |
-| 内存占用 | 低 | 中 |
-| 准确率 | 100% | 100% |
-| 成本 | 免费 | ~$0.001/次 |
+- [API Gateway 文档](../api_gateway/README.md)
+- [Scripts 文档](../scripts/README.md)
+- [Shared 模块文档](../shared/README.md)
+- [主项目文档](../README.md)
 
-## 🔍 故障排查
+## 🤝 贡献指南
 
-### LangGraph 未安装
+1. 遵循现有的代码风格
+2. 添加必要的类型注解
+3. 编写单元测试
+4. 更新相关文档
+5. 提交 Pull Request
 
-```bash
-pip install "langgraph>=1.0,<2.0"
-```
+## 📞 联系方式
 
-Agent 会自动降级到简化版本。
-
-### LLM 错误
-
-```bash
-# 检查 API Key
-echo $OPENAI_API_KEY
-
-# 或禁用 LLM
-agent = InteractionAgent(use_llm=False)
-```
-
-## 📞 获取帮助
-
-- **示例代码**: `examples/interaction_agent_example.py`
-- **测试用例**: `tests/test_interaction_agent.py`
-- **负责人**: 人员B2
-
-## 📄 许可证
-
-与主项目相同
-
----
-
-**版本**: 2.0.0  
-**状态**: 生产就绪 ✅
+如有问题，请联系 AI Agents 团队或提交 Issue。

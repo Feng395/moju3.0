@@ -110,6 +110,7 @@ class Settings(BaseSettings):
         return [ext.strip() for ext in self.ALLOWED_FILE_EXTENSIONS.split(",")]
     
     # 外部NC Agent配置
+    NC_AGENT_ENABLED: bool = True  # 是否启用外部NC Agent（本地开发可设为False）
     NC_AGENT_URL: str = "http://192.168.0.65:8001"
     NC_AGENT_TIMEOUT: int = 86400  # 24小时超时
     
