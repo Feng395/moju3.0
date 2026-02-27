@@ -25,9 +25,9 @@ class Settings(BaseSettings):
     # 数据库配置
     DB_HOST: str = "localhost"
     DB_PORT: int = 5432
-    DB_NAME: str = "mold_cost_db"
-    DB_USER: str = "root"
-    DB_PASSWORD: str = "yunzai123"
+    DB_NAME: str = "mold_cost"  # 修改默认值为本地数据库
+    DB_USER: str = "postgres"
+    DB_PASSWORD: str = "root"
     
     @property
     def DATABASE_URL(self) -> str:
