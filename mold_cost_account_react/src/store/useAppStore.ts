@@ -3,7 +3,7 @@ import { devtools } from 'zustand/middleware'
 import { SessionItem } from '../services/sessionService'
 
 // 意图类型
-export type IntentType =
+export type IntentType = 
   | 'DATA_MODIFICATION'      // 数据修改
   | 'FEATURE_RECOGNITION'    // 特征识别
   | 'PRICE_CALCULATION'      // 价格计算
@@ -137,7 +137,7 @@ interface AppState {
   initialized: boolean
   isMobile: boolean // 是否为移动端
   mobileDrawerVisible: boolean // 移动端抽屉是否可见
-
+  
   // Chat State
   messages: Message[]
   isTyping: boolean
@@ -150,23 +150,24 @@ interface AppState {
   isRefreshing: boolean  // 新增：是否正在刷新审核数据（调用/review/refresh接口）
   reviewStarted: boolean  // 新增：审核是否已启动完成（/review/start接口已完成）
   isReprocessing: boolean  // 新增：是否正在重新处理（重新识别特征或重新计算价格）
-
+  loadingSessionId: string | null  // 新增：当前正在加载的会话ID，用于防止竞态条件
+  
   // Jobs State
   jobs: Job[]
-
+  
   // Sessions State
   sessions: SessionItem[]
   sessionsLoading: boolean
   sessionsTotal: number
   sessionsOffset: number
   hasMoreSessions: boolean
-
+  
   // Interaction State
   interactionCards: InteractionCard[]
-
+  
   // WebSocket State
   wsConnected: boolean
-
+  
   // Actions
   setCurrentView: (view: 'chat' | 'price' | 'process' | 'jobs' | 'settings' | 'history') => void
   setSidebarCollapsed: (collapsed: boolean) => void
@@ -199,6 +200,7 @@ interface AppState {
   resetUploadState: () => void  // 新增：重置上传状态
   setMessages: (messages: Message[] | ((prevMessages: Message[]) => Message[])) => void
   loadHistoryMessages: (sessionId: string) => Promise<void>
+  cancelLoadingHistory: () => void  // 新增：取消正在进行的历史加载
 }
 
 export const useAppStore = create<AppState>()(
@@ -221,6 +223,7 @@ export const useAppStore = create<AppState>()(
       isRefreshing: false,  // 新增：初始化为false
       reviewStarted: false,  // 新增：初始化为false
       isReprocessing: false,  // 新增：初始化为false
+      loadingSessionId: null,  // 新增：初始化为null
       jobs: [],
       sessions: [],
       sessionsLoading: false,
@@ -232,15 +235,15 @@ export const useAppStore = create<AppState>()(
 
       // Actions
       setCurrentView: (view) => set({ currentView: view }),
-
+      
       setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
-
+      
       setInitialized: (initialized) => set({ initialized }),
-
+      
       setIsMobile: (isMobile) => set({ isMobile }),
-
+      
       setMobileDrawerVisible: (visible) => set({ mobileDrawerVisible: visible }),
-
+      
       addMessage: (message) => set((state) => {
         // 验证和清理 progressData
         let cleanedMessage = { ...message }
@@ -255,68 +258,48 @@ export const useAppStore = create<AppState>()(
             data: message.progressData.data,
           }
         }
-
+        
         const newMessage: Message = {
           ...cleanedMessage,
           // 生成 id 和 timestamp
           id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
           timestamp: new Date(),
         }
-
+        
         // 确保 state.messages 是数组
         const currentMessages = Array.isArray(state.messages) ? state.messages : []
-
-        // 中间进度消息合并：对于 feature_recognition_progress 和 pricing_progress 阶段，
-        // 替换掉同一 stage 的上一条消息，避免在聊天区域堆积大量中间进度消息
-        const MERGEABLE_STAGES = ['feature_recognition_progress', 'pricing_progress']
-        const stage = cleanedMessage.progressData?.stage
-        if (message.type === 'progress' && stage && MERGEABLE_STAGES.includes(stage)) {
-          // 从后往前找到同一 stage 的最后一条消息并替换
-          let lastIndex = -1
-          for (let i = currentMessages.length - 1; i >= 0; i--) {
-            if (currentMessages[i].type === 'progress' && currentMessages[i].progressData?.stage === stage) {
-              lastIndex = i
-              break
-            }
-          }
-          if (lastIndex >= 0) {
-            const updatedMessages = [...currentMessages]
-            updatedMessages[lastIndex] = { ...newMessage, id: currentMessages[lastIndex].id }
-            return { messages: updatedMessages }
-          }
-        }
-
+        
         return {
           messages: [...currentMessages, newMessage]
         }
       }),
-
+      
       setIsTyping: (typing) => set({ isTyping: typing }),
-
+      
       setCurrentJobId: (jobId) => set({ currentJobId: jobId }),
-
+      
       setIsLoadingHistory: (loading) => set({ isLoadingHistory: loading }),  // 新增：实现设置加载历史消息状态
-
+      
       setHistoryLoadError: (error) => set({ historyLoadError: error }),  // 新增：实现设置历史消息加载错误
-
+      
       setIsNewSession: (isNew) => set({ isNewSession: isNew }),  // 新增：实现设置是否为新会话
-
+      
       setIsCalculating: (calculating) => set({ isCalculating: calculating }),  // 新增：实现设置是否正在核算
-
+      
       setIsStartingReview: (starting) => set({ isStartingReview: starting }),  // 新增：实现设置是否正在启动审核
-
+      
       setIsRefreshing: (refreshing) => set({ isRefreshing: refreshing }),  // 新增：实现设置是否正在刷新审核数据
-
+      
       setReviewStarted: (started) => set({ reviewStarted: started }),  // 新增：实现设置审核是否已启动完成
-
+      
       setIsReprocessing: (reprocessing) => set({ isReprocessing: reprocessing }),  // 新增：实现设置是否正在重新处理
-
+      
       updateJob: (jobId, updates) => set((state) => ({
-        jobs: state.jobs.map(job =>
+        jobs: state.jobs.map(job => 
           job.id === jobId ? { ...job, ...updates, updatedAt: new Date() } : job
         )
       })),
-
+      
       addJob: (job) => set((state) => {
         // 检查是否已存在相同ID的任务，避免重复添加
         const existingJob = state.jobs.find(j => j.id === job.id)
@@ -327,62 +310,72 @@ export const useAppStore = create<AppState>()(
           jobs: [job, ...state.jobs]
         }
       }),
-
+      
       deleteJob: (jobId) => set((state) => ({
         jobs: state.jobs.filter(job => job.id !== jobId)
       })),
-
+      
       setSessions: (sessions, total, offset) => set({
         sessions,
         sessionsTotal: total,
         sessionsOffset: offset,
         hasMoreSessions: sessions.length + offset < total,
       }),
-
+      
       addSessions: (newSessions, total, offset) => set((state) => ({
         sessions: [...state.sessions, ...newSessions],
         sessionsTotal: total,
         sessionsOffset: offset,
         hasMoreSessions: state.sessions.length + newSessions.length + offset < total,
       })),
-
+      
       setSessionsLoading: (loading) => set({ sessionsLoading: loading }),
-
+      
       deleteSession: (sessionId) => {
-
+        
         set((state) => {
           const newSessions = state.sessions.filter(session => session.session_id !== sessionId)
-
+          
           return {
             sessions: [...newSessions], // 确保创建新数组
             sessionsTotal: Math.max(0, state.sessionsTotal - 1),
           }
         })
       },
-
+      
       updateSession: (sessionId, updates) => set((state) => ({
         sessions: state.sessions.map(session =>
           session.session_id === sessionId ? { ...session, ...updates } : session
         ),
       })),
-
+      
       addInteractionCard: (card) => set((state) => ({
         interactionCards: [...state.interactionCards, card]
       })),
-
+      
       removeInteractionCard: (cardId) => set((state) => ({
         interactionCards: state.interactionCards.filter(card => card.id !== cardId)
       })),
-
+      
       setWsConnected: (connected) => set({ wsConnected: connected }),
-
+      
       clearMessages: () => set({ messages: [] }),
-
+      
       resetUploadState: () => {
         // 触发自定义事件，通知FileUpload组件重置状态
         window.dispatchEvent(new CustomEvent('resetUploadState'))
       },
-
+      
+      cancelLoadingHistory: () => {
+        // 取消正在进行的历史加载
+        // 通过清除 loadingSessionId，使得正在进行的请求在完成时会被忽略
+        const currentLoadingSessionId = get().loadingSessionId
+        if (currentLoadingSessionId) {
+          console.log('🚫 取消历史加载请求:', currentLoadingSessionId)
+        }
+        set({ loadingSessionId: null, isLoadingHistory: false, historyLoadError: null })
+      },
+      
       setMessages: (messagesOrUpdater) => {
         if (typeof messagesOrUpdater === 'function') {
           // 支持函数式更新
@@ -404,40 +397,69 @@ export const useAppStore = create<AppState>()(
           set({ messages: Array.isArray(messagesOrUpdater) ? messagesOrUpdater : [] });
         }
       },
-
+      
       loadHistoryMessages: async (sessionId) => {
+        // 检查是否已经在加载这个会话
+        const currentLoadingSessionId = get().loadingSessionId
+        if (currentLoadingSessionId === sessionId) {
+          console.log('⏭️ 该会话正在加载中，跳过重复请求:', sessionId)
+          return
+        }
+        
+        // 如果正在加载其他会话，记录日志但继续（新请求会覆盖旧请求）
+        if (currentLoadingSessionId) {
+          console.log('⚠️ 取消之前的加载请求:', currentLoadingSessionId, '开始加载新会话:', sessionId)
+        }
+        
+        // 标记当前正在加载的会话ID
+        set({ loadingSessionId: sessionId })
+        
         try {
           // 设置加载状态，同时清除打字状态和错误信息
           set({ isLoadingHistory: true, isTyping: false, historyLoadError: null })
-
+          
           const { historyService } = await import('../services/historyService')
           // 使用新的 getAllChatHistory 方法获取所有历史消息
           const historyData = await historyService.getAllChatHistory(sessionId)
-
+          
+          // 请求完成后，检查当前正在加载的会话ID是否仍然是这个会话
+          // 如果不是，说明用户已经切换到其他会话，忽略这个响应
+          const latestLoadingSessionId = get().loadingSessionId
+          if (latestLoadingSessionId !== sessionId) {
+            console.log('⚠️ 会话已切换，忽略旧会话的响应:', sessionId, '当前加载:', latestLoadingSessionId)
+            return
+          }
+          
           // 转换历史消息格式
           const convertedMessages = historyService.convertToAppMessages(historyData.messages)
-
+          
           // 设置jobId为当前会话的job_id
           const messagesWithJobId = convertedMessages.map(msg => ({
             ...msg,
             jobId: historyData.session_info.job_id,
           }))
-
+          
+          // 再次检查会话ID（防止在转换消息期间切换了会话）
+          if (get().loadingSessionId !== sessionId) {
+            console.log('⚠️ 会话已切换，忽略旧会话的数据更新:', sessionId)
+            return
+          }
+          
           // 更新消息列表（确保是数组）
           set({ messages: Array.isArray(messagesWithJobId) ? messagesWithJobId : [] })
-
+          
           // 如果有session_info，更新当前jobId并创建/更新job数据
           if (historyData.session_info.job_id) {
             set({ currentJobId: historyData.session_info.job_id })
-
+            
             // 检查jobs数组中是否已存在该job
             const state = get()
             const existingJob = state.jobs.find(j => j.id === historyData.session_info.job_id)
-
+            
             // 从metadata中获取name，或者从sessions中查找
-            const sessionName = historyData.session_info.metadata?.name ||
-              state.sessions.find(s => s.job_id === historyData.session_info.job_id)?.name
-
+            const sessionName = historyData.session_info.metadata?.name || 
+                               state.sessions.find(s => s.job_id === historyData.session_info.job_id)?.name
+            
             if (!existingJob) {
               // 如果不存在，创建一个新的job对象
               const newJob: Job = {
@@ -449,7 +471,7 @@ export const useAppStore = create<AppState>()(
                 createdAt: new Date(historyData.session_info.created_at || Date.now()),
                 updatedAt: new Date(historyData.session_info.updated_at || Date.now()),
               }
-
+              
               // 添加到jobs数组
               set((state) => ({
                 jobs: [newJob, ...state.jobs]
@@ -458,8 +480,8 @@ export const useAppStore = create<AppState>()(
               // 如果存在，更新title（如果有的话）
               if (sessionName && existingJob.title !== sessionName) {
                 set((state) => ({
-                  jobs: state.jobs.map(job =>
-                    job.id === historyData.session_info.job_id
+                  jobs: state.jobs.map(job => 
+                    job.id === historyData.session_info.job_id 
                       ? { ...job, title: sessionName }
                       : job
                   )
@@ -467,7 +489,9 @@ export const useAppStore = create<AppState>()(
               }
             }
           }
-
+          
+          console.log('✅ 历史消息加载成功:', sessionId)
+          
           // 注释掉：不在加载历史消息后启动审核流程
           // 审核流程应该由 FileUpload 组件在特征识别完成后启动
           // 避免重复调用 /review/start 接口
@@ -487,16 +511,24 @@ export const useAppStore = create<AppState>()(
           */
         } catch (error) {
           console.error('❌ 加载历史消息失败:', error)
-
+          
+          // 检查是否仍然是当前会话（防止错误信息显示给错误的会话）
+          if (get().loadingSessionId !== sessionId) {
+            console.log('⚠️ 会话已切换，忽略旧会话的错误:', sessionId)
+            return
+          }
+          
           // 保存错误信息
           const errorMessage = error instanceof Error ? error.message : '加载历史消息失败，请重试'
           set({ historyLoadError: errorMessage })
-
+          
           // 加载失败时，清空消息列表（确保是数组）
           set({ messages: [] })
         } finally {
-          // 无论成功还是失败，都要清除加载状态
-          set({ isLoadingHistory: false })
+          // 只有当前加载的会话ID仍然是这个会话时，才清除加载状态
+          if (get().loadingSessionId === sessionId) {
+            set({ isLoadingHistory: false, loadingSessionId: null })
+          }
         }
       },
     }),

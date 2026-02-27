@@ -55,6 +55,9 @@ const Sidebar: React.FC = () => {
     setIsCalculating,  // 新增：设置核算状态
     setIsRefreshing,  // 新增：设置刷新状态
     setIsReprocessing,  // 新增：设置重新处理状态
+    setHistoryLoadError,  // 新增：清除历史加载错误
+    setIsLoadingHistory,  // 新增：清除加载状态
+    cancelLoadingHistory,  // 新增：取消正在进行的历史加载
     setSessions,
     addSessions,
     setSessionsLoading,
@@ -192,9 +195,17 @@ const Sidebar: React.FC = () => {
       websocketService.disconnect()
     }
     
+    // 取消正在进行的历史加载（这会清除 loadingSessionId，使旧请求被忽略）
+    cancelLoadingHistory()
+    
+    // 清除所有状态
     clearMessages()
     setCurrentJobId(undefined)
     resetUploadState()  // 重置上传状态
+    setIsTyping(false)  // 清除打字状态
+    setIsCalculating(false)  // 清除核算状态
+    setIsRefreshing(false)  // 清除刷新状态
+    setIsReprocessing(false)  // 清除重新处理状态
     setCurrentView('chat')
     
     // 如果是移动端，关闭抽屉
@@ -695,6 +706,9 @@ const Sidebar: React.FC = () => {
                                 console.log('🔌 切换会话，断开当前 WebSocket 连接')
                                 websocketService.disconnect()
                               }
+                              
+                              // 清除当前消息，准备加载新会话的消息
+                              clearMessages()
                               
                               // 先将会话信息添加到 jobs 数组，确保标题能立即显示
                               const { addJob, updateJob, jobs } = useAppStore.getState()

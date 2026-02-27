@@ -20,6 +20,33 @@ interface MissingFieldsCardProps {
   missingFields: MissingField[]
 }
 
+// 自定义滚动条样式
+const scrollbarStyles = `
+  .missing-fields-list::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .missing-fields-list::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 3px;
+  }
+  
+  .missing-fields-list::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 3px;
+    transition: background 0.2s ease;
+  }
+  
+  .missing-fields-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.25);
+  }
+  
+  .missing-fields-list {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+  }
+`;
+
 const MissingFieldsCard: React.FC<MissingFieldsCardProps> = ({
   message,
   summary,
@@ -28,14 +55,18 @@ const MissingFieldsCard: React.FC<MissingFieldsCardProps> = ({
   const { token } = theme.useToken()
 
   return (
-    <Card
-      style={{
-        background: token.colorWarningBg,
-        border: `1px solid ${token.colorWarningBorder}`,
-        borderRadius: token.borderRadius,
-      }}
-      styles={{ body: { padding: '16px' } }}
-    >
+    <>
+      {/* 注入自定义滚动条样式 */}
+      <style>{scrollbarStyles}</style>
+      
+      <Card
+        style={{
+          background: token.colorWarningBg,
+          border: `1px solid ${token.colorWarningBorder}`,
+          borderRadius: token.borderRadius,
+        }}
+        styles={{ body: { padding: '16px' } }}
+      >
       <Space direction="vertical" size={16} style={{ width: '100%' }}>
         {/* 标题和主要消息 */}
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
@@ -63,7 +94,15 @@ const MissingFieldsCard: React.FC<MissingFieldsCardProps> = ({
         <Divider style={{ margin: 0 }} />
 
         {/* 缺失字段列表 */}
-        <div>
+        <div
+          style={{
+            maxHeight: '360px',
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            paddingRight: '4px',
+          }}
+          className="missing-fields-list"
+        >
           <Space direction="vertical" size={6} style={{ width: '100%' }}>
             {missingFields.map((field, index) => (
               <div
@@ -106,31 +145,31 @@ const MissingFieldsCard: React.FC<MissingFieldsCardProps> = ({
                   {index + 1}
                 </div>
 
-                {/* 零件编号 */}
-                {field.part_code && (
+                {/* 零件名称 */}
+                {field.part_name && (
                   <Text 
                     strong 
                     style={{ 
                       fontSize: 14, 
                       color: token.colorText, 
                       flexShrink: 0,
-                      fontFamily: 'monospace',
                     }}
                   >
-                    {field.part_code}
+                    {field.part_name}
                   </Text>
                 )}
 
-                {/* 零件名称 */}
-                {field.part_name && (
+                {/* 零件编号 */}
+                {field.part_code && (
                   <Text 
                     style={{ 
                       fontSize: 13, 
                       color: token.colorTextSecondary, 
                       flexShrink: 0,
+                      fontFamily: 'monospace',
                     }}
                   >
-                    {field.part_name}
+                    ({field.part_code})
                   </Text>
                 )}
 
@@ -187,6 +226,7 @@ const MissingFieldsCard: React.FC<MissingFieldsCardProps> = ({
         </div>
       </Space>
     </Card>
+    </>
   )
 }
 

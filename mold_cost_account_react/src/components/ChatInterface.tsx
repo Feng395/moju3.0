@@ -58,6 +58,7 @@ const ChatInterface: React.FC = () => {
     const [isExporting, setIsExporting] = useState(false); // 新增：导出Excel加载状态
     const [showProgressBar, setShowProgressBar] = useState(true); // 新增：控制进度条显示/隐藏
     const [isRecording, setIsRecording] = useState(false); // 新增：语音录音状态
+    const [isRecognizing, setIsRecognizing] = useState(false); // 新增：语音识别中状态
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const { token } = theme.useToken();
     const loadedSessionRef = useRef<string | null>(null); // 记录已加载的sessionId，避免重复加载
@@ -385,9 +386,13 @@ const ChatInterface: React.FC = () => {
                 loadedSessionRef.current = currentJobId; // 标记为已加载
                 
                 // 使用sessionId（通常与jobId相同）加载历史消息
+                // loadHistoryMessages 内部已经有防止竞态条件的逻辑
                 loadHistoryMessages(currentJobId).catch(error => {
                     console.error('❌ 加载历史消息失败:', error);
-                    loadedSessionRef.current = null; // 加载失败，清除标记以便重试
+                    // 加载失败时，只有当前仍然是这个会话时才清除标记
+                    if (loadedSessionRef.current === currentJobId) {
+                        loadedSessionRef.current = null; // 加载失败，清除标记以便重试
+                    }
                 });
             } else {
                 // console.log('⏭️ 跳过加载 - 已经加载过该会话:', currentJobId);
@@ -546,6 +551,8 @@ const ChatInterface: React.FC = () => {
             // 停止录音
             speechRecognitionService.stopRecognition();
             setIsRecording(false);
+            // 开始识别，显示等待效果
+            setIsRecognizing(true);
         } else {
             // 开始录音前先检查麦克风权限
             try {
@@ -607,26 +614,24 @@ const ChatInterface: React.FC = () => {
                     onResult: (text, isFinal) => {
                         console.log('📝 识别结果:', text, isFinal ? '(最终)' : '(临时)');
                         
-                        // 实时更新输入框内容
+                        // 只在最终结果时更新输入框
                         if (isFinal) {
-                            // 稳态结果：追加到输入框
                             setInputValue(prev => {
                                 const newValue = prev ? `${prev} ${text}` : text;
                                 return newValue.trim();
                             });
-                        } else {
-                            // 非稳态结果：临时显示（可选）
-                            // 这里可以选择不处理，只在稳态时更新
                         }
                     },
                     onEnd: () => {
                         console.log('✅ 录音结束');
                         setIsRecording(false);
-                        message.success('录音结束');
+                        setIsRecognizing(false);
+                        message.success('识别完成');
                     },
                     onError: (error) => {
                         console.error('❌ 录音错误:', error);
                         setIsRecording(false);
+                        setIsRecognizing(false);
                         message.error(`录音失败: ${error}`);
                     },
                 });
@@ -634,6 +639,7 @@ const ChatInterface: React.FC = () => {
                 console.error('❌ 启动语音识别失败:', error);
                 message.error('启动语音识别失败');
                 setIsRecording(false);
+                setIsRecognizing(false);
             }
         }
     };
@@ -1671,6 +1677,26 @@ const ChatInterface: React.FC = () => {
                                         animation: "pulse 1.5s ease-in-out infinite",
                                     }}
                                     className="voice-btn"
+                                />
+                            ) : isRecognizing ? (
+                                <Button
+                                    type="primary"
+                                    icon={<LoadingOutlined />}
+                                    disabled
+                                    style={{
+                                        width: 40,
+                                        height: 40,
+                                        borderRadius: 20,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        background: token.colorPrimary,
+                                        borderColor: token.colorPrimary,
+                                        color: "white",
+                                        transition: "all 0.2s ease",
+                                        opacity: 0.8,
+                                    }}
+                                    className="recognizing-btn"
                                 />
                             ) : inputValue.trim() ? (
                                 <Button
