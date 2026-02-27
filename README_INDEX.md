@@ -24,6 +24,7 @@
 |------|------|------|
 | **Infrastructure** | [mold_cost_/infrastructure/README.md](mold_cost_/infrastructure/README.md) | 基础设施配置 |
 | **MCP Services** | [mold_cost_/mcp_services/README.md](mold_cost_/mcp_services/README.md) | 微服务模块 |
+| **Speech Services** | [mold_cost_/speech_services/README.md](mold_cost_/speech_services/README.md) | 语音识别服务 |
 | **Consumers** | [mold_cost_/consumers/README.md](mold_cost_/consumers/README.md) | 消息队列消费者 |
 | **Docs** | [mold_cost_/docs/README.md](mold_cost_/docs/README.md) | 文档中心 |
 | **Examples** | [mold_cost_/examples/README.md](mold_cost_/examples/README.md) | 示例代码 |
@@ -68,6 +69,20 @@
 13. **[前端主项目](mold_cost_account_react/README.md)** - React 项目说明
 14. **[Components](mold_cost_account_react/src/components/README.md)** - 组件库
 15. **[Services](mold_cost_account_react/src/services/README.md)** - API 服务
+16. **[语音识别集成](mold_cost_account_react/SPEECH_INTEGRATION.md)** - 语音识别使用指南
+
+### 语音识别文档
+
+17. **[语音服务指南](SPEECH_SERVICES_GUIDE.md)** - 完整使用指南
+18. **[快速参考](SPEECH_QUICK_REFERENCE.md)** - 快速查询卡片
+19. **[Speech Services](mold_cost_/speech_services/README.md)** - 服务详细文档
+20. **[语音识别集成总结](SPEECH_INTEGRATION_SUMMARY.md)** - 集成完成总结
+
+### 调试文档
+
+21. **[调试指南](mold_cost_/docs/debug/DEBUG_GUIDE.md)** - VSCode 调试配置和故障排除
+22. **[缓存问题修复](mold_cost_/docs/debug/CACHE_ISSUE_FIX.md)** - Python 缓存问题详细分析
+23. **[调试修复完成](mold_cost_/DEBUG_FIX_COMPLETE.md)** - 调试问题修复总结
 
 ### 按功能分类
 
@@ -146,6 +161,8 @@
 | **数据库** | [Shared](mold_cost_/shared/README.md), [Infrastructure](mold_cost_/infrastructure/README.md) |
 | **任务** | [Workers](mold_cost_/workers/README.md), [Consumers](mold_cost_/consumers/README.md) |
 | **前端** | [Components](mold_cost_account_react/src/components/README.md), [Services](mold_cost_account_react/src/services/README.md) |
+| **语音识别** | [语音服务指南](SPEECH_SERVICES_GUIDE.md), [快速参考](SPEECH_QUICK_REFERENCE.md) |
+| **调试** | [调试指南](mold_cost_/docs/debug/DEBUG_GUIDE.md), [缓存问题](mold_cost_/docs/debug/CACHE_ISSUE_FIX.md) |
 | **示例** | [Examples](mold_cost_/examples/README.md) |
 | **部署** | [Infrastructure](mold_cost_/infrastructure/README.md), [主项目](mold_cost_/README.md) |
 

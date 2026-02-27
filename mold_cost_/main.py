@@ -97,9 +97,18 @@ class UnifiedServer:
     async def start_api(self):
         """启动 API Gateway"""
         try:
-            from api_gateway.main import app
-            
             logger.info(f"🚀 启动 API Gateway (端口: {self.port})...")
+            
+            # 导入 app
+            try:
+                from api_gateway.main import app
+                logger.info("✅ API Gateway 模块导入成功")
+            except ImportError as e:
+                logger.error(f"❌ 导入 API Gateway 失败: {e}", exc_info=True)
+                raise
+            except Exception as e:
+                logger.error(f"❌ 初始化 API Gateway 失败: {e}", exc_info=True)
+                raise
             
             config = uvicorn.Config(
                 app=app,
@@ -112,7 +121,7 @@ class UnifiedServer:
             
             self.api_server = uvicorn.Server(config)
             
-            logger.info(f"✅ API Gateway 已启动")
+            logger.info(f"✅ API Gateway 配置完成")
             logger.info(f"   访问地址: http://localhost:{self.port}")
             logger.info(f"   API 文档: http://localhost:{self.port}/docs")
             logger.info(f"   健康检查: http://localhost:{self.port}/health")

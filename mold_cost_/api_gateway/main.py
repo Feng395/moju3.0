@@ -163,9 +163,14 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 # 注册路由
-from api_gateway.routers import features, pricing, jobs, reports, weight_price, websocket_router
-from api_gateway.routers import interactions, review_router, chat_router, file_router
-from api_gateway.routers.account import auth, process_rules, price_items, chat_sessions
+try:
+    from api_gateway.routers import features, pricing, jobs, reports, weight_price, websocket_router
+    from api_gateway.routers import interactions, review_router, chat_router, file_router, speech
+    from api_gateway.routers.account import auth, process_rules, price_items, chat_sessions
+    logger.info("✅ 路由模块导入成功")
+except Exception as e:
+    logger.error(f"❌ 路由模块导入失败: {e}", exc_info=True)
+    raise
 
 # 业务路由
 app.include_router(features.router)
@@ -186,6 +191,7 @@ app.include_router(interactions.router)
 app.include_router(review_router.router)
 app.include_router(chat_router.router)
 app.include_router(file_router.router)
+app.include_router(speech.router)  # 语音识别路由
 
 # 账户系统路由
 app.include_router(auth.router, tags=["认证"])  # auth 路由已包含 /api 前缀
@@ -210,6 +216,7 @@ async def root():
             "reviews": "/api/reviews",
             "chat": "/api/chat",
             "files": "/api/files",
+            "speech": "/api/speech",  # 语音识别
             "websocket": "/ws/{job_id}",
             # 账户系统端点
             "auth": {

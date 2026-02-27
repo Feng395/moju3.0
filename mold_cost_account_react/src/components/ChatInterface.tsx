@@ -36,10 +36,10 @@ const { Text } = Typography;
 
 // 同步检查登录状态的函数
 const checkAuthSync = () => {
-  const loggedIn = localStorage.getItem(AUTH_STORAGE_KEYS.IS_LOGGED_IN) === 'true'
-  const userInfoStr = localStorage.getItem(AUTH_STORAGE_KEYS.USER_INFO)
-  const validToken = getValidToken()
-  return loggedIn && !!userInfoStr && !!validToken
+    const loggedIn = localStorage.getItem(AUTH_STORAGE_KEYS.IS_LOGGED_IN) === 'true'
+    const userInfoStr = localStorage.getItem(AUTH_STORAGE_KEYS.USER_INFO)
+    const validToken = getValidToken()
+    return loggedIn && !!userInfoStr && !!validToken
 }
 
 const ChatInterface: React.FC = () => {
@@ -94,7 +94,7 @@ const ChatInterface: React.FC = () => {
 
     // 获取当前任务
     const currentJob = currentJobId ? jobs.find(job => job.id === currentJobId) : null;
-    
+
     // // 添加日志监控currentJob
     // useEffect(() => {
     //     console.log('📋 ChatInterface - currentJob 状态:', {
@@ -104,91 +104,91 @@ const ChatInterface: React.FC = () => {
     //         jobs: jobs.map(j => ({ id: j.id, title: j.title }))
     //     })
     // }, [currentJobId, currentJob, jobs])
-    
+
     // 检查是否已上传CAD文件
     const hasUploadedFiles = currentJob && (currentJob.dwgFile || currentJob.prtFile);
-    
+
     // 检查当前会话是否有消息历史（只检查当前jobId的消息）
     // 添加安全检查，确保messages是数组
-    const currentJobMessages = Array.isArray(messages) 
-        ? messages.filter(msg => msg.jobId === currentJobId) 
+    const currentJobMessages = Array.isArray(messages)
+        ? messages.filter(msg => msg.jobId === currentJobId)
         : [];
     const hasMessages = currentJobMessages.length > 0;
-    
+
     // 计算当前进度（用于判断是否可以发送消息）
     const currentProgress = useMemo(() => {
         const progressMessages = currentJobMessages.filter(
-            msg => msg.type === 'progress' && 
-                   msg.progressData &&
-                   typeof msg.progressData.progress === 'number'
+            msg => msg.type === 'progress' &&
+                msg.progressData &&
+                typeof msg.progressData.progress === 'number'
         );
-        
+
         if (progressMessages.length === 0) {
             return 0;
         }
-        
+
         // 获取最新的进度值
         const latestProgress = progressMessages[progressMessages.length - 1];
         return latestProgress.progressData?.progress || 0;
     }, [currentJobMessages]);
-    
+
     // 检查是否收到了 awaiting_confirm 阶段（特征识别完成，等待用户确认）
     // 只有在收到 awaiting_confirm 时才允许发送消息
-    const hasReachedMinProgress = currentJobMessages.some(msg => 
+    const hasReachedMinProgress = currentJobMessages.some(msg =>
         msg.type === 'progress' && msg.progressData?.stage === 'awaiting_confirm'
     );
-    
+
     // 检查是否正在进行重新处理（重新识别特征或重新计算价格）
     const isReprocessingInHistory = useMemo(() => {
         // 获取最新的进度消息
         const progressMessages = currentJobMessages.filter(
             msg => msg.type === 'progress' && msg.progressData
         );
-        
+
         if (progressMessages.length === 0) {
             return false;
         }
-        
+
         const latestProgress = progressMessages[progressMessages.length - 1];
         const stage = latestProgress.progressData?.stage || '';
         const details = latestProgress.progressData?.details;
-        
+
         // 检查是否是重新识别特征（feature_recognition_started 且 type 为 reprocess）
-        const isReprocessingFeature = stage === 'feature_recognition_started' && 
-                                      details?.type === 'reprocess';
-        
+        const isReprocessingFeature = stage === 'feature_recognition_started' &&
+            details?.type === 'reprocess';
+
         // 检查是否正在计算价格（pricing_started）
         const isPricing = stage === 'pricing_started';
-        
+
         return isReprocessingFeature || isPricing;
     }, [currentJobMessages]);
-    
+
     // 检查是否显示了审核数据表格（特征识别完成）
     // 检查三种情况：
     // 1. progress 类型且有 review_display_view
     // 2. system 类型且有 reviewData
     // 3. progress 类型且 stage 为 awaiting_confirm（等待确认状态，表示特征识别已完成）
     // 检查是否收到了 awaiting_confirm 阶段（特征识别完成，等待用户确认）
-    const hasAwaitingConfirm = currentJobMessages.some(msg => 
+    const hasAwaitingConfirm = currentJobMessages.some(msg =>
         msg.type === 'progress' && msg.progressData?.stage === 'awaiting_confirm'
     );
-    
+
     // 检查是否已经开始核算（通过检测是否有价格计算相关的消息）
     const hasPricingMessages = currentJobMessages.some(msg =>
         msg.type === 'progress' &&
         (msg.progressData?.stage === 'pricing_started' ||
-         msg.progressData?.stage === 'pricing_completed' ||
-         msg.progressData?.stage === 'cost_calculation_started' ||
-         msg.progressData?.stage === 'cost_calculation_completed')
+            msg.progressData?.stage === 'pricing_completed' ||
+            msg.progressData?.stage === 'cost_calculation_started' ||
+            msg.progressData?.stage === 'cost_calculation_completed')
     );
-    
+
     // 检查任务是否已完成
     const isTaskCompleted = currentJobMessages.some(msg =>
         msg.type === 'progress' &&
         msg.progressData?.stage === 'completed' &&
         msg.progressData?.progress === 100
     );
-    
+
     // // 调试日志：监控开始核算按钮显示条件
     // useEffect(() => {
     //     if (currentJobId && currentJobMessages.length > 0) {
@@ -207,12 +207,12 @@ const ChatInterface: React.FC = () => {
     //         });
     //     }
     // }, [hasAwaitingConfirm, hasPricingMessages, isTaskCompleted, isCalculating, currentJobId, currentJobMessages]);
-    
+
     // 只有在已上传文件或当前会话有消息时才显示聊天界面
     // 如果正在加载历史消息，也显示聊天界面（显示骨架屏）
     // 如果有currentJobId（选中了会话），也显示聊天界面
     const shouldShowChatInterface = hasUploadedFiles || hasMessages || isLoadingHistory || !!currentJobId;
-    
+
     // // 添加调试日志 - 监控关键状态变化
     // useEffect(() => {
     //     // 如果突然显示欢迎卡片，打印警告
@@ -231,13 +231,13 @@ const ChatInterface: React.FC = () => {
         const checkAuth = () => {
             const newAuthState = checkAuthSync()
             setIsLoggedIn(newAuthState)
-            
+
             // 如果检测到未登录状态，确保清理可能残留的数据
             if (!newAuthState) {
                 const hasLoggedInFlag = localStorage.getItem(AUTH_STORAGE_KEYS.IS_LOGGED_IN) === 'true'
                 const hasUserInfo = !!localStorage.getItem(AUTH_STORAGE_KEYS.USER_INFO)
                 const hasValidToken = !!getValidToken()
-                
+
                 // 如果有登录标记但 token 无效，清理数据
                 if ((hasLoggedInFlag || hasUserInfo) && !hasValidToken) {
                     localStorage.removeItem(AUTH_STORAGE_KEYS.IS_LOGGED_IN)
@@ -257,7 +257,7 @@ const ChatInterface: React.FC = () => {
 
         window.addEventListener('loginStateChange', handleLoginStateChange)
         window.addEventListener('storage', handleLoginStateChange)
-        
+
         // 定期检查 token 有效性（每30秒检查一次）
         const intervalId = setInterval(() => {
             checkAuth()
@@ -292,13 +292,13 @@ const ChatInterface: React.FC = () => {
 
         try {
             setRenamingLoading(true); // 开始加载
-            
+
             // 调用重命名接口
             await sessionService.renameSession(currentJob.id, renameInputValue.trim());
-            
+
             // 更新本地状态
             updateJob(currentJob.id, { title: renameInputValue.trim() });
-            
+
             message.success('重命名成功');
             setRenameModalVisible(false);
             setRenameInputValue('');
@@ -360,7 +360,7 @@ const ChatInterface: React.FC = () => {
         const rafId = requestAnimationFrame(() => {
             setTextareaInitialized(true);
         });
-        
+
         return () => cancelAnimationFrame(rafId);
     }, []);
 
@@ -370,7 +370,7 @@ const ChatInterface: React.FC = () => {
         // 当 currentJobId 变化时，重置已开始核算标记和审核启动状态
         setHasStartedCalculation(false);
         setReviewStarted(false);
-        
+
         // 当 currentJobId 变化时，无论之前是否加载过，都重新加载
         // 但如果是新会话（刚上传文件），则跳过加载历史消息
         if (currentJobId && isLoggedIn) {
@@ -380,11 +380,11 @@ const ChatInterface: React.FC = () => {
                 setIsNewSession(false); // 重置标记
                 return;
             }
-            
+
             // 检查是否需要加载（与上次加载的不同）
             if (loadedSessionRef.current !== currentJobId) {
                 loadedSessionRef.current = currentJobId; // 标记为已加载
-                
+
                 // 使用sessionId（通常与jobId相同）加载历史消息
                 // loadHistoryMessages 内部已经有防止竞态条件的逻辑
                 loadHistoryMessages(currentJobId).catch(error => {
@@ -427,16 +427,16 @@ const ChatInterface: React.FC = () => {
                 if (msg.requiresConfirmation && !msg.confirmationStatus) {
                     // 重新识别特征和重新计算：标记为已取消
                     if (msg.intent === 'FEATURE_RECOGNITION' || msg.intent === 'PRICE_CALCULATION') {
-                        return { 
-                            ...msg, 
+                        return {
+                            ...msg,
                             requiresConfirmation: false,
                             confirmationStatus: 'cancelled' as const  // 标记为已取消
                         };
                     }
                     // 确认修改：不标记为已取消（后端会缓存这些修改）
                     else if (msg.intent === 'DATA_MODIFICATION') {
-                        return { 
-                            ...msg, 
+                        return {
+                            ...msg,
                             requiresConfirmation: false,
                             // 不设置 confirmationStatus，这样就不会显示"已取消"标签
                         };
@@ -464,14 +464,14 @@ const ChatInterface: React.FC = () => {
 
         // 使用新的 /review/${jobId}/modify 接口
         setIsTyping(true);
-        
+
         try {
             // 保存当前的 jobId，用于后续验证
             const requestJobId = currentJobId;
-            
+
             // 调用意图识别接口
             const response = await chatService.submitModification(currentJobId, userMessage);
-            
+
             // 检查当前页面的 job_id 是否与请求时的 job_id 相同
             // 如果用户在请求期间切换了会话，则不渲染返回的数据
             if (requestJobId !== useAppStore.getState().currentJobId) {
@@ -482,7 +482,7 @@ const ChatInterface: React.FC = () => {
                 setIsTyping(false);
                 return;
             }
-            
+
             // 添加AI回复消息，包含意图信息
             addMessage({
                 type: "assistant",
@@ -497,7 +497,7 @@ const ChatInterface: React.FC = () => {
 
         } catch (error: any) {
             console.error("发送消息失败:", error);
-            
+
             // 检查当前页面的 job_id 是否仍然是请求时的 job_id
             if (currentJobId === useAppStore.getState().currentJobId) {
                 addMessage({
@@ -516,14 +516,14 @@ const ChatInterface: React.FC = () => {
             // 检查是否满足发送条件（与发送按钮的禁用条件保持一致）
             // 从历史会话进入时，如果进度未达到50%，禁用发送
             // 如果正在重新处理（重新识别特征或重新计算价格），禁用发送
-            const canSend = inputValue.trim() && 
-                           !isTyping && 
-                           !isStartingReview && 
-                           !isRefreshing && 
-                           !isCalculating && 
-                           !isReprocessing && 
-                           hasReachedMinProgress && 
-                           !isReprocessingInHistory;
+            const canSend = inputValue.trim() &&
+                !isTyping &&
+                !isStartingReview &&
+                !isRefreshing &&
+                !isCalculating &&
+                !isReprocessing &&
+                hasReachedMinProgress &&
+                !isReprocessingInHistory;
             if (canSend) {
                 handleSendMessage();
             }
@@ -557,16 +557,23 @@ const ChatInterface: React.FC = () => {
             // 开始录音前先检查麦克风权限
             try {
                 // 检查浏览器是否支持麦克风
+                console.log('🔍 检查麦克风支持...');
+                console.log('navigator.mediaDevices:', navigator.mediaDevices);
+                console.log('navigator.mediaDevices.getUserMedia:', navigator.mediaDevices?.getUserMedia);
+
                 if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                    message.error('您的浏览器不支持麦克风功能');
+                    console.error('❌ 浏览器不支持 mediaDevices API');
+                    message.error('您的浏览器不支持麦克风功能，请使用 Chrome、Edge 或 Firefox 浏览器');
                     return;
                 }
+
+                console.log('✅ 浏览器支持麦克风 API');
 
                 // 检查麦克风权限状态
                 if (navigator.permissions && navigator.permissions.query) {
                     try {
                         const permissionStatus = await navigator.permissions.query({ name: 'microphone' as PermissionName });
-                        
+
                         if (permissionStatus.state === 'denied') {
                             Modal.warning({
                                 title: '需要麦克风权限',
@@ -588,7 +595,7 @@ const ChatInterface: React.FC = () => {
                     testStream.getTracks().forEach(track => track.stop());
                 } catch (error: any) {
                     console.error('❌ 麦克风权限被拒绝:', error);
-                    
+
                     if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
                         Modal.warning({
                             title: '需要麦克风权限',
@@ -605,7 +612,7 @@ const ChatInterface: React.FC = () => {
 
                 // 权限检查通过，开始录音
                 setIsRecording(true);
-                
+
                 speechRecognitionService.startRecognition({
                     onStart: () => {
                         console.log('🎤 开始录音');
@@ -613,7 +620,7 @@ const ChatInterface: React.FC = () => {
                     },
                     onResult: (text, isFinal) => {
                         console.log('📝 识别结果:', text, isFinal ? '(最终)' : '(临时)');
-                        
+
                         // 只在最终结果时更新输入框
                         if (isFinal) {
                             setInputValue(prev => {
@@ -653,10 +660,10 @@ const ChatInterface: React.FC = () => {
 
         try {
             setIsExporting(true);
-            
+
             // 构建导出URL - 使用 CONTINUE_API_URL（包含 /api/v1 前缀）
             const exportUrl = `${chatService.getContinueApiUrl()}/reports/${currentJobId}/export`;
-            
+
             // 获取token
             const token = getValidToken();
             if (!token) {
@@ -664,7 +671,7 @@ const ChatInterface: React.FC = () => {
                 setShowLoginModal(true);
                 return;
             }
-            
+
             // 使用fetch下载文件
             const response = await fetch(exportUrl, {
                 method: 'GET',
@@ -672,15 +679,15 @@ const ChatInterface: React.FC = () => {
                     'Authorization': `Bearer ${token}`,
                 },
             });
-            
+
             if (!response.ok) {
                 throw new Error('导出失败');
             }
-            
+
             // 获取文件名（从响应头）/*  */
             const contentDisposition = response.headers.get('Content-Disposition');
             let filename = ''; // 默认为空，让浏览器自动处理
-            
+
             if (contentDisposition) {
                 // 尝试匹配 filename*=UTF-8''encoded-filename 格式（RFC 5987）
                 const filenameStarMatch = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
@@ -705,23 +712,23 @@ const ChatInterface: React.FC = () => {
                     }
                 }
             }
-            
+
             // 创建Blob并下载
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            
+
             // 只有在有文件名时才设置 download 属性
             if (filename) {
                 a.download = filename;
             }
-            
+
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
-            
+
             message.success('报价单导出成功！');
         } catch (error: any) {
             console.error('导出报价单失败:', error);
@@ -768,26 +775,26 @@ const ChatInterface: React.FC = () => {
                                 }}
                             />
                         )}
-                        
+
                         {/* 未登录时显示Logo，登录后显示任务标题 */}
                         {!isLoggedIn ? (
                             <Flex align="center" gap={12}>
-                                <div style={{ 
-                                    width: 32, 
-                                    height: 32, 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
+                                <div style={{
+                                    width: 32,
+                                    height: 32,
+                                    display: 'flex',
+                                    alignItems: 'center',
                                     justifyContent: 'center',
                                     flexShrink: 0,
                                 }}>
-                                    <img 
-                                        src="/logo.svg" 
-                                        alt="Logo" 
-                                        style={{ 
+                                    <img
+                                        src="/logo.svg"
+                                        alt="Logo"
+                                        style={{
                                             height: 32,
                                             width: 32,
                                             objectFit: 'contain',
-                                        }} 
+                                        }}
                                     />
                                 </div>
                                 <Text strong style={{ fontSize: 18 }}>
@@ -800,10 +807,10 @@ const ChatInterface: React.FC = () => {
                                 trigger={['click']}
                                 placement="bottomLeft"
                             >
-                                <Flex 
-                                    align="center" 
-                                    gap={8} 
-                                    style={{ 
+                                <Flex
+                                    align="center"
+                                    gap={8}
+                                    style={{
                                         cursor: 'pointer',
                                         padding: '4px 12px',
                                         height: 32,
@@ -898,7 +905,7 @@ const ChatInterface: React.FC = () => {
 
             {/* 全局进度条 - 受 showProgressBar 状态控制 */}
             {showProgressBar && (
-                <GlobalProgressBar 
+                <GlobalProgressBar
                     messages={messages}
                     currentJobId={currentJobId}
                     isTyping={isTyping}
@@ -941,7 +948,7 @@ const ChatInterface: React.FC = () => {
                                 <Space direction="vertical" size={24} style={{ width: '100%' }}>
                                     {/* 模拟3条消息的骨架屏 */}
                                     {[1, 2, 3].map((item) => (
-                                        <div key={item} style={{ 
+                                        <div key={item} style={{
                                             display: 'flex',
                                             gap: 12,
                                             alignItems: 'flex-start',
@@ -981,22 +988,22 @@ const ChatInterface: React.FC = () => {
                                             borderRadius: '50%',
                                             padding: 8,
                                         }}>
-                                            <ExclamationCircleOutlined style={{ 
-                                                fontSize: 48, 
-                                                color: token.colorError 
+                                            <ExclamationCircleOutlined style={{
+                                                fontSize: 48,
+                                                color: token.colorError
                                             }} />
                                         </div>
 
                                         {/* 错误信息 */}
                                         <div>
-                                            <Typography.Title level={4} style={{ 
-                                                margin: 0, 
+                                            <Typography.Title level={4} style={{
+                                                margin: 0,
                                                 marginBottom: 12,
                                                 color: token.colorText,
                                             }}>
                                                 加载历史消息失败
                                             </Typography.Title>
-                                            <Text style={{ 
+                                            <Text style={{
                                                 fontSize: 15,
                                                 color: token.colorTextSecondary,
                                                 lineHeight: 1.6,
@@ -1031,7 +1038,7 @@ const ChatInterface: React.FC = () => {
                             </div>
                         ) : shouldShowChatInterface && messages.length === 0 ? (
                             /* 如果进入历史会话但消息为空，显示 AI 头像和等待图标 */
-                            <div style={{ 
+                            <div style={{
                                 // padding: '20px 0',
                                 marginBottom: 12,
                                 display: 'flex',
@@ -1055,7 +1062,7 @@ const ChatInterface: React.FC = () => {
                                         marginTop: 4,
                                     }} />
                                 </div> */}
-                                <div style={{ 
+                                <div style={{
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: 12,
@@ -1092,10 +1099,10 @@ const ChatInterface: React.FC = () => {
                                             padding: 8,
                                             transition: 'all 0.3s ease',
                                         }}
-                                        className="welcome-avatar-container"
+                                            className="welcome-avatar-container"
                                         >
-                                            <WelcomeAIAvatar 
-                                                size={80} 
+                                            <WelcomeAIAvatar
+                                                size={80}
                                                 onClick={() => {
                                                     if (showFireworks) {
                                                         // 烟花进行中，发射额外的1个烟花
@@ -1111,8 +1118,8 @@ const ChatInterface: React.FC = () => {
 
                                         {/* 标题和描述 */}
                                         <div>
-                                            <Typography.Title level={2} style={{ 
-                                                margin: 0, 
+                                            <Typography.Title level={2} style={{
+                                                margin: 0,
                                                 marginBottom: 16,
                                                 fontSize: 32,
                                                 fontWeight: 600,
@@ -1123,7 +1130,7 @@ const ChatInterface: React.FC = () => {
                                             }}>
                                                 欢迎使用九章智核
                                             </Typography.Title>
-                                            <Text style={{ 
+                                            <Text style={{
                                                 fontSize: 17,
                                                 color: token.colorTextSecondary,
                                                 lineHeight: 1.6,
@@ -1169,16 +1176,16 @@ const ChatInterface: React.FC = () => {
                                                     }}
                                                 >
                                                     <div style={{ fontSize: 32, marginBottom: 12 }}>{item.icon}</div>
-                                                    <div style={{ 
-                                                        fontSize: 15, 
+                                                    <div style={{
+                                                        fontSize: 15,
                                                         fontWeight: 600,
                                                         color: token.colorText,
                                                         marginBottom: 6,
                                                     }}>
                                                         {item.title}
                                                     </div>
-                                                    <div style={{ 
-                                                        fontSize: 13, 
+                                                    <div style={{
+                                                        fontSize: 13,
                                                         color: token.colorTextSecondary,
                                                         lineHeight: 1.5,
                                                     }}>
@@ -1221,8 +1228,8 @@ const ChatInterface: React.FC = () => {
                             </div>
                         ) : (
                             <>
-                                <MessageList 
-                                    messages={messages} 
+                                <MessageList
+                                    messages={messages}
                                     isTyping={isTyping}
                                     scrollContainerRef={scrollContainerRef}
                                 />
@@ -1267,370 +1274,370 @@ const ChatInterface: React.FC = () => {
                         zIndex: 10,
                     }}
                 >
-                {/* 开始核算按钮 - 当收到 awaiting_confirm 阶段且未开始核算且任务未完成时显示 */}
-                {hasAwaitingConfirm && !hasPricingMessages && !isTaskCompleted && !isCalculating && (
-                    <div
-                        style={{
-                            maxWidth: 768,
-                            margin: "0 auto 10px",
-                            padding: "8px 12px",
-                            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                            borderRadius: 12,
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 10,
-                            boxShadow: "0 2px 8px rgba(102, 126, 234, 0.25)",
-                            animation: "slideDown 0.3s ease-out",
-                            position: "relative",
-                            overflow: "hidden",
-                        }}
-                    >
-                        {/* 背景装饰 - 进一步缩小 */}
+                    {/* 开始核算按钮 - 当收到 awaiting_confirm 阶段且未开始核算且任务未完成时显示 */}
+                    {hasAwaitingConfirm && !hasPricingMessages && !isTaskCompleted && !isCalculating && (
                         <div
                             style={{
-                                position: "absolute",
-                                top: -10,
-                                right: -10,
-                                width: 40,
-                                height: 40,
-                                background: "rgba(255, 255, 255, 0.1)",
-                                borderRadius: "50%",
-                                pointerEvents: "none",
-                            }}
-                        />
-                        
-                        {/* 图标 - 进一步缩小 */}
-                        <div
-                            style={{
-                                width: 28,
-                                height: 28,
-                                background: "rgba(255, 255, 255, 0.2)",
-                                borderRadius: 8,
+                                maxWidth: 768,
+                                margin: "0 auto 10px",
+                                padding: "8px 12px",
+                                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                                borderRadius: 12,
                                 display: "flex",
                                 alignItems: "center",
-                                justifyContent: "center",
-                                fontSize: 16,
-                                flexShrink: 0,
-                            }}
-                        >
-                            💰
-                        </div>
-                        
-                        {/* 文字内容 - 单行紧凑 */}
-                        <div style={{ flex: 1, position: "relative", zIndex: 1 }}>
-                            <Text 
-                                style={{ 
-                                    fontSize: 14, 
-                                    color: "#ffffff",
-                                    fontWeight: 500,
-                                    lineHeight: 1.2,
-                                }}
-                            >
-                                数据审核完成，可开始核算
-                            </Text>
-                        </div>
-                        
-                        {/* 按钮 - 进一步缩小 */}
-                        <Button
-                            type="primary"
-                            size="small"
-                            onClick={async () => {
-                                if (!currentJobId) return;
-                                
-                                try {
-                                    setIsCalculating(true);
-                                    
-                                    // 调用继续核算 API
-                                    await chatService.continueCalculation(currentJobId);
-                                    
-                                    // 接口成功返回后，保持 isCalculating 为 true
-                                    // 不要立即设置为 false，等待 WebSocket 推送价格计算消息
-                                    // setIsCalculating(false) 会在收到 pricing_started 或 pricing_completed 消息时自动设置
-                                    
-                                    message.success('核算已开始，请等待结果...');
-                                } catch (error: any) {
-                                    console.error('开始核算失败:', error);
-                                    message.error(error.message || '开始核算失败');
-                                    setIsCalculating(false);
-                                }
-                            }}
-                            style={{
-                                minWidth: 80,
-                                height: 28,
-                                fontSize: 13,
-                                fontWeight: 600,
-                                background: "rgba(255, 255, 255, 0.25)",
-                                color: "#ffffff",
-                                border: "1px solid rgba(255, 255, 255, 0.3)",
-                                borderRadius: 8,
-                                boxShadow: "0 1px 4px rgba(0, 0, 0, 0.1)",
+                                gap: 10,
+                                boxShadow: "0 2px 8px rgba(102, 126, 234, 0.25)",
+                                animation: "slideDown 0.3s ease-out",
                                 position: "relative",
-                                zIndex: 1,
-                                transition: "all 0.2s ease",
-                                padding: "0 12px",
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.background = "rgba(255, 255, 255, 0.35)";
-                                e.currentTarget.style.color = "#ffffff";
-                                e.currentTarget.style.transform = "translateY(-1px)";
-                                e.currentTarget.style.boxShadow = "0 2px 6px rgba(0, 0, 0, 0.15)";
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.background = "rgba(255, 255, 255, 0.25)";
-                                e.currentTarget.style.color = "#ffffff";
-                                e.currentTarget.style.transform = "translateY(0)";
-                                e.currentTarget.style.boxShadow = "0 1px 4px rgba(0, 0, 0, 0.1)";
+                                overflow: "hidden",
                             }}
                         >
-                            开始核算
-                        </Button>
-                    </div>
-                )}
-                
-                {/* 核算中悬浮提示 */}
-                {isCalculating && (
-                    <div
-                        style={{
-                            maxWidth: 768,
-                            margin: "0 auto 10px",
-                            padding: "8px 12px",
-                            background: "linear-gradient(135deg, #52c41a 0%, #389e0d 100%)",
-                            borderRadius: 12,
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 10,
-                            boxShadow: "0 2px 8px rgba(82, 196, 26, 0.25)",
-                            animation: "slideDown 0.3s ease-out",
-                            position: "relative",
-                            overflow: "hidden",
-                        }}
-                    >
-                        {/* 背景装饰 - 进一步缩小 */}
-                        <div
-                            style={{
-                                position: "absolute",
-                                top: -10,
-                                right: -10,
-                                width: 40,
-                                height: 40,
-                                background: "rgba(255, 255, 255, 0.1)",
-                                borderRadius: "50%",
-                                pointerEvents: "none",
-                            }}
-                        />
-                        
-                        {/* 加载图标 - 进一步缩小 */}
-                        <div
-                            style={{
-                                width: 28,
-                                height: 28,
-                                background: "rgba(255, 255, 255, 0.2)",
-                                borderRadius: 8,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                flexShrink: 0,
-                            }}
-                        >
-                            <LoadingOutlined 
-                                style={{ 
-                                    fontSize: 16, 
-                                    color: "#ffffff",
-                                }} 
-                                spin 
-                            />
-                        </div>
-                        
-                        {/* 文字内容 - 单行紧凑 */}
-                        <div style={{ flex: 1, position: "relative", zIndex: 1 }}>
-                            <Text 
-                                style={{ 
-                                    fontSize: 14, 
-                                    color: "#ffffff",
-                                    fontWeight: 500,
-                                    lineHeight: 1.2,
-                                }}
-                            >
-                                正在核算成本，请稍候...
-                            </Text>
-                        </div>
-                    </div>
-                )}
-                
-                {/* 任务完成 - 导出报价单按钮 */}
-                {isTaskCompleted && (
-                    <div
-                        style={{
-                            maxWidth: 768,
-                            margin: "0 auto 10px",
-                            padding: "8px 12px",
-                            background: "linear-gradient(135deg, #13c2c2 0%, #08979c 100%)",
-                            borderRadius: 12,
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 10,
-                            boxShadow: "0 2px 8px rgba(19, 194, 194, 0.25)",
-                            animation: "slideDown 0.3s ease-out",
-                            position: "relative",
-                            overflow: "hidden",
-                        }}
-                    >
-                        {/* 背景装饰 */}
-                        <div
-                            style={{
-                                position: "absolute",
-                                top: -10,
-                                right: -10,
-                                width: 40,
-                                height: 40,
-                                background: "rgba(255, 255, 255, 0.1)",
-                                borderRadius: "50%",
-                                pointerEvents: "none",
-                            }}
-                        />
-                        
-                        {/* 图标 */}
-                        <div
-                            style={{
-                                width: 28,
-                                height: 28,
-                                background: "rgba(255, 255, 255, 0.2)",
-                                borderRadius: 8,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                fontSize: 16,
-                                flexShrink: 0,
-                            }}
-                        >
-                            ✅
-                        </div>
-                        
-                        {/* 文字内容 */}
-                        <div style={{ flex: 1, position: "relative", zIndex: 1 }}>
-                            <Text 
-                                style={{ 
-                                    fontSize: 14, 
-                                    color: "#ffffff",
-                                    fontWeight: 500,
-                                    lineHeight: 1.2,
-                                }}
-                            >
-                                任务完成！可以导出报价单
-                            </Text>
-                        </div>
-                        
-                        {/* 导出按钮 */}
-                        <Button
-                            type="primary"
-                            size="small"
-                            icon={<DownloadOutlined />}
-                            loading={isExporting}
-                            onClick={handleExportExcel}
-                            style={{
-                                minWidth: 100,
-                                height: 28,
-                                fontSize: 13,
-                                fontWeight: 600,
-                                background: "rgba(255, 255, 255, 0.25)",
-                                color: "#ffffff",
-                                border: "1px solid rgba(255, 255, 255, 0.3)",
-                                borderRadius: 8,
-                                boxShadow: "0 1px 4px rgba(0, 0, 0, 0.1)",
-                                position: "relative",
-                                zIndex: 1,
-                                transition: "all 0.2s ease",
-                                padding: "0 12px",
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.background = "rgba(255, 255, 255, 0.35)";
-                                e.currentTarget.style.color = "#ffffff";
-                                e.currentTarget.style.transform = "translateY(-1px)";
-                                e.currentTarget.style.boxShadow = "0 2px 6px rgba(0, 0, 0, 0.15)";
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.background = "rgba(255, 255, 255, 0.25)";
-                                e.currentTarget.style.color = "#ffffff";
-                                e.currentTarget.style.transform = "translateY(0)";
-                                e.currentTarget.style.boxShadow = "0 1px 4px rgba(0, 0, 0, 0.1)";
-                            }}
-                        >
-                            导出Excel
-                        </Button>
-                    </div>
-                )}
-                
-                <div
-                    style={{
-                        maxWidth: 768,
-                        margin: "0 auto",
-                    }}
-                >
-                    {/* 主输入框 */}
-                    <div
-                        style={{
-                            background: token.colorBgContainer,
-                            borderRadius: 24,
-                            border: `1px solid ${token.colorBorderSecondary}`,
-                            boxShadow: "0 2px 6px rgba(0, 0, 0, 0.06)",
-                            transition: "all 0.2s ease",
-                            position: "relative",
-                        }}
-                        className="gemini-input-container"
-                    >
-                        {/* 输入区域 */}
-                        <div
-                            style={{
-                                display: "flex",
-                                alignItems: "flex-end",
-                                padding: "12px 16px",
-                                gap: 12,
-                            }}
-                        >
-                            {/* 文本输入 */}
-                            <TextArea
-                                placeholder="输入您的问题，或上传CAD文件进行成本分析..."
-                                value={inputValue}
-                                onChange={(e) => setInputValue(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                autoSize={textareaInitialized ? { minRows: 2, maxRows: 8 } : false}
-                                variant="borderless"
+                            {/* 背景装饰 - 进一步缩小 */}
+                            <div
                                 style={{
-                                    flex: 1,
-                                    fontSize: 16,
-                                    lineHeight: "24px",
-                                    padding: "8px 0",
-                                    resize: "none",
-                                    minHeight: "40px", // 设置为一行文本的实际高度（24px + 8px*2 padding）
-                                    height: textareaInitialized ? "auto" : "48px", // 初始化前固定高度
-                                    transition: textareaInitialized ? "height 0.2s ease" : "none", // 只在初始化后才有过渡动画
-                                    // 优化输入性能
-                                    transform: "translateZ(0)", // 启用 GPU 加速
-                                    willChange: "height", // 提示浏览器优化高度变化
+                                    position: "absolute",
+                                    top: -10,
+                                    right: -10,
+                                    width: 40,
+                                    height: 40,
+                                    background: "rgba(255, 255, 255, 0.1)",
+                                    borderRadius: "50%",
+                                    pointerEvents: "none",
                                 }}
-                                maxLength={2000}
                             />
-                        </div>
 
-                        {/* 工具栏 */}
+                            {/* 图标 - 进一步缩小 */}
+                            <div
+                                style={{
+                                    width: 28,
+                                    height: 28,
+                                    background: "rgba(255, 255, 255, 0.2)",
+                                    borderRadius: 8,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: 16,
+                                    flexShrink: 0,
+                                }}
+                            >
+                                💰
+                            </div>
+
+                            {/* 文字内容 - 单行紧凑 */}
+                            <div style={{ flex: 1, position: "relative", zIndex: 1 }}>
+                                <Text
+                                    style={{
+                                        fontSize: 14,
+                                        color: "#ffffff",
+                                        fontWeight: 500,
+                                        lineHeight: 1.2,
+                                    }}
+                                >
+                                    数据审核完成，可开始核算
+                                </Text>
+                            </div>
+
+                            {/* 按钮 - 进一步缩小 */}
+                            <Button
+                                type="primary"
+                                size="small"
+                                onClick={async () => {
+                                    if (!currentJobId) return;
+
+                                    try {
+                                        setIsCalculating(true);
+
+                                        // 调用继续核算 API
+                                        await chatService.continueCalculation(currentJobId);
+
+                                        // 接口成功返回后，保持 isCalculating 为 true
+                                        // 不要立即设置为 false，等待 WebSocket 推送价格计算消息
+                                        // setIsCalculating(false) 会在收到 pricing_started 或 pricing_completed 消息时自动设置
+
+                                        message.success('核算已开始，请等待结果...');
+                                    } catch (error: any) {
+                                        console.error('开始核算失败:', error);
+                                        message.error(error.message || '开始核算失败');
+                                        setIsCalculating(false);
+                                    }
+                                }}
+                                style={{
+                                    minWidth: 80,
+                                    height: 28,
+                                    fontSize: 13,
+                                    fontWeight: 600,
+                                    background: "rgba(255, 255, 255, 0.25)",
+                                    color: "#ffffff",
+                                    border: "1px solid rgba(255, 255, 255, 0.3)",
+                                    borderRadius: 8,
+                                    boxShadow: "0 1px 4px rgba(0, 0, 0, 0.1)",
+                                    position: "relative",
+                                    zIndex: 1,
+                                    transition: "all 0.2s ease",
+                                    padding: "0 12px",
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.35)";
+                                    e.currentTarget.style.color = "#ffffff";
+                                    e.currentTarget.style.transform = "translateY(-1px)";
+                                    e.currentTarget.style.boxShadow = "0 2px 6px rgba(0, 0, 0, 0.15)";
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.25)";
+                                    e.currentTarget.style.color = "#ffffff";
+                                    e.currentTarget.style.transform = "translateY(0)";
+                                    e.currentTarget.style.boxShadow = "0 1px 4px rgba(0, 0, 0, 0.1)";
+                                }}
+                            >
+                                开始核算
+                            </Button>
+                        </div>
+                    )}
+
+                    {/* 核算中悬浮提示 */}
+                    {isCalculating && (
                         <div
                             style={{
+                                maxWidth: 768,
+                                margin: "0 auto 10px",
+                                padding: "8px 12px",
+                                background: "linear-gradient(135deg, #52c41a 0%, #389e0d 100%)",
+                                borderRadius: 12,
                                 display: "flex",
                                 alignItems: "center",
-                                justifyContent: "space-between",
-                                padding: "8px 16px 12px",
-                                // borderTop: `1px solid ${token.colorBorderSecondary}`,
+                                gap: 10,
+                                boxShadow: "0 2px 8px rgba(82, 196, 26, 0.25)",
+                                animation: "slideDown 0.3s ease-out",
+                                position: "relative",
+                                overflow: "hidden",
                             }}
                         >
-                            {/* 左侧工具按钮 */}
+                            {/* 背景装饰 - 进一步缩小 */}
+                            <div
+                                style={{
+                                    position: "absolute",
+                                    top: -10,
+                                    right: -10,
+                                    width: 40,
+                                    height: 40,
+                                    background: "rgba(255, 255, 255, 0.1)",
+                                    borderRadius: "50%",
+                                    pointerEvents: "none",
+                                }}
+                            />
+
+                            {/* 加载图标 - 进一步缩小 */}
+                            <div
+                                style={{
+                                    width: 28,
+                                    height: 28,
+                                    background: "rgba(255, 255, 255, 0.2)",
+                                    borderRadius: 8,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    flexShrink: 0,
+                                }}
+                            >
+                                <LoadingOutlined
+                                    style={{
+                                        fontSize: 16,
+                                        color: "#ffffff",
+                                    }}
+                                    spin
+                                />
+                            </div>
+
+                            {/* 文字内容 - 单行紧凑 */}
+                            <div style={{ flex: 1, position: "relative", zIndex: 1 }}>
+                                <Text
+                                    style={{
+                                        fontSize: 14,
+                                        color: "#ffffff",
+                                        fontWeight: 500,
+                                        lineHeight: 1.2,
+                                    }}
+                                >
+                                    正在核算成本，请稍候...
+                                </Text>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 任务完成 - 导出报价单按钮 */}
+                    {isTaskCompleted && (
+                        <div
+                            style={{
+                                maxWidth: 768,
+                                margin: "0 auto 10px",
+                                padding: "8px 12px",
+                                background: "linear-gradient(135deg, #13c2c2 0%, #08979c 100%)",
+                                borderRadius: 12,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 10,
+                                boxShadow: "0 2px 8px rgba(19, 194, 194, 0.25)",
+                                animation: "slideDown 0.3s ease-out",
+                                position: "relative",
+                                overflow: "hidden",
+                            }}
+                        >
+                            {/* 背景装饰 */}
+                            <div
+                                style={{
+                                    position: "absolute",
+                                    top: -10,
+                                    right: -10,
+                                    width: 40,
+                                    height: 40,
+                                    background: "rgba(255, 255, 255, 0.1)",
+                                    borderRadius: "50%",
+                                    pointerEvents: "none",
+                                }}
+                            />
+
+                            {/* 图标 */}
+                            <div
+                                style={{
+                                    width: 28,
+                                    height: 28,
+                                    background: "rgba(255, 255, 255, 0.2)",
+                                    borderRadius: 8,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: 16,
+                                    flexShrink: 0,
+                                }}
+                            >
+                                ✅
+                            </div>
+
+                            {/* 文字内容 */}
+                            <div style={{ flex: 1, position: "relative", zIndex: 1 }}>
+                                <Text
+                                    style={{
+                                        fontSize: 14,
+                                        color: "#ffffff",
+                                        fontWeight: 500,
+                                        lineHeight: 1.2,
+                                    }}
+                                >
+                                    任务完成！可以导出报价单
+                                </Text>
+                            </div>
+
+                            {/* 导出按钮 */}
+                            <Button
+                                type="primary"
+                                size="small"
+                                icon={<DownloadOutlined />}
+                                loading={isExporting}
+                                onClick={handleExportExcel}
+                                style={{
+                                    minWidth: 100,
+                                    height: 28,
+                                    fontSize: 13,
+                                    fontWeight: 600,
+                                    background: "rgba(255, 255, 255, 0.25)",
+                                    color: "#ffffff",
+                                    border: "1px solid rgba(255, 255, 255, 0.3)",
+                                    borderRadius: 8,
+                                    boxShadow: "0 1px 4px rgba(0, 0, 0, 0.1)",
+                                    position: "relative",
+                                    zIndex: 1,
+                                    transition: "all 0.2s ease",
+                                    padding: "0 12px",
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.35)";
+                                    e.currentTarget.style.color = "#ffffff";
+                                    e.currentTarget.style.transform = "translateY(-1px)";
+                                    e.currentTarget.style.boxShadow = "0 2px 6px rgba(0, 0, 0, 0.15)";
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.25)";
+                                    e.currentTarget.style.color = "#ffffff";
+                                    e.currentTarget.style.transform = "translateY(0)";
+                                    e.currentTarget.style.boxShadow = "0 1px 4px rgba(0, 0, 0, 0.1)";
+                                }}
+                            >
+                                导出Excel
+                            </Button>
+                        </div>
+                    )}
+
+                    <div
+                        style={{
+                            maxWidth: 768,
+                            margin: "0 auto",
+                        }}
+                    >
+                        {/* 主输入框 */}
+                        <div
+                            style={{
+                                background: token.colorBgContainer,
+                                borderRadius: 24,
+                                border: `1px solid ${token.colorBorderSecondary}`,
+                                boxShadow: "0 2px 6px rgba(0, 0, 0, 0.06)",
+                                transition: "all 0.2s ease",
+                                position: "relative",
+                            }}
+                            className="gemini-input-container"
+                        >
+                            {/* 输入区域 */}
+                            <div
+                                style={{
+                                    display: "flex",
+                                    alignItems: "flex-end",
+                                    padding: "12px 16px",
+                                    gap: 12,
+                                }}
+                            >
+                                {/* 文本输入 */}
+                                <TextArea
+                                    placeholder="输入您的问题，或上传CAD文件进行成本分析..."
+                                    value={inputValue}
+                                    onChange={(e) => setInputValue(e.target.value)}
+                                    onKeyDown={handleKeyDown}
+                                    autoSize={textareaInitialized ? { minRows: 2, maxRows: 8 } : false}
+                                    variant="borderless"
+                                    style={{
+                                        flex: 1,
+                                        fontSize: 16,
+                                        lineHeight: "24px",
+                                        padding: "8px 0",
+                                        resize: "none",
+                                        minHeight: "40px", // 设置为一行文本的实际高度（24px + 8px*2 padding）
+                                        height: textareaInitialized ? "auto" : "48px", // 初始化前固定高度
+                                        transition: textareaInitialized ? "height 0.2s ease" : "none", // 只在初始化后才有过渡动画
+                                        // 优化输入性能
+                                        transform: "translateZ(0)", // 启用 GPU 加速
+                                        willChange: "height", // 提示浏览器优化高度变化
+                                    }}
+                                    maxLength={2000}
+                                />
+                            </div>
+
+                            {/* 工具栏 */}
                             <div
                                 style={{
                                     display: "flex",
                                     alignItems: "center",
-                                    gap: 4,
+                                    justifyContent: "space-between",
+                                    padding: "8px 16px 12px",
+                                    // borderTop: `1px solid ${token.colorBorderSecondary}`,
                                 }}
                             >
-                                {/* <Button
+                                {/* 左侧工具按钮 */}
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 4,
+                                    }}
+                                >
+                                    {/* <Button
                                     type="text"
                                     size="small"
                                     style={{
@@ -1654,96 +1661,96 @@ const ChatInterface: React.FC = () => {
                                 </Button> */}
 
 
+                                </div>
+
+                                {/* 发送按钮或语音按钮 */}
+                                {/* 录音状态时始终显示语音按钮，不显示发送按钮 */}
+                                {isRecording ? (
+                                    <Button
+                                        type="primary"
+                                        icon={<AudioOutlined />}
+                                        onClick={handleVoiceRecognition}
+                                        style={{
+                                            width: 40,
+                                            height: 40,
+                                            borderRadius: 20,
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            background: "#ff4d4f",
+                                            borderColor: "#ff4d4f",
+                                            color: "white",
+                                            transition: "all 0.2s ease",
+                                            animation: "pulse 1.5s ease-in-out infinite",
+                                        }}
+                                        className="voice-btn"
+                                    />
+                                ) : isRecognizing ? (
+                                    <Button
+                                        type="primary"
+                                        icon={<LoadingOutlined />}
+                                        disabled
+                                        style={{
+                                            width: 40,
+                                            height: 40,
+                                            borderRadius: 20,
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            background: token.colorPrimary,
+                                            borderColor: token.colorPrimary,
+                                            color: "white",
+                                            transition: "all 0.2s ease",
+                                            opacity: 0.8,
+                                        }}
+                                        className="recognizing-btn"
+                                    />
+                                ) : inputValue.trim() ? (
+                                    <Button
+                                        type="primary"
+                                        icon={<SendOutlined />}
+                                        onClick={handleSendMessage}
+                                        disabled={!inputValue.trim() || isTyping || isStartingReview || isRefreshing || isCalculating || isReprocessing || !hasReachedMinProgress || isReprocessingInHistory}
+                                        style={{
+                                            width: 40,
+                                            height: 40,
+                                            borderRadius: 20,
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            background: token.colorPrimary,
+                                            borderColor: token.colorPrimary,
+                                            color: "white",
+                                            transition: "all 0.2s ease",
+                                        }}
+                                        className="send-btn"
+                                    />
+                                ) : (
+                                    <Button
+                                        type="text"
+                                        icon={<AudioOutlined />}
+                                        onClick={handleVoiceRecognition}
+                                        disabled={isTyping || isStartingReview || isRefreshing || isCalculating || isReprocessing}
+                                        style={{
+                                            width: 40,
+                                            height: 40,
+                                            borderRadius: 20,
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            background: "transparent",
+                                            borderColor: "transparent",
+                                            color: token.colorTextSecondary,
+                                            transition: "all 0.2s ease",
+                                        }}
+                                        className="voice-btn"
+                                    />
+                                )}
                             </div>
-
-                            {/* 发送按钮或语音按钮 */}
-                            {/* 录音状态时始终显示语音按钮，不显示发送按钮 */}
-                            {isRecording ? (
-                                <Button
-                                    type="primary"
-                                    icon={<AudioOutlined />}
-                                    onClick={handleVoiceRecognition}
-                                    style={{
-                                        width: 40,
-                                        height: 40,
-                                        borderRadius: 20,
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        background: "#ff4d4f",
-                                        borderColor: "#ff4d4f",
-                                        color: "white",
-                                        transition: "all 0.2s ease",
-                                        animation: "pulse 1.5s ease-in-out infinite",
-                                    }}
-                                    className="voice-btn"
-                                />
-                            ) : isRecognizing ? (
-                                <Button
-                                    type="primary"
-                                    icon={<LoadingOutlined />}
-                                    disabled
-                                    style={{
-                                        width: 40,
-                                        height: 40,
-                                        borderRadius: 20,
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        background: token.colorPrimary,
-                                        borderColor: token.colorPrimary,
-                                        color: "white",
-                                        transition: "all 0.2s ease",
-                                        opacity: 0.8,
-                                    }}
-                                    className="recognizing-btn"
-                                />
-                            ) : inputValue.trim() ? (
-                                <Button
-                                    type="primary"
-                                    icon={<SendOutlined />}
-                                    onClick={handleSendMessage}
-                                    disabled={!inputValue.trim() || isTyping || isStartingReview || isRefreshing || isCalculating || isReprocessing || !hasReachedMinProgress || isReprocessingInHistory}
-                                    style={{
-                                        width: 40,
-                                        height: 40,
-                                        borderRadius: 20,
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        background: token.colorPrimary,
-                                        borderColor: token.colorPrimary,
-                                        color: "white",
-                                        transition: "all 0.2s ease",
-                                    }}
-                                    className="send-btn"
-                                />
-                            ) : (
-                                <Button
-                                    type="text"
-                                    icon={<AudioOutlined />}
-                                    onClick={handleVoiceRecognition}
-                                    disabled={isTyping || isStartingReview || isRefreshing || isCalculating || isReprocessing}
-                                    style={{
-                                        width: 40,
-                                        height: 40,
-                                        borderRadius: 20,
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        background: "transparent",
-                                        borderColor: "transparent",
-                                        color: token.colorTextSecondary,
-                                        transition: "all 0.2s ease",
-                                    }}
-                                    className="voice-btn"
-                                />
-                            )}
                         </div>
-                    </div>
 
+                    </div>
                 </div>
-            </div>
             )}
 
             {/* 文件上传模态框 */}
@@ -1785,7 +1792,7 @@ const ChatInterface: React.FC = () => {
             </Modal>
 
             {/* 烟花效果 */}
-            <Fireworks 
+            <Fireworks
                 active={showFireworks}
                 extraTrigger={extraFireworkTrigger}
                 onComplete={() => setShowFireworks(false)}

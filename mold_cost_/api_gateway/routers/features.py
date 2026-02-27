@@ -64,7 +64,7 @@ class ReprocessRequest(BaseModel):
     force_reprocess: Optional[bool] = True
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "job_id": "4fada577-6d86-4b8f-8c2e-0f991fd65a3c",
                 "subgraph_ids": ["sub_001", "sub_002"],

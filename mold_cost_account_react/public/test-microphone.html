@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>麦克风测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .test-section h3 {
+            margin-top: 0;
+            color: #666;
+        }
+
+        .result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .recording {
+            background: #dc3545;
+        }
+
+        .recording:hover {
+            background: #c82333;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🎤 麦克风功能测试</h1>
+
+        <!-- 测试 1: 浏览器支持检查 -->
+        <div class="test-section">
+            <h3>测试 1: 浏览器支持检查</h3>
+            <button onclick="checkBrowserSupport()">运行测试</button>
+            <div id="browser-result"></div>
+        </div>
+
+        <!-- 测试 2: 麦克风权限检查 -->
+        <div class="test-section">
+            <h3>测试 2: 麦克风权限检查</h3>
+            <button onclick="checkPermission()">检查权限</button>
+            <div id="permission-result"></div>
+        </div>
+
+        <!-- 测试 3: 麦克风访问测试 -->
+        <div class="test-section">
+            <h3>测试 3: 麦克风访问测试</h3>
+            <button onclick="testMicrophone()">测试麦克风</button>
+            <div id="microphone-result"></div>
+        </div>
+
+        <!-- 测试 4: 录音测试 -->
+        <div class="test-section">
+            <h3>测试 4: 录音测试</h3>
+            <button id="recordBtn" onclick="toggleRecording()">开始录音</button>
+            <div id="recording-result"></div>
+        </div>
+
+        <!-- 测试 5: API 连接测试 -->
+        <div class="test-section">
+            <h3>测试 5: API 连接测试</h3>
+            <button onclick="testAPI()">测试 API</button>
+            <div id="api-result"></div>
+        </div>
+    </div>
+
+    <script>
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let isRecording = false;
+
+        // 测试 1: 浏览器支持检查
+        function checkBrowserSupport() {
+            const resultDiv = document.getElementById('browser-result');
+            resultDiv.innerHTML = '';
+
+            const results = [];
+
+            // 检查基本信息
+            results.push(`<div class="info">浏览器: ${navigator.userAgent}</div>`);
+            results.push(`<div class="info">协议: ${window.location.protocol}</div>`);
+            results.push(`<div class="info">主机: ${window.location.hostname}</div>`);
+
+            // 检查 navigator.mediaDevices
+            if (navigator.mediaDevices) {
+                results.push('<div class="success">✅ navigator.mediaDevices 存在</div>');
+            } else {
+                results.push('<div class="error">❌ navigator.mediaDevices 不存在</div>');
+                resultDiv.innerHTML = results.join('');
+                return;
+            }
+
+            // 检查 getUserMedia
+            if (navigator.mediaDevices.getUserMedia) {
+                results.push('<div class="success">✅ getUserMedia 方法存在</div>');
+            } else {
+                results.push('<div class="error">❌ getUserMedia 方法不存在</div>');
+            }
+
+            // 检查 MediaRecorder
+            if (typeof MediaRecorder !== 'undefined') {
+                results.push('<div class="success">✅ MediaRecorder API 可用</div>');
+
+                // 检查支持的 MIME 类型
+                const mimeTypes = [
+                    'audio/webm',
+                    'audio/webm;codecs=opus',
+                    'audio/ogg;codecs=opus',
+                    'audio/mp4'
+                ];
+
+                results.push('<div class="info">支持的音频格式:</div>');
+                mimeTypes.forEach(type => {
+                    if (MediaRecorder.isTypeSupported(type)) {
+                        results.push(`<div class="success">  ✅ ${type}</div>`);
+                    } else {
+                        results.push(`<div class="error">  ❌ ${type}</div>`);
+                    }
+                });
+            } else {
+                results.push('<div class="error">❌ MediaRecorder API 不可用</div>');
+            }
+
+            resultDiv.innerHTML = results.join('');
+        }
+
+        // 测试 2: 麦克风权限检查
+        async function checkPermission() {
+            const resultDiv = document.getElementById('permission-result');
+            resultDiv.innerHTML = '<div class="info">正在检查权限...</div>';
+
+            try {
+                if (navigator.permissions && navigator.permissions.query) {
+                    const result = await navigator.permissions.query({ name: 'microphone' });
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ 权限 API 可用</div>
+                        <div class="info">权限状态: ${result.state}</div>
+                        <div class="info">
+                            - granted: 已授权<br>
+                            - prompt: 需要询问<br>
+                            - denied: 已拒绝
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = '<div class="info">⚠️ 浏览器不支持权限查询 API（这是正常的）</div>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ 检查权限失败: ${error.message}</div>`;
+            }
+        }
+
+        // 测试 3: 麦克风访问测试
+        async function testMicrophone() {
+            const resultDiv = document.getElementById('microphone-result');
+            resultDiv.innerHTML = '<div class="info">正在请求麦克风访问...</div>';
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+                // 获取音频轨道信息
+                const audioTracks = stream.getAudioTracks();
+                const track = audioTracks[0];
+
+                resultDiv.innerHTML = `
+                    <div class="success">✅ 麦克风访问成功！</div>
+                    <div class="info">设备标签: ${track.label}</div>
+                    <div class="info">设备ID: ${track.id}</div>
+                    <div class="info">状态: ${track.readyState}</div>
+                    <div class="info">已启用: ${track.enabled}</div>
+                `;
+
+                // 停止流
+                stream.getTracks().forEach(track => track.stop());
+            } catch (error) {
+                let errorMsg = error.message;
+                if (error.name === 'NotAllowedError') {
+                    errorMsg = '用户拒绝了麦克风权限';
+                } else if (error.name === 'NotFoundError') {
+                    errorMsg = '未找到麦克风设备';
+                } else if (error.name === 'NotReadableError') {
+                    errorMsg = '麦克风被其他应用占用';
+                }
+
+                resultDiv.innerHTML = `
+                    <div class="error">❌ 麦克风访问失败</div>
+                    <div class="error">错误类型: ${error.name}</div>
+                    <div class="error">错误信息: ${errorMsg}</div>
+                `;
+            }
+        }
+
+        // 测试 4: 录音测试
+        async function toggleRecording() {
+            const btn = document.getElementById('recordBtn');
+            const resultDiv = document.getElementById('recording-result');
+
+            if (!isRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+                    audioChunks = [];
+
+                    mediaRecorder.ondataavailable = (event) => {
+                        if (event.data.size > 0) {
+                            audioChunks.push(event.data);
+                        }
+                    };
+
+                    mediaRecorder.onstop = () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                        resultDiv.innerHTML = `
+                            <div class="success">✅ 录音完成</div>
+                            <div class="info">音频大小: ${audioBlob.size} bytes</div>
+                            <div class="info">音频类型: ${audioBlob.type}</div>
+                        `;
+
+                        // 停止所有轨道
+                        stream.getTracks().forEach(track => track.stop());
+                    };
+
+                    mediaRecorder.start();
+                    isRecording = true;
+                    btn.textContent = '停止录音';
+                    btn.className = 'recording';
+                    resultDiv.innerHTML = '<div class="info">🎤 正在录音...</div>';
+
+                } catch (error) {
+                    resultDiv.innerHTML = `<div class="error">❌ 启动录音失败: ${error.message}</div>`;
+                }
+            } else {
+                mediaRecorder.stop();
+                isRecording = false;
+                btn.textContent = '开始录音';
+                btn.className = '';
+            }
+        }
+
+        // 测试 5: API 连接测试
+        async function testAPI() {
+            const resultDiv = document.getElementById('api-result');
+            resultDiv.innerHTML = '<div class="info">正在测试 API 连接...</div>';
+
+            const apiUrl = 'http://localhost:8000/api/speech/health';
+
+            try {
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+
+                resultDiv.innerHTML = `
+                    <div class="success">✅ API 连接成功</div>
+                    <div class="info">API 地址: ${apiUrl}</div>
+                    <div class="info">响应状态: ${response.status}</div>
+                    <div class="info">响应数据: <pre>${JSON.stringify(data, null, 2)}</pre></div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">❌ API 连接失败</div>
+                    <div class="error">API 地址: ${apiUrl}</div>
+                    <div class="error">错误: ${error.message}</div>
+                    <div class="info">请确保后端服务已启动</div>
+                `;
+            }
+        }
+
+        // 页面加载时自动运行浏览器支持检查
+        window.onload = () => {
+            checkBrowserSupport();
+        };
+    </script>
+</body>
+
+</html>

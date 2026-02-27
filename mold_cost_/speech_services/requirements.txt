@@ -1,0 +1,27 @@
+# Speech Services 依赖
+# 基于 CodeWhisper (OpenAI Whisper)
+
+# 核心依赖
+openai-whisper>=20231117
+numpy>=1.24.0
+torch>=2.0.0
+tqdm>=4.65.0
+more-itertools>=9.1.0
+tiktoken>=0.5.0
+
+# 音频处理
+sounddevice>=0.4.6
+soundfile>=0.12.1
+
+# 中文处理
+hanziconv>=0.3.2
+
+# API 服务
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+python-multipart>=0.0.6
+websockets>=12.0
+
+# HTTP 客户端
+httpx>=0.25.0
+requests>=2.31.0
