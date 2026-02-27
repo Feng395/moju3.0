@@ -314,11 +314,25 @@ class QueryDetailsHandler(BaseActionHandler):
         """
         logger.info(f"🤖 使用 LLM 格式化计算详情: {subgraph_id}")
         
+        # 检查 calculation_steps 是否为空
+        if not calculation_steps:
+            logger.warning(f"⚠️ calculation_steps 为空，无法格式化")
+            return "暂无计算详情数据"
+        
         # 解析 JSON（如果是字符串）
         if isinstance(calculation_steps, str):
-            steps = json.loads(calculation_steps)
+            try:
+                steps = json.loads(calculation_steps)
+            except json.JSONDecodeError as e:
+                logger.error(f"❌ JSON 解析失败: {e}")
+                return "计算详情数据格式错误"
         else:
             steps = calculation_steps
+        
+        # 再次检查解析后的结果
+        if not steps or not isinstance(steps, list):
+            logger.warning(f"⚠️ steps 不是有效的列表: {type(steps)}")
+            return "暂无计算详情数据"
         
         # 如果指定了 query_type，只提取对应的 category
         if query_type:
@@ -1371,13 +1385,22 @@ PU-02 的 NC（数控铣削）费用计算如下：
             格式化后的文本
         """
         try:
+            # 检查 calculation_steps 是否为空
+            if not calculation_steps:
+                return f"{subgraph_id} 暂无计算详情"
+            
             # 如果是字符串，先解析为 JSON
             if isinstance(calculation_steps, str):
-                steps = json.loads(calculation_steps)
+                try:
+                    steps = json.loads(calculation_steps)
+                except json.JSONDecodeError as e:
+                    logger.error(f"❌ JSON 解析失败: {e}")
+                    return f"{subgraph_id} 计算详情数据格式错误"
             else:
                 steps = calculation_steps
             
-            if not steps:
+            # 检查解析后的结果
+            if not steps or not isinstance(steps, list):
                 return f"{subgraph_id} 暂无计算详情"
             
             lines = [f"{subgraph_id} 的成本计算详情：\n"]
@@ -1692,11 +1715,25 @@ PU-02 的 NC（数控铣削）费用计算如下：
             格式化后的文本
         """
         try:
+            # 检查 calculation_steps 是否为空
+            if not calculation_steps:
+                logger.warning(f"⚠️ calculation_steps 为空")
+                return f"{subgraph_id} 暂无计算详情数据"
+            
             # 解析 JSON
             if isinstance(calculation_steps, str):
-                steps = json.loads(calculation_steps)
+                try:
+                    steps = json.loads(calculation_steps)
+                except json.JSONDecodeError as e:
+                    logger.error(f"❌ JSON 解析失败: {e}")
+                    return f"{subgraph_id} 计算详情数据格式错误"
             else:
                 steps = calculation_steps
+            
+            # 检查解析后的结果
+            if not steps or not isinstance(steps, list):
+                logger.warning(f"⚠️ steps 不是有效的列表: {type(steps)}")
+                return f"{subgraph_id} 暂无计算详情数据"
             
             # 查找对应的 category
             target_item = None

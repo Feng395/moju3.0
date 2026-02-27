@@ -40,46 +40,74 @@ class DatabaseManager:
             logger.error(f"❌ 数据库连接池初始化失败: {e}")
             return False
     
-    def get_dwg_file_path(self, job_id: str) -> Optional[str]:
-        """从数据库中根据 job_id 查询 dwg_file_path"""
+    def get_dwg_file_path(self, job_id: str, max_retries: int = 5, retry_delay: float = 1.0) -> Optional[str]:
+        """
+        从数据库中根据 job_id 查询 dwg_file_path
+        
+        Args:
+            job_id: 任务ID
+            max_retries: 最大重试次数（默认5次,适应远程数据库）
+            retry_delay: 重试延迟秒数（默认1.0秒,适应远程数据库网络延迟）
+        
+        Returns:
+            dwg_file_path 或 None
+        """
         if not self.db_pool:
             logger.warning("数据库连接池未初始化")
             return None
         
-        conn = None
-        cursor = None
         try:
-            try:
-                job_uuid = uuid.UUID(job_id)
-            except (ValueError, AttributeError) as e:
-                logger.error(f"❌ job_id 格式错误（不是有效的 UUID）: {job_id}")
-                return None
-            
-            conn = self.db_pool.getconn()
-            cursor = conn.cursor()
-            
-            cursor.execute("SELECT dwg_file_path FROM jobs WHERE job_id = %s", (str(job_uuid),))
-            result = cursor.fetchone()
-            
-            if result and result[0]:
-                dwg_file_path = result[0]
-                logger.info(f"✅ 从数据库查询到 dwg_file_path: {dwg_file_path}")
-                return dwg_file_path
-            else:
-                logger.warning(f"⚠️ 未找到 job_id={job_id} 对应的 dwg_file_path")
-                return None
-                
-        except Exception as e:
-            logger.error(f"❌ 从数据库查询 dwg_file_path 失败: {e}")
+            job_uuid = uuid.UUID(job_id)
+        except (ValueError, AttributeError) as e:
+            logger.error(f"❌ job_id 格式错误（不是有效的 UUID）: {job_id}")
             return None
-        finally:
-            if cursor:
-                try:
-                    cursor.close()
-                except:
-                    pass
-            if conn:
-                self.db_pool.putconn(conn)
+        
+        # 重试逻辑：处理事务提交延迟（使用指数退避策略）
+        for attempt in range(1, max_retries + 1):
+            conn = None
+            cursor = None
+            try:
+                conn = self.db_pool.getconn()
+                cursor = conn.cursor()
+                
+                cursor.execute("SELECT dwg_file_path FROM jobs WHERE job_id = %s", (str(job_uuid),))
+                result = cursor.fetchone()
+                
+                if result and result[0]:
+                    dwg_file_path = result[0]
+                    if attempt > 1:
+                        logger.info(f"✅ 从数据库查询到 dwg_file_path (第{attempt}次尝试): {dwg_file_path}")
+                    else:
+                        logger.info(f"✅ 从数据库查询到 dwg_file_path: {dwg_file_path}")
+                    return dwg_file_path
+                else:
+                    if attempt < max_retries:
+                        # 指数退避: 1s, 2s, 4s, 8s...
+                        wait_time = retry_delay * (2 ** (attempt - 1))
+                        logger.warning(f"⚠️ 未找到 job_id={job_id} 对应的 dwg_file_path (第{attempt}次尝试，{wait_time:.1f}秒后重试)")
+                        import time
+                        time.sleep(wait_time)
+                    else:
+                        logger.warning(f"⚠️ 未找到 job_id={job_id} 对应的 dwg_file_path (已重试{max_retries}次)")
+                        return None
+                    
+            except Exception as e:
+                logger.error(f"❌ 从数据库查询 dwg_file_path 失败 (第{attempt}次尝试): {e}")
+                if attempt >= max_retries:
+                    return None
+                wait_time = retry_delay * (2 ** (attempt - 1))
+                import time
+                time.sleep(wait_time)
+            finally:
+                if cursor:
+                    try:
+                        cursor.close()
+                    except:
+                        pass
+                if conn:
+                    self.db_pool.putconn(conn)
+        
+        return None
     
     def save_subgraph(self, sub_code: str, file_url: str, source_file: str, job_id: str, part_name: str = None, part_code: str = None) -> bool:
         """保存子图信息到数据库"""

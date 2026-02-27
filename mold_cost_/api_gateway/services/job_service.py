@@ -138,7 +138,13 @@ class JobService:
                     snapshot_stats=snapshot_stats
                 )
             
+            # 确保事务已提交
+            await db.commit()
             logger.info(f"✅ 数据库事务提交成功: {job_id}")
+            
+            # 对于远程数据库,等待一小段时间确保事务完全可见
+            import asyncio
+            await asyncio.sleep(0.2)  # 200ms 延迟,确保远程数据库事务可见
         
         except Exception as e:
             logger.error(f"❌ 数据库写入失败: {e}")
