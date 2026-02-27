@@ -18,24 +18,27 @@ class PlateLineViewIdentifier:
         """
         self.tolerance = tolerance
     
-    def identify_views_by_plate_lines(self, msp) -> tuple:
+    def identify_views_by_plate_lines(self, msp, dimensions: Optional[Dict] = None) -> tuple:
         """
         通过板料线（252号色、dashed线形）识别三个视图的边框
         
         识别规则：
-        - 左上角的是俯视图（top_view）
-        - 左下角的是正视图（front_view）
-        - 右上角的是侧视图（side_view）
+        1. 优先根据零件尺寸（L×W×T）匹配视图
+        2. 如果尺寸匹配失败，则根据相对位置分配：
+           - 左上角的是俯视图（top_view）
+           - 左下角的是正视图（front_view）
+           - 右上角的是侧视图（side_view）
         
         Args:
             msp: modelspace
+            dimensions: 零件尺寸字典，包含 'L', 'W', 'T' 键（可选）
         
         Returns:
             tuple: (views_dict, anomaly_dict)
                 views_dict: {
-                    'top_view': {'bounds': {...}},     # 俯视图（左上）
-                    'front_view': {'bounds': {...}},   # 正视图（左下）
-                    'side_view': {'bounds': {...}}     # 侧视图（右上）
+                    'top_view': {'bounds': {...}},     # 俯视图
+                    'front_view': {'bounds': {...}},   # 正视图
+                    'side_view': {'bounds': {...}}     # 侧视图
                 }
                 anomaly_dict: 异常信息字典，如果有异常则包含异常详情，否则为 None
             如果未识别到板料线，返回 ({}, anomaly)
@@ -82,8 +85,19 @@ class PlateLineViewIdentifier:
             
             logging.info(f"✅ 找到 {len(plate_rectangles)} 个板料线矩形")
             
-            # 根据相对位置分配视图
-            views = self._assign_views_by_position(plate_rectangles)
+            # 优先根据尺寸匹配视图
+            views = None
+            if dimensions and all(k in dimensions for k in ['L', 'W', 'T']):
+                logging.info("🔍 尝试根据零件尺寸匹配视图")
+                views = self._assign_views_by_dimensions(plate_rectangles, dimensions)
+            
+            # 如果尺寸匹配失败，则根据相对位置分配视图
+            if not views:
+                if dimensions:
+                    logging.info("⚠️ 尺寸匹配失败，使用相对位置分配视图")
+                else:
+                    logging.info("🔍 使用相对位置分配视图")
+                views = self._assign_views_by_position(plate_rectangles)
             
             if views:
                 # 检查是否识别到全部3个视图
@@ -454,6 +468,101 @@ class PlateLineViewIdentifier:
                 'max_y': max(ys)
             }
         except Exception:
+            return None
+    
+    def _assign_views_by_dimensions(self, rectangles: List[Dict], dimensions: Dict) -> Optional[Dict[str, Dict]]:
+        """
+        根据零件尺寸（L×W×T）匹配视图
+        
+        匹配规则：
+        - 俯视图: L×W 或 W×L
+        - 正视图: L×T 或 T×L
+        - 侧视图: W×T 或 T×W
+        
+        Args:
+            rectangles: 矩形列表
+            dimensions: 零件尺寸字典 {'L': float, 'W': float, 'T': float}
+        
+        Returns:
+            Dict: {view_name: {'bounds': ...}} 或 None（匹配失败）
+        """
+        try:
+            L = dimensions['L']
+            W = dimensions['W']
+            T = dimensions['T']
+            
+            logging.info(f"零件尺寸提取完成: L={L}, W={W}, T={T}")
+            logging.info(f"期望视图尺寸 - 俯视图: {L}×{W} 或 {W}×{L}")
+            logging.info(f"期望视图尺寸 - 正视图: {L}×{T} 或 {T}×{L}")
+            logging.info(f"期望视图尺寸 - 侧视图: {W}×{T} 或 {T}×{W}")
+            
+            # 尺寸匹配容差（5mm）
+            size_tolerance = self.tolerance
+            
+            views = {}
+            matched_indices = set()
+            
+            # 匹配俯视图 (L×W 或 W×L)
+            for idx, rect in enumerate(rectangles):
+                width = rect['width']
+                height = rect['height']
+                
+                # 检查是否匹配 L×W
+                if (abs(width - L) <= size_tolerance and abs(height - W) <= size_tolerance) or \
+                   (abs(width - W) <= size_tolerance and abs(height - L) <= size_tolerance):
+                    views['top_view'] = {'bounds': rect['bounds']}
+                    matched_indices.add(idx)
+                    logging.info(f"✅ 俯视图匹配成功: 矩形{idx+1} ({width:.1f}×{height:.1f}mm)")
+                    break
+            
+            # 匹配正视图 (L×T 或 T×L)
+            for idx, rect in enumerate(rectangles):
+                if idx in matched_indices:
+                    continue
+                
+                width = rect['width']
+                height = rect['height']
+                
+                # 检查是否匹配 L×T
+                if (abs(width - L) <= size_tolerance and abs(height - T) <= size_tolerance) or \
+                   (abs(width - T) <= size_tolerance and abs(height - L) <= size_tolerance):
+                    views['front_view'] = {'bounds': rect['bounds']}
+                    matched_indices.add(idx)
+                    logging.info(f"✅ 正视图匹配成功: 矩形{idx+1} ({width:.1f}×{height:.1f}mm)")
+                    break
+            
+            # 匹配侧视图 (W×T 或 T×W)
+            for idx, rect in enumerate(rectangles):
+                if idx in matched_indices:
+                    continue
+                
+                width = rect['width']
+                height = rect['height']
+                
+                # 检查是否匹配 W×T
+                if (abs(width - W) <= size_tolerance and abs(height - T) <= size_tolerance) or \
+                   (abs(width - T) <= size_tolerance and abs(height - W) <= size_tolerance):
+                    views['side_view'] = {'bounds': rect['bounds']}
+                    matched_indices.add(idx)
+                    logging.info(f"✅ 侧视图匹配成功: 矩形{idx+1} ({width:.1f}×{height:.1f}mm)")
+                    break
+            
+            # 检查匹配结果
+            if len(views) == 3:
+                logging.info("✅ 根据尺寸成功匹配全部3个视图")
+                return views
+            elif len(views) >= 1:
+                logging.warning(f"⚠️ 根据尺寸只匹配到 {len(views)} 个视图: {list(views.keys())}")
+                # 部分匹配也返回，可以与位置匹配结合
+                return views
+            else:
+                logging.warning("⚠️ 根据尺寸未匹配到任何视图")
+                return None
+            
+        except Exception as e:
+            logging.error(f"根据尺寸匹配视图失败: {str(e)}")
+            import traceback
+            logging.error(traceback.format_exc())
             return None
     
     def _assign_views_by_position(self, rectangles: List[Dict]) -> Dict[str, Dict]:

@@ -1,0 +1,4649 @@
+[
+  {
+    "part_name": "外限位柱",
+    "part_code": "A01",
+    "length_mm": 0.0,
+    "width_mm": 0.0,
+    "thickness_mm": 0.0,
+    "material": "45#",
+    "heat_treatment": null,
+    "calculated_weight_kg": 1.28,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(外限位柱)_A01",
+        "M :1 -M10,Φ11.5钻穿,",
+        ",背沉头Φ18.0深23.2mm(螺丝)",
+        "M1 :1 -Φ5.2正钻,正攻M6xP1.0深15.0mm(螺丝)",
+        "Φ50.0*82.80 4PCS 45# - -",
+        "GW:1.28KG",
+        "喷黄漆",
+        "附图订购",
+        "全周倒C1"
+      ]
+    },
+    "abnormal_situation": {
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_not_found",
+          "description": "板料线识别失败: 未找到板料线矩形",
+          "found_count": 0,
+          "required_count": 3
+        }
+      ],
+      "dimension_anomalies": [
+        {
+          "type": "dimension_missing",
+          "description": "零件尺寸缺失: 长度, 宽度, 厚度",
+          "missing_dimensions": [
+            "长度",
+            "宽度",
+            "厚度"
+          ]
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 1
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 0
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "储运柱",
+    "part_code": "A02",
+    "length_mm": 0.0,
+    "width_mm": 0.0,
+    "thickness_mm": 0.0,
+    "material": "铁氟龙",
+    "heat_treatment": null,
+    "calculated_weight_kg": 1.54,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(储运柱)_A02",
+        "M :1 -M6,Φ7.0钻穿,(螺丝)",
+        "M1 :1 -Φ5.2正钻,正攻M6xP1.0深15.0mm(螺丝)",
+        "Φ50.0*100.00 4PCS 铁氟龙 - -",
+        "GW:1.54KG",
+        "附图订购",
+        "全周倒C1"
+      ]
+    },
+    "abnormal_situation": {
+      "view_anomalies": [
+        {
+          "type": "view_recognition_failed",
+          "description": "视图识别异常: 俯视图未识别到",
+          "missing_views": [
+            "俯视图"
+          ]
+        }
+      ],
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_partial",
+          "description": "板料线识别不全: 缺少俯视图",
+          "found_count": 2,
+          "missing_views": [
+            "俯视图"
+          ],
+          "required_count": 3
+        }
+      ],
+      "dimension_anomalies": [
+        {
+          "type": "dimension_missing",
+          "description": "零件尺寸缺失: 长度, 宽度, 厚度",
+          "missing_dimensions": [
+            "长度",
+            "宽度",
+            "厚度"
+          ]
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 1
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 0
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "垫柱",
+    "part_code": "A03",
+    "length_mm": 0.0,
+    "width_mm": 0.0,
+    "thickness_mm": 0.0,
+    "material": "45#",
+    "heat_treatment": null,
+    "calculated_weight_kg": 2.23,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(垫柱)_A03",
+        "M :4 -Φ8.5钻穿,M10xP1.5攻穿(螺丝)",
+        "M1 :4 -M8,Φ9.0钻穿,(螺丝)",
+        "Φ95.0*40.00 16PCS 45# - -",
+        "GW:2.23KG",
+        "附图订购",
+        "全周倒C1"
+      ]
+    },
+    "abnormal_situation": {
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_not_found",
+          "description": "板料线识别失败: 未找到板料线矩形",
+          "found_count": 0,
+          "required_count": 3
+        }
+      ],
+      "dimension_anomalies": [
+        {
+          "type": "dimension_missing",
+          "description": "零件尺寸缺失: 长度, 宽度, 厚度",
+          "missing_dimensions": [
+            "长度",
+            "宽度",
+            "厚度"
+          ]
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 1
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 0
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "成型冲头",
+    "part_code": "A04",
+    "length_mm": 0.0,
+    "width_mm": 0.0,
+    "thickness_mm": 0.0,
+    "material": "Cr12mov",
+    "heat_treatment": "HRC56~58",
+    "calculated_weight_kg": 0.091,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(成型冲头)_A04",
+        "Φ15.5*61.69 5PCS Cr12mov HRC56~58 -",
+        "GW:0.091KG",
+        "附图订购",
+        "型面按3D加工"
+      ]
+    },
+    "abnormal_situation": {
+      "view_anomalies": [
+        {
+          "type": "view_recognition_failed",
+          "description": "视图识别异常: 侧视图未识别到",
+          "missing_views": [
+            "侧视图"
+          ]
+        }
+      ],
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_insufficient",
+          "description": "板料线识别失败: 只找到 1 个板料线矩形",
+          "found_count": 1,
+          "required_count": 2
+        }
+      ],
+      "dimension_anomalies": [
+        {
+          "type": "dimension_missing",
+          "description": "零件尺寸缺失: 长度, 宽度, 厚度",
+          "missing_dimensions": [
+            "长度",
+            "宽度",
+            "厚度"
+          ]
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 0
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 0
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "成型冲头",
+    "part_code": "A05",
+    "length_mm": 0.0,
+    "width_mm": 0.0,
+    "thickness_mm": 0.0,
+    "material": "Cr12mov",
+    "heat_treatment": "HRC56~58",
+    "calculated_weight_kg": 0.066,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(成型冲头)_A05",
+        "Φ12.4*70.00 1PCS Cr12mov HRC56~58 -",
+        "GW:0.066KG",
+        "附图订购",
+        "型面按3D加工"
+      ]
+    },
+    "abnormal_situation": {
+      "view_anomalies": [
+        {
+          "type": "view_recognition_failed",
+          "description": "视图识别异常: 侧视图未识别到",
+          "missing_views": [
+            "侧视图"
+          ]
+        }
+      ],
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_insufficient",
+          "description": "板料线识别失败: 只找到 1 个板料线矩形",
+          "found_count": 1,
+          "required_count": 2
+        }
+      ],
+      "dimension_anomalies": [
+        {
+          "type": "dimension_missing",
+          "description": "零件尺寸缺失: 长度, 宽度, 厚度",
+          "missing_dimensions": [
+            "长度",
+            "宽度",
+            "厚度"
+          ]
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 0
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 0
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "成型冲头",
+    "part_code": "A06",
+    "length_mm": 0.0,
+    "width_mm": 0.0,
+    "thickness_mm": 0.0,
+    "material": "Cr12mov",
+    "heat_treatment": "HRC56~58",
+    "calculated_weight_kg": 0.066,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(成型冲头)_A06",
+        "Φ12.4*70.00 1PCS Cr12mov HRC56~58 -",
+        "GW:0.066KG",
+        "附图订购",
+        "型面按3D加工"
+      ]
+    },
+    "abnormal_situation": {
+      "view_anomalies": [
+        {
+          "type": "view_recognition_failed",
+          "description": "视图识别异常: 侧视图未识别到",
+          "missing_views": [
+            "侧视图"
+          ]
+        }
+      ],
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_insufficient",
+          "description": "板料线识别失败: 只找到 1 个板料线矩形",
+          "found_count": 1,
+          "required_count": 2
+        }
+      ],
+      "dimension_anomalies": [
+        {
+          "type": "dimension_missing",
+          "description": "零件尺寸缺失: 长度, 宽度, 厚度",
+          "missing_dimensions": [
+            "长度",
+            "宽度",
+            "厚度"
+          ]
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 0
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 0
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "下托板",
+    "part_code": "B1-01",
+    "length_mm": 1250.0,
+    "width_mm": 1050.0,
+    "thickness_mm": 27.5,
+    "material": "45#",
+    "heat_treatment": null,
+    "calculated_weight_kg": 283.0,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(下托板)_B1-01",
+        "M :32-Φ6.8钻穿,M8xP1.25攻穿(螺丝)",
+        "M1 :4 -Φ17.5钻穿,M20xP2.5攻穿(螺丝)",
+        "M2 :16-M12,Φ13.5钻穿,",
+        ",背沉头Φ20.0深15.0mm(螺丝)",
+        "M3 :16-M16,Φ18.0钻穿,",
+        ",背沉头Φ30.0深17.5mm(螺丝)",
+        "C :6 -Φ18.0贯通",
+        "C1 :6 -Φ22.0贯通",
+        "C2 :22-Φ24.0贯通",
+        "1250.0L*1050.0W*27.50T 1PCS 45# - -",
+        "GW:283KG",
+        "全周倒角C2",
+        "外形缺口实数铣",
+        "B :8 -码模槽,实数铣通",
+        "分中加工"
+      ]
+    },
+    "abnormal_situation": {
+      "view_anomalies": [
+        {
+          "type": "view_recognition_failed",
+          "description": "视图识别异常: 侧视图未识别到",
+          "missing_views": [
+            "侧视图"
+          ]
+        }
+      ],
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_insufficient",
+          "description": "板料线识别失败: 只找到 1 个板料线矩形",
+          "found_count": 1,
+          "required_count": 2
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 1
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 2
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "下垫脚",
+    "part_code": "B2-01",
+    "length_mm": 47.0,
+    "width_mm": 870.0,
+    "thickness_mm": 170.5,
+    "material": "45#",
+    "heat_treatment": null,
+    "calculated_weight_kg": 54.7,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(下垫脚)_B2-01",
+        "M :4 -Φ10.5背钻,背攻M12xP1.75深30.0mm(螺丝)",
+        "M1 :4 -M16,Φ18.0钻穿,(螺丝)",
+        "B :2 -让位,正面铣深60.0mm",
+        "47.0L*870.0W*170.50T 1PCS 45# - -",
+        "GW:54.7KG",
+        "全周倒角C2",
+        "170.5mm等高研磨"
+      ]
+    },
+    "abnormal_situation": {
+      "view_anomalies": [
+        {
+          "type": "view_recognition_failed",
+          "description": "视图识别异常: 正视图未识别到",
+          "missing_views": [
+            "正视图"
+          ]
+        }
+      ],
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_not_found",
+          "description": "板料线识别失败: 未找到板料线矩形",
+          "found_count": 0,
+          "required_count": 3
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 1
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 2
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "下垫脚",
+    "part_code": "B2-02",
+    "length_mm": 47.0,
+    "width_mm": 870.0,
+    "thickness_mm": 170.5,
+    "material": "45#",
+    "heat_treatment": null,
+    "calculated_weight_kg": 54.7,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(下垫脚)_B2-02",
+        "M :4 -Φ10.5背钻,背攻M12xP1.75深30.0mm(螺丝)",
+        "M1 :4 -M16,Φ18.0钻穿,(螺丝)",
+        "B :5 -废料滑槽，按3D实数铣",
+        "47.0L*870.0W*170.50T 1PCS 45# - -",
+        "GW:54.7KG",
+        "全周倒角C2",
+        "170.5mm等高研磨"
+      ]
+    },
+    "abnormal_situation": {
+      "view_anomalies": [
+        {
+          "type": "view_recognition_failed",
+          "description": "视图识别异常: 正视图未识别到",
+          "missing_views": [
+            "正视图"
+          ]
+        }
+      ],
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_not_found",
+          "description": "板料线识别失败: 未找到板料线矩形",
+          "found_count": 0,
+          "required_count": 3
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 1
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 0
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "下垫脚",
+    "part_code": "B2-03",
+    "length_mm": 47.0,
+    "width_mm": 870.0,
+    "thickness_mm": 170.5,
+    "material": "45#",
+    "heat_treatment": null,
+    "calculated_weight_kg": 54.7,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(下垫脚)_B2-03",
+        "M :4 -Φ10.5背钻,背攻M12xP1.75深30.0mm(螺丝)",
+        "M1 :4 -M16,Φ18.0钻穿,(螺丝)",
+        "B :1 -废料滑槽，按3D实数铣",
+        "47.0L*870.0W*170.50T 1PCS 45# - -",
+        "GW:54.7KG",
+        "全周倒角C2",
+        "170.5mm等高研磨"
+      ]
+    },
+    "abnormal_situation": {
+      "view_anomalies": [
+        {
+          "type": "view_recognition_failed",
+          "description": "视图识别异常: 正视图未识别到",
+          "missing_views": [
+            "正视图"
+          ]
+        }
+      ],
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_not_found",
+          "description": "板料线识别失败: 未找到板料线矩形",
+          "found_count": 0,
+          "required_count": 3
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 1
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 2
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "下垫脚",
+    "part_code": "B2-04",
+    "length_mm": 47.0,
+    "width_mm": 870.0,
+    "thickness_mm": 170.5,
+    "material": "45#",
+    "heat_treatment": null,
+    "calculated_weight_kg": 54.7,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(下垫脚)_B2-04",
+        "M :4 -Φ10.5背钻,背攻M12xP1.75深30.0mm(螺丝)",
+        "M1 :4 -M16,Φ18.0钻穿,(螺丝)",
+        "B :2 -让位,正面铣深60.0mm",
+        "47.0L*870.0W*170.50T 1PCS 45# - -",
+        "GW:54.7KG",
+        "全周倒角C2",
+        "170.5mm等高研磨"
+      ]
+    },
+    "abnormal_situation": {
+      "view_anomalies": [
+        {
+          "type": "view_recognition_failed",
+          "description": "视图识别异常: 正视图未识别到",
+          "missing_views": [
+            "正视图"
+          ]
+        }
+      ],
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_not_found",
+          "description": "板料线识别失败: 未找到板料线矩形",
+          "found_count": 0,
+          "required_count": 3
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 1
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 2
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "下模板",
+    "part_code": "DIE-01",
+    "length_mm": 1030.0,
+    "width_mm": 960.0,
+    "thickness_mm": 65.0,
+    "material": "D2",
+    "heat_treatment": null,
+    "calculated_weight_kg": 505.0,
+    "top_view_wire_length": 2333.03,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(下模板)_DIE-01",
+        "L :4 -Φ16.00割,单+0.008(合销)，穿线孔Φ5.0钻",
+        "M :56-Φ5.2正钻,正攻M6xP1.0深15.0mm(盲牙螺丝)",
+        "M1 :8 -Φ6.8背钻,背攻M8xP1.25深20.0mm(盲牙螺丝)",
+        "M2 :14-Φ6.8正钻,正攻M8xP1.25深20.0mm(盲牙螺丝)",
+        "M3 :30-Φ10.5背钻,背攻M12xP1.75深20mm(盲牙螺丝)",
+        "M4 :4 -Φ17.5钻穿,正面M20xP2.5攻穿",
+        ",正沉头Φ22.0深3.0mm(螺丝)",
+        "M5 :6 -M10,Φ11.5钻穿,",
+        ",背沉头Φ18.0深15.0mm(螺丝)",
+        "M6 :2 -M12,Φ13.0钻穿,(螺丝)",
+        "G :4 -Φ34.00割,单+0.005，穿线孔Φ5.0钻",
+        ",背沉头Φ38.0深38.0mm(导套)",
+        "N :8 -Φ8.2钻穿",
+        ",背沉头Φ13.0深45.0mm(顶料销)",
+        "C :20-Φ3.0贯通",
+        "C1 :5 -Φ3.0贯通",
+        ",背沉头Φ16.0深16.7mm",
+        "C2 :9 -Φ4.0钻穿",
+        ",背沉头Φ10.0深52.7mm",
+        "C3 :3 -Φ4.0钻穿",
+        ",背沉头Φ10.0深49.4mm",
+        "C4 :4 -Φ4.0钻穿",
+        ",背沉头Φ10.0深48.5mm",
+        "C5 :3 -Φ4.0钻穿",
+        ",背沉头Φ10.0深16.7mm",
+        "D :1 -精铣槽,侧壁单+0.02，正面精铣深35.01mm，深度准底平",
+        "D1 :8 -精铣槽,侧壁单+0.02，正面精铣深15.01mm，深度准底平",
+        "D2 :2 -精铣槽,侧壁单+0.02，正面精铣深20.01mm，深度准底平",
+        "D3 :4 -入子槽,背面精铣深34.70mm，深度准底平",
+        "D4 :8 -入子槽,正面精铣深15.01mm，深度准底平",
+        "D5 :24-入子槽,正面精铣深12.21mm，深度准底平",
+        "W :1 -入子孔,割,单+0.01",
+        "W1 :4 -入子孔,割,单+0.01，穿线孔Φ5.0钻",
+        "1030.0L*960.0W*65.00T 1PCS T00L0X33 - -",
+        "GW:505KG",
+        "背面倒角，正面禁止倒角",
+        "型面按3D精铣,164号色按3D精铣避位0.2mm",
+        "试模抛光后超级氮化"
+      ]
+    },
+    "abnormal_situation": {
+      "wire_cut_anomalies": [
+        {
+          "type": "unmatched_red_lines",
+          "view": "top_view",
+          "description": "俯视图中存在未匹配的线割实线: 1条(82.34mm)",
+          "total_count": 1,
+          "total_length": 82.34
+        },
+        {
+          "type": "plate_line_not_found",
+          "description": "板料线识别失败: 未找到板料线矩形",
+          "found_count": 0,
+          "required_count": 3
+        }
+      ]
+    },
+    "metadata": {
+      "wire_cut_details": [
+        {
+          "code": "G",
+          "cone": "f",
+          "view": "top_view",
+          "area_num": 4,
+          "instruction": "4 -Φ34.00割,单+0.005，穿线孔Φ5.0钻",
+          "slider_angle": 0,
+          "total_length": 427.26,
+          "is_additional": false,
+          "matched_count": 4,
+          "single_length": 106.82,
+          "expected_count": 4,
+          "matched_line_ids": [
+            2219791758864,
+            2219791749008,
+            2219791752528,
+            2219791760144
+          ]
+        },
+        {
+          "code": "L",
+          "cone": "f",
+          "view": "top_view",
+          "area_num": 4,
+          "instruction": "4 -Φ16.00割,单+0.008(合销)，穿线孔Φ5.0钻",
+          "slider_angle": 0,
+          "total_length": 201.06,
+          "is_additional": false,
+          "matched_count": 4,
+          "single_length": 50.27,
+          "expected_count": 4,
+          "matched_line_ids": [
+            2220075031504,
+            2220075030096,
+            2220075036176,
+            2220075037392
+          ]
+        },
+        {
+          "code": "W",
+          "cone": "f",
+          "view": "top_view",
+          "area_num": 0,
+          "instruction": "1 -入子孔,割,单+0.01",
+          "slider_angle": 0,
+          "total_length": 997.5,
+          "is_additional": false,
+          "matched_count": 1,
+          "single_length": 997.5,
+          "expected_count": 1,
+          "matched_line_ids": [
+            2219799176080
+          ]
+        },
+        {
+          "code": "W1",
+          "cone": "f",
+          "view": "top_view",
+          "area_num": 4,
+          "instruction": "4 -入子孔,割,单+0.01，穿线孔Φ5.0钻",
+          "slider_angle": 0,
+          "total_length": 707.2,
+          "is_additional": false,
+          "matched_count": 4,
+          "single_length": 176.8,
+          "expected_count": 4,
+          "matched_line_ids": [
+            2220218686608,
+            2220218689296,
+            2220218689168,
+            2220218687696
+          ]
+        }
+      ]
+    },
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 0
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 2
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 8.0
+  },
+  {
+    "part_name": "下模板",
+    "part_code": "DIE-02",
+    "length_mm": 53.5,
+    "width_mm": 33.0,
+    "thickness_mm": 31.2,
+    "material": "45#",
+    "heat_treatment": null,
+    "calculated_weight_kg": 0.432,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(下模板)_DIE-02",
+        "C :1 -Φ10.0钻穿",
+        "B :1 -让位,实数铣通",
+        "53.5L*33.0W*31.20T 3PCS 45# - -",
+        "GW:0.432KG",
+        "全周倒角",
+        "自找料"
+      ]
+    },
+    "abnormal_situation": {
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_not_found",
+          "description": "板料线识别失败: 未找到板料线矩形",
+          "found_count": 0,
+          "required_count": 3
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 1
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 0
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 2
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "下模板",
+    "part_code": "DIE-03",
+    "length_mm": 349.0,
+    "width_mm": 354.0,
+    "thickness_mm": 64.7,
+    "material": "Cr12mov",
+    "heat_treatment": "HRC56~58",
+    "calculated_weight_kg": 59.2,
+    "top_view_wire_length": 1852.68,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(下模板)_DIE-03",
+        "L :2 -Φ8.00割,单+0.008(合销)",
+        "M :6 -Φ8.5背钻,背攻M10xP1.5深30.0mm(盲牙螺丝)",
+        "M1 :2 -Φ8.5正钻,正攻M10xP1.5深30.0mm(盲牙螺丝)",
+        "W :1 -Φ230.00刀口，割，单+0.06，穿线孔Φ5.0钻",
+        "C2 :7 -Φ4.0钻穿",
+        ",背沉头Φ10.0深10.5mm",
+        "D :1 -削边基准,按3D精铣",
+        "349.0L*354.0W*64.70T 1PCS Cr12mov HRC56~58 -",
+        "GW:59.2KG",
+        "背面倒角，正面禁止倒角",
+        "背面按照3D加工逃料孔",
+        "外形割单+0.00",
+        "型面按照3D精铣"
+      ]
+    },
+    "abnormal_situation": {
+      "view_anomalies": [
+        {
+          "type": "view_recognition_failed",
+          "description": "视图识别异常: 侧视图未识别到",
+          "missing_views": [
+            "侧视图"
+          ]
+        }
+      ],
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_partial",
+          "description": "板料线识别不全: 缺少正视图, 侧视图",
+          "found_count": 1,
+          "missing_views": [
+            "正视图",
+            "侧视图"
+          ],
+          "required_count": 3
+        }
+      ]
+    },
+    "metadata": {
+      "wire_cut_details": [
+        {
+          "code": "L",
+          "cone": "f",
+          "view": "top_view",
+          "area_num": 2,
+          "instruction": "2 -Φ8.00割,单+0.008(合销)",
+          "slider_angle": 0,
+          "total_length": 50.27,
+          "is_additional": false,
+          "matched_count": 2,
+          "single_length": 25.13,
+          "expected_count": 2,
+          "matched_line_ids": [
+            2219943669584,
+            2219943668304
+          ]
+        },
+        {
+          "code": "W",
+          "cone": "f",
+          "view": "top_view",
+          "area_num": 1,
+          "instruction": "1 -Φ230.00刀口，割，单+0.06，穿线孔Φ5.0钻",
+          "slider_angle": 0,
+          "total_length": 722.57,
+          "is_additional": false,
+          "matched_count": 1,
+          "single_length": 722.57,
+          "expected_count": 1,
+          "matched_line_ids": [
+            2220205975056
+          ]
+        },
+        {
+          "code": "外形割单+0.00",
+          "cone": "f",
+          "view": "top_view",
+          "area_num": 0,
+          "instruction": "外形割单+0.00",
+          "slider_angle": 0,
+          "total_length": 1079.84,
+          "is_additional": true,
+          "matched_count": 1,
+          "single_length": 1079.84,
+          "expected_count": 1,
+          "matched_line_ids": [
+            2220210108688
+          ]
+        }
+      ]
+    },
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 0
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 2
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 3.0
+  },
+  {
+    "part_name": "下模板",
+    "part_code": "DIE-04",
+    "length_mm": 73.0,
+    "width_mm": 538.0,
+    "thickness_mm": 37.0,
+    "material": "T00L0X33",
+    "heat_treatment": null,
+    "calculated_weight_kg": 10.43,
+    "top_view_wire_length": 766.69,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(下模板)_DIE-04",
+        "M :6 -Φ8.5背钻,背攻M10xP1.5深16mm(螺丝)",
+        "N :2 -Φ8.2钻穿",
+        ",背沉头Φ13.0深15.0mm(顶料销)",
+        "B :1 -让位,正面铣深22.0mm",
+        "W :1 -入子孔,割,单+0.01",
+        "D :2 -入子槽,正面精铣深17.00mm，深度准底平",
+        "73.0L*538.0W*37.00T 1PCS T00L0X33 - -",
+        "GW:10.43KG",
+        "背面倒角，正面禁止倒角",
+        "型面按3D精铣",
+        "试模抛光后超级氮化",
+        "外形红色线割单+0.00"
+      ]
+    },
+    "abnormal_situation": {
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_partial",
+          "description": "板料线识别不全: 缺少正视图, 侧视图",
+          "found_count": 1,
+          "missing_views": [
+            "正视图",
+            "侧视图"
+          ],
+          "required_count": 3
+        }
+      ]
+    },
+    "metadata": {
+      "wire_cut_details": [
+        {
+          "code": "W",
+          "cone": "f",
+          "view": "top_view",
+          "area_num": 0,
+          "instruction": "1 -入子孔,割,单+0.01",
+          "slider_angle": 0,
+          "total_length": 97.59,
+          "is_additional": false,
+          "matched_count": 1,
+          "single_length": 97.59,
+          "expected_count": 1,
+          "matched_line_ids": [
+            2220033662608
+          ]
+        },
+        {
+          "code": "外形红色线割单+0.00",
+          "cone": "f",
+          "view": "top_view",
+          "area_num": 0,
+          "instruction": "外形红色线割单+0.00",
+          "slider_angle": 0,
+          "total_length": 669.1,
+          "is_additional": true,
+          "matched_count": 4,
+          "single_length": 167.28,
+          "expected_count": 1,
+          "matched_line_ids": [
+            2220033661264,
+            2220033661200,
+            2220033656528,
+            2220033664400
+          ]
+        }
+      ]
+    },
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 0
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 2
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "下模板",
+    "part_code": "DIE-05",
+    "length_mm": 53.5,
+    "width_mm": 33.0,
+    "thickness_mm": 33.2,
+    "material": "45#",
+    "heat_treatment": null,
+    "calculated_weight_kg": 0.46,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(下模板)_DIE-05",
+        "C :1 -Φ10.0钻穿",
+        "B :1 -让位,实数铣通",
+        "53.5L*33.0W*33.20T 1PCS 45# - -",
+        "GW:0.460KG",
+        "全周倒角",
+        "自找料"
+      ]
+    },
+    "abnormal_situation": {
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_not_found",
+          "description": "板料线识别失败: 未找到板料线矩形",
+          "found_count": 0,
+          "required_count": 3
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 1
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 0
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 4
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "下模座",
+    "part_code": "LP-01",
+    "length_mm": 1250.0,
+    "width_mm": 1050.0,
+    "thickness_mm": 67.0,
+    "material": "45#",
+    "heat_treatment": null,
+    "calculated_weight_kg": 690.0,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(下模座)_LP-01",
+        "L :2 -Φ8.00精镗,单+0.008(合销)",
+        "L1 :8 -Φ16.00精镗,单+0.008(合销)，穿线孔Φ5.0钻",
+        "M :12-Φ3.5正钻,正攻M4xP0.7深10.0mm(螺丝)",
+        "M1 :4 -Φ4.3正钻,正攻M5xP0.8深15.0mm(螺丝)",
+        "M2 :4 -Φ5.2正钻,正攻M6xP1.0深15.0mm(螺丝)",
+        "M3 :4 -Φ6.8正钻,正攻M8xP1.25深20.0mm(螺丝)",
+        "M4 :4 -Φ8.5正钻,正攻M10xP1.5深30.0mm(螺丝)",
+        "M5 :16-Φ14.0背钻,背攻M16xP2.0深40.0mm(螺丝)",
+        "M6 :10-Φ12.5钻穿,",
+        ",背攻M14xP1.5深25.0mm(止付螺丝) MSW14",
+        "M7 :6 -M10,Φ11.5钻穿,",
+        ",背沉头Φ18.0深47.0mm(螺丝)",
+        "M8 :30-M12,Φ13.5钻穿,",
+        ",背沉头Φ20.0深37.0mm(螺丝)",
+        "G :2 -Φ70.00精镗,单+0.15(导套)，穿线孔Φ5.0钻",
+        "C :26-Φ10.0贯通",
+        "C1 :5 -Φ16.0贯通",
+        "C2 :6 -Φ18.0贯通",
+        "C3 :4 -Φ26.0钻穿",
+        "C4 :4 -Φ83.00精镗,单+0.15(导套)，穿线孔Φ5.0钻",
+        "C5 :1 -Φ235.0贯通",
+        "B :4 -让位,实数铣通",
+        "M9 :2 -Φ27.0背钻,背攻M30xP3.5深60.0mm",
+        ",背沉头Φ32.0深3.0mm(螺丝)",
+        "M10 :2 -Φ27.0正钻,正攻M30xP3.5深60.0mm",
+        ",正沉头Φ32.0深3.0mm(螺丝)",
+        "1250.0L*1050.0W*67.00T 1PCS 45# - -",
+        "GW:690KG",
+        "全周倒角C2",
+        "按3D加工刻字",
+        "外形缺口实数铣"
+      ]
+    },
+    "abnormal_situation": {
+      "view_anomalies": [
+        {
+          "type": "view_recognition_failed",
+          "description": "视图识别异常: 侧视图未识别到",
+          "missing_views": [
+            "侧视图"
+          ]
+        }
+      ],
+      "wire_cut_anomalies": [
+        {
+          "type": "unmatched_red_lines",
+          "view": "top_view",
+          "description": "俯视图中存在未匹配的线割实线: 16条(1935.24mm)",
+          "total_count": 16,
+          "total_length": 1935.24
+        },
+        {
+          "type": "plate_line_insufficient",
+          "description": "板料线识别失败: 只找到 1 个板料线矩形",
+          "found_count": 1,
+          "required_count": 2
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 1
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 2
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "上夹板",
+    "part_code": "PH-01",
+    "length_mm": 72.0,
+    "width_mm": 52.0,
+    "thickness_mm": 40.0,
+    "material": "45#",
+    "heat_treatment": null,
+    "calculated_weight_kg": 1.18,
+    "top_view_wire_length": 278.07,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(上夹板)_PH-01",
+        "L :2 -Φ8.00割,单+0.008(合销)",
+        "C :1 -Φ8.5贯通",
+        ",背沉头Φ14.5深11.0mm",
+        "C1 :1 -Φ9.40冲头夹持孔，割单+0.005",
+        ",正沉头Φ14.0深5.30mm，深度准",
+        "72.0L*52.0W*40.00T 2PCS 45# - -",
+        "GW:1.18KG",
+        "全周倒角",
+        "自找料",
+        "外形红色线割单+0.00"
+      ]
+    },
+    "abnormal_situation": {
+      "wire_cut_anomalies": [
+        {
+          "code": "L",
+          "type": "wire_cut_count_mismatch",
+          "description": "工艺编号 L 的线割实线数量不匹配",
+          "actual_count": 1,
+          "expected_count": 2
+        },
+        {
+          "type": "plate_line_insufficient",
+          "description": "板料线识别失败: 只找到 1 个板料线矩形",
+          "found_count": 1,
+          "required_count": 2
+        }
+      ]
+    },
+    "metadata": {
+      "wire_cut_details": [
+        {
+          "code": "C1",
+          "cone": "f",
+          "view": "top_view",
+          "area_num": 1,
+          "instruction": "1 -Φ9.40冲头夹持孔，割单+0.005",
+          "slider_angle": 0,
+          "total_length": 25.13,
+          "is_additional": false,
+          "matched_count": 1,
+          "single_length": 25.13,
+          "expected_count": 1,
+          "matched_line_ids": [
+            2220093303312
+          ]
+        },
+        {
+          "code": "L",
+          "cone": "f",
+          "view": "top_view",
+          "area_num": 1,
+          "instruction": "2 -Φ8.00割,单+0.008(合销)",
+          "slider_angle": 0,
+          "total_length": 25.13,
+          "is_additional": false,
+          "matched_count": 1,
+          "single_length": 25.13,
+          "expected_count": 2,
+          "matched_line_ids": [
+            2220093295824
+          ]
+        },
+        {
+          "code": "外形红色线割单+0.00",
+          "cone": "f",
+          "view": "top_view",
+          "area_num": 1,
+          "instruction": "外形红色线割单+0.00",
+          "slider_angle": 0,
+          "total_length": 227.8,
+          "is_additional": true,
+          "matched_count": 1,
+          "single_length": 227.8,
+          "expected_count": 1,
+          "matched_line_ids": [
+            2219772385744
+          ]
+        }
+      ]
+    },
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 1
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 0
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 2
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 2.0
+  },
+  {
+    "part_name": "上脱板",
+    "part_code": "PS-01",
+    "length_mm": 1030.0,
+    "width_mm": 960.0,
+    "thickness_mm": 67.0,
+    "material": "P20",
+    "heat_treatment": null,
+    "calculated_weight_kg": 520.0,
+    "top_view_wire_length": 5424.41,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(上脱板)_PS-01",
+        "L :4 -Φ16.00割,单+0.008(合销)，穿线孔Φ5.0钻",
+        "M :8 -Φ6.8正钻,正攻M8xP1.25深20.0mm(螺丝)",
+        "M1 :18-Φ14.0正钻,正攻M16xP2.0深40.0mm(螺丝)",
+        "M2 :4 -Φ17.5钻穿,背面M20xP2.5攻穿",
+        ",背沉头Φ22.0深3.0mm(螺丝)",
+        "G :4 -Φ34.00割,单+0.005，穿线孔Φ5.0钻",
+        ",正沉头Φ38.0深34.8mm(导套)",
+        "X :16-正铣Φ97.0深19.3mm(弹簧孔)",
+        "N :42-Φ4.2钻穿",
+        ",正沉头Φ6.8深49.0mm",
+        ",正攻M8xP1.25深15.0mm(顶料销) MSW8",
+        "N1 :7 -Φ8.2钻穿",
+        ",正沉头Φ12.5深45.0mm",
+        ",正攻M14xP1.5深25.0mm(顶料销) MSW14",
+        "N2 :1 -Φ8.2钻穿",
+        ",正沉头Φ12.5深45.3mm",
+        ",正攻M14xP1.5深25.0mm(顶料销) MSW14",
+        "C :2 -Φ9.80冲头过孔，实数线割",
+        "W :1 -Φ551.00冲头过孔,实数割通，穿线孔Φ5.0钻",
+        "W1 :12-冲头过孔,实数割通，穿线孔Φ5.0钻",
+        "W2 :8 -让位，实数割通，穿线孔Φ5.0钻",
+        "B :2 -让位,正面铣深45.0mm",
+        "D :4 -入子槽,正面精铣深31.50mm，深度准底平",
+        "1030.0L*960.0W*67.00T 1PCS P20 - -",
+        "GW:520KG",
+        "正面倒角，背面禁止倒角",
+        "型面按3D精铣"
+      ]
+    },
+    "abnormal_situation": {
+      "wire_cut_anomalies": [
+        {
+          "code": "C",
+          "type": "wire_cut_matching_failed",
+          "description": "工艺编号 C 在所有视图中都未能配对到线割实线",
+          "actual_count": 0,
+          "expected_count": 2
+        },
+        {
+          "type": "unmatched_red_lines",
+          "view": "top_view",
+          "description": "俯视图中存在未匹配的线割实线: 3条(181.86mm)",
+          "total_count": 3,
+          "total_length": 181.86
+        },
+        {
+          "type": "plate_line_not_found",
+          "description": "板料线识别失败: 未找到板料线矩形",
+          "found_count": 0,
+          "required_count": 3
+        }
+      ]
+    },
+    "metadata": {
+      "wire_cut_details": [
+        {
+          "code": "C",
+          "cone": "f",
+          "view": null,
+          "area_num": 0,
+          "instruction": "2 -Φ9.80冲头过孔，实数线割",
+          "slider_angle": 0,
+          "total_length": 0.0,
+          "is_additional": false,
+          "matched_count": 0,
+          "single_length": 0.0,
+          "expected_count": 2,
+          "matched_line_ids": []
+        },
+        {
+          "code": "G",
+          "cone": "f",
+          "view": "top_view",
+          "area_num": 4,
+          "instruction": "4 -Φ34.00割,单+0.005，穿线孔Φ5.0钻",
+          "slider_angle": 0,
+          "total_length": 427.26,
+          "is_additional": false,
+          "matched_count": 4,
+          "single_length": 106.82,
+          "expected_count": 4,
+          "matched_line_ids": [
+            2220281708688,
+            2220281716048,
+            2220281714000,
+            2220281710992
+          ]
+        },
+        {
+          "code": "L",
+          "cone": "f",
+          "view": "top_view",
+          "area_num": 4,
+          "instruction": "4 -Φ16.00割,单+0.008(合销)，穿线孔Φ5.0钻",
+          "slider_angle": 0,
+          "total_length": 201.06,
+          "is_additional": false,
+          "matched_count": 4,
+          "single_length": 50.27,
+          "expected_count": 4,
+          "matched_line_ids": [
+            2220006176144,
+            2220006164880,
+            2220006177168,
+            2220006176848
+          ]
+        },
+        {
+          "code": "W",
+          "cone": "f",
+          "view": "top_view",
+          "area_num": 1,
+          "instruction": "1 -Φ551.00冲头过孔,实数割通，穿线孔Φ5.0钻",
+          "slider_angle": 0,
+          "total_length": 1731.02,
+          "is_additional": false,
+          "matched_count": 1,
+          "single_length": 1731.02,
+          "expected_count": 1,
+          "matched_line_ids": [
+            2220006167696
+          ]
+        },
+        {
+          "code": "W1",
+          "cone": "f",
+          "view": "top_view",
+          "area_num": 11,
+          "instruction": "12-冲头过孔,实数割通，穿线孔Φ5.0钻",
+          "slider_angle": 0,
+          "total_length": 2498.27,
+          "is_additional": false,
+          "matched_count": 12,
+          "single_length": 208.19,
+          "expected_count": 12,
+          "matched_line_ids": [
+            2219806050576,
+            2219806056464,
+            2219806061072,
+            2219761222416,
+            2219806053456,
+            2219806061136,
+            2219761229904,
+            2219806062288,
+            2219806054096,
+            2219806050704,
+            2219761231312,
+            2219761223312
+          ]
+        },
+        {
+          "code": "W2",
+          "cone": "f",
+          "view": "top_view",
+          "area_num": 8,
+          "instruction": "8 -让位，实数割通，穿线孔Φ5.0钻",
+          "slider_angle": 0,
+          "total_length": 566.8,
+          "is_additional": false,
+          "matched_count": 8,
+          "single_length": 70.85,
+          "expected_count": 8,
+          "matched_line_ids": [
+            2219806049808,
+            2219761228112,
+            2219806061392,
+            2219806064528,
+            2219761223696,
+            2219761234000,
+            2219806050256,
+            2219761221776
+          ]
+        }
+      ]
+    },
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 0
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 2
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 9.0
+  },
+  {
+    "part_name": "冲头",
+    "part_code": "PU-01",
+    "length_mm": 0.0,
+    "width_mm": 0.0,
+    "thickness_mm": 0.0,
+    "material": "T00L0X33",
+    "heat_treatment": null,
+    "calculated_weight_kg": 1.56,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(冲头)_PU-01",
+        "M :2 -Φ8.5正钻,正攻M10xP1.5深30.0mm(盲牙螺丝)",
+        "C :1 -Φ4.0钻穿",
+        ",正沉头Φ10.0深79.3mm",
+        "- 1PCS T00L0X33 - 已备料在PU-BL1",
+        "GW:1.56KG",
+        "正面倒角，背面禁止倒角",
+        "型面按3D精铣",
+        "试模抛光后超级氮化"
+      ]
+    },
+    "abnormal_situation": {
+      "view_anomalies": [
+        {
+          "type": "view_recognition_failed",
+          "description": "视图识别异常: 侧视图未识别到",
+          "missing_views": [
+            "侧视图"
+          ]
+        }
+      ],
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_insufficient",
+          "description": "板料线识别失败: 只找到 1 个板料线矩形",
+          "found_count": 1,
+          "required_count": 2
+        }
+      ],
+      "dimension_anomalies": [
+        {
+          "type": "dimension_missing",
+          "description": "零件尺寸缺失: 长度, 宽度, 厚度",
+          "missing_dimensions": [
+            "长度",
+            "宽度",
+            "厚度"
+          ]
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 1
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 0
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 0
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "成型冲头",
+    "part_code": "PU-02",
+    "length_mm": 560.0,
+    "width_mm": 560.0,
+    "thickness_mm": 64.5,
+    "material": "T00L0X33",
+    "heat_treatment": null,
+    "calculated_weight_kg": 120.0,
+    "top_view_wire_length": 2062.46,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(成型冲头)_PU-02",
+        "L :2 -Φ10.00割,单+0.008(合销)",
+        "L1 :2 -Φ12.00割,单+0.008(合销)",
+        "M :4 -Φ8.5钻穿,M10xP1.5攻穿(螺丝)",
+        "M1 :4 -Φ10.5钻穿,M12xP1.75攻穿(螺丝)",
+        "M2 :8 -Φ10.5正钻,正攻M12xP1.75深30.0mm(盲牙螺丝)",
+        "C :20-Φ3.0贯通",
+        "C1 :5 -Φ3.0贯通",
+        ",正沉头Φ16.0深48.3mm",
+        "C2 :3 -Φ4.0钻穿",
+        ",正沉头Φ10.0深48.3mm",
+        "C3 :5 -冲头过孔Φ12.5割单+0.01",
+        ",正沉头Φ16.5深5.3mm",
+        "D :1 -削边基准,按3D精铣",
+        "D1 :4 -正面定位键铣深11.00mm,精铣单+0.01,外形准",
+        "560.0L*560.0W*64.50T 1PCS T00L0X33 - -",
+        "GW:120KG",
+        "正面倒角，背面禁止倒角",
+        "型面按3D精铣",
+        "试模抛光后超级氮化",
+        "外形割单+0.00"
+      ]
+    },
+    "abnormal_situation": {
+      "view_anomalies": [
+        {
+          "type": "view_recognition_failed",
+          "description": "视图识别异常: 侧视图未识别到",
+          "missing_views": [
+            "侧视图"
+          ]
+        }
+      ],
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_partial",
+          "description": "板料线识别不全: 缺少正视图, 侧视图",
+          "found_count": 1,
+          "missing_views": [
+            "正视图",
+            "侧视图"
+          ],
+          "required_count": 3
+        }
+      ]
+    },
+    "metadata": {
+      "wire_cut_details": [
+        {
+          "code": "C3",
+          "cone": "f",
+          "view": "top_view",
+          "area_num": 5,
+          "instruction": "5 -冲头过孔Φ12.5割单+0.01",
+          "slider_angle": 0,
+          "total_length": 196.35,
+          "is_additional": false,
+          "matched_count": 5,
+          "single_length": 39.27,
+          "expected_count": 5,
+          "matched_line_ids": [
+            2219954561488,
+            2219954568720,
+            2219954553744,
+            2219954552912,
+            2219954553552
+          ]
+        },
+        {
+          "code": "L",
+          "cone": "f",
+          "view": "top_view",
+          "area_num": 2,
+          "instruction": "2 -Φ10.00割,单+0.008(合销)",
+          "slider_angle": 0,
+          "total_length": 62.83,
+          "is_additional": false,
+          "matched_count": 2,
+          "single_length": 31.42,
+          "expected_count": 2,
+          "matched_line_ids": [
+            2219804355664,
+            2220119162512
+          ]
+        },
+        {
+          "code": "L1",
+          "cone": "f",
+          "view": "top_view",
+          "area_num": 2,
+          "instruction": "2 -Φ12.00割,单+0.008(合销)",
+          "slider_angle": 0,
+          "total_length": 75.4,
+          "is_additional": false,
+          "matched_count": 2,
+          "single_length": 37.7,
+          "expected_count": 2,
+          "matched_line_ids": [
+            2220206944464,
+            2219804347984
+          ]
+        },
+        {
+          "code": "外形割单+0.00",
+          "cone": "f",
+          "view": "top_view",
+          "area_num": 0,
+          "instruction": "外形割单+0.00",
+          "slider_angle": 0,
+          "total_length": 1727.88,
+          "is_additional": true,
+          "matched_count": 1,
+          "single_length": 1727.88,
+          "expected_count": 1,
+          "matched_line_ids": [
+            2220006178256
+          ]
+        }
+      ]
+    },
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 0
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 2
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 4.0
+  },
+  {
+    "part_name": "冲头",
+    "part_code": "PU-03",
+    "length_mm": 0.0,
+    "width_mm": 0.0,
+    "thickness_mm": 0.0,
+    "material": "T00L0X33",
+    "heat_treatment": null,
+    "calculated_weight_kg": 1.58,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(冲头)_PU-03",
+        "M :2 -Φ8.5正钻,正攻M10xP1.5深30.0mm(盲牙螺丝)",
+        "C :1 -Φ4.0钻穿",
+        ",正沉头Φ10.0深79.3mm",
+        "- 1PCS T00L0X33 - 已备料在PU-BL1",
+        "GW:1.58KG",
+        "正面倒角，背面禁止倒角",
+        "型面按3D精铣",
+        "试模抛光后超级氮化"
+      ]
+    },
+    "abnormal_situation": {
+      "view_anomalies": [
+        {
+          "type": "view_recognition_failed",
+          "description": "视图识别异常: 侧视图未识别到",
+          "missing_views": [
+            "侧视图"
+          ]
+        }
+      ],
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_partial",
+          "description": "板料线识别不全: 缺少侧视图",
+          "found_count": 2,
+          "missing_views": [
+            "侧视图"
+          ],
+          "required_count": 3
+        }
+      ],
+      "dimension_anomalies": [
+        {
+          "type": "dimension_missing",
+          "description": "零件尺寸缺失: 长度, 宽度, 厚度",
+          "missing_dimensions": [
+            "长度",
+            "宽度",
+            "厚度"
+          ]
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 1
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 0
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 0
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "冲头",
+    "part_code": "PU-04",
+    "length_mm": 0.0,
+    "width_mm": 0.0,
+    "thickness_mm": 0.0,
+    "material": "T00L0X33",
+    "heat_treatment": null,
+    "calculated_weight_kg": 2.12,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(冲头)_PU-04",
+        "M :2 -Φ8.5正钻,正攻M10xP1.5深30.0mm(盲牙螺丝)",
+        "C :1 -Φ4.0钻穿",
+        ",正沉头Φ10.0深80.0mm",
+        "- 1PCS T00L0X33 - 已备料在PU-BL1",
+        "GW:2.12KG",
+        "正面倒角，背面禁止倒角",
+        "型面按3D精铣",
+        "试模抛光后超级氮化"
+      ]
+    },
+    "abnormal_situation": {
+      "view_anomalies": [
+        {
+          "type": "view_recognition_failed",
+          "description": "视图识别异常: 侧视图未识别到",
+          "missing_views": [
+            "侧视图"
+          ]
+        }
+      ],
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_not_found",
+          "description": "板料线识别失败: 未找到板料线矩形",
+          "found_count": 0,
+          "required_count": 3
+        }
+      ],
+      "dimension_anomalies": [
+        {
+          "type": "dimension_missing",
+          "description": "零件尺寸缺失: 长度, 宽度, 厚度",
+          "missing_dimensions": [
+            "长度",
+            "宽度",
+            "厚度"
+          ]
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 1
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 0
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 0
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "冲孔冲头",
+    "part_code": "PU-05",
+    "length_mm": 240.0,
+    "width_mm": 240.0,
+    "thickness_mm": 48.0,
+    "material": "Cr12mov",
+    "heat_treatment": "HRC56~58",
+    "calculated_weight_kg": 15.66,
+    "top_view_wire_length": 785.4,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(冲孔冲头)_PU-05",
+        "L :2 -Φ10.00割,单+0.008",
+        ",背攻M12xP1.5深20.0mm(细牙止付螺丝)",
+        "M :2 -Φ10.5钻穿,背面M12xP1.75攻穿",
+        ",背沉头Φ18.0深28.0mm(螺丝)",
+        "M1 :2 -M10,Φ11.5钻穿,",
+        ",背沉头Φ18.0深28.0mm(螺丝)",
+        "N :4 -Φ4.2钻穿",
+        ",正沉头Φ7.0深41.0mm(顶料销)",
+        "D :1 -削边基准,按3D精铣",
+        "240.0L*240.0W*48.00T 1PCS Cr12mov HRC56~58 -",
+        "GW:15.66KG",
+        "外形割单+0.00",
+        "正面倒角，背面禁止倒角",
+        "此处逃料按3D精铣"
+      ]
+    },
+    "abnormal_situation": {
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_partial",
+          "description": "板料线识别不全: 缺少正视图, 侧视图",
+          "found_count": 1,
+          "missing_views": [
+            "正视图",
+            "侧视图"
+          ],
+          "required_count": 3
+        }
+      ]
+    },
+    "metadata": {
+      "wire_cut_details": [
+        {
+          "code": "L",
+          "cone": "f",
+          "view": "top_view",
+          "area_num": 2,
+          "instruction": "2 -Φ10.00割,单+0.008",
+          "slider_angle": 0,
+          "total_length": 62.83,
+          "is_additional": false,
+          "matched_count": 2,
+          "single_length": 31.42,
+          "expected_count": 2,
+          "matched_line_ids": [
+            2220103928400,
+            2220103932112
+          ]
+        },
+        {
+          "code": "外形割单+0.00",
+          "cone": "f",
+          "view": "top_view",
+          "area_num": 1,
+          "instruction": "外形割单+0.00",
+          "slider_angle": 0,
+          "total_length": 722.57,
+          "is_additional": true,
+          "matched_count": 1,
+          "single_length": 722.57,
+          "expected_count": 1,
+          "matched_line_ids": [
+            2220103931216
+          ]
+        }
+      ]
+    },
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 0
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 2
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 2.0
+  },
+  {
+    "part_name": "冲头",
+    "part_code": "PU-06",
+    "length_mm": 0.0,
+    "width_mm": 0.0,
+    "thickness_mm": 0.0,
+    "material": "T00L0X33",
+    "heat_treatment": null,
+    "calculated_weight_kg": 1.88,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(冲头)_PU-06",
+        "M :2 -Φ8.5正钻,正攻M10xP1.5深30.0mm(盲牙螺丝)",
+        "C :1 -Φ4.0钻穿",
+        ",正沉头Φ10.0深79.3mm",
+        "- 1PCS T00L0X33 - 已备料在PU-BL1",
+        "GW:1.88KG",
+        "正面倒角，背面禁止倒角",
+        "型面按3D精铣",
+        "试模抛光后超级氮化"
+      ]
+    },
+    "abnormal_situation": {
+      "view_anomalies": [
+        {
+          "type": "view_recognition_failed",
+          "description": "视图识别异常: 侧视图未识别到",
+          "missing_views": [
+            "侧视图"
+          ]
+        }
+      ],
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_insufficient",
+          "description": "板料线识别失败: 只找到 1 个板料线矩形",
+          "found_count": 1,
+          "required_count": 2
+        }
+      ],
+      "dimension_anomalies": [
+        {
+          "type": "dimension_missing",
+          "description": "零件尺寸缺失: 长度, 宽度, 厚度",
+          "missing_dimensions": [
+            "长度",
+            "宽度",
+            "厚度"
+          ]
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 1
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 0
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 0
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "冲头",
+    "part_code": "PU-07",
+    "length_mm": 0.0,
+    "width_mm": 0.0,
+    "thickness_mm": 0.0,
+    "material": "T00L0X33",
+    "heat_treatment": null,
+    "calculated_weight_kg": 1.88,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(冲头)_PU-07",
+        "M :2 -Φ8.5正钻,正攻M10xP1.5深30.0mm(盲牙螺丝)",
+        "C :1 -Φ4.0钻穿",
+        ",正沉头Φ10.0深79.3mm",
+        "- 1PCS T00L0X33 - 已备料在PU-BL1",
+        "GW:1.88KG",
+        "正面倒角，背面禁止倒角",
+        "型面按3D精铣",
+        "试模抛光后超级氮化"
+      ]
+    },
+    "abnormal_situation": {
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_insufficient",
+          "description": "板料线识别失败: 只找到 1 个板料线矩形",
+          "found_count": 1,
+          "required_count": 2
+        }
+      ],
+      "dimension_anomalies": [
+        {
+          "type": "dimension_missing",
+          "description": "零件尺寸缺失: 长度, 宽度, 厚度",
+          "missing_dimensions": [
+            "长度",
+            "宽度",
+            "厚度"
+          ]
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 1
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 0
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 0
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "冲头",
+    "part_code": "PU-08",
+    "length_mm": 0.0,
+    "width_mm": 0.0,
+    "thickness_mm": 0.0,
+    "material": "T00L0X33",
+    "heat_treatment": null,
+    "calculated_weight_kg": 14.27,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(冲头)_PU-08",
+        "M :3 -Φ10.5正钻,正攻M12xP1.75深30.0mm(盲牙螺丝)",
+        "C :2 -Φ4.0钻穿",
+        ",正沉头Φ10.0深83.5mm",
+        "C1 :1 -Φ4.0钻穿",
+        ",正沉头Φ10.0深82.6mm",
+        "- 1PCS T00L0X33 - 已备料在PU-BL2",
+        "GW:14.27KG",
+        "正面倒角，背面禁止倒角",
+        "型面按3D精铣",
+        "试模抛光后超级氮化"
+      ]
+    },
+    "abnormal_situation": {
+      "view_anomalies": [
+        {
+          "type": "view_recognition_failed",
+          "description": "视图识别异常: 侧视图未识别到",
+          "missing_views": [
+            "侧视图"
+          ]
+        }
+      ],
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_insufficient",
+          "description": "板料线识别失败: 只找到 1 个板料线矩形",
+          "found_count": 1,
+          "required_count": 2
+        }
+      ],
+      "dimension_anomalies": [
+        {
+          "type": "dimension_missing",
+          "description": "零件尺寸缺失: 长度, 宽度, 厚度",
+          "missing_dimensions": [
+            "长度",
+            "宽度",
+            "厚度"
+          ]
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 1
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 0
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 0
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "冲头",
+    "part_code": "PU-09",
+    "length_mm": 0.0,
+    "width_mm": 0.0,
+    "thickness_mm": 0.0,
+    "material": "T00L0X33",
+    "heat_treatment": null,
+    "calculated_weight_kg": 14.27,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(冲头)_PU-09",
+        "M :3 -Φ10.5正钻,正攻M12xP1.75深30.0mm(盲牙螺丝)",
+        "C :2 -Φ4.0钻穿",
+        ",正沉头Φ10.0深83.5mm",
+        "C1 :1 -Φ4.0钻穿",
+        ",正沉头Φ10.0深82.6mm",
+        "- 1PCS T00L0X33 - 已备料在PU-BL2",
+        "GW:14.27KG",
+        "正面倒角，背面禁止倒角",
+        "型面按3D精铣",
+        "试模抛光后超级氮化"
+      ]
+    },
+    "abnormal_situation": {
+      "view_anomalies": [
+        {
+          "type": "view_recognition_failed",
+          "description": "视图识别异常: 侧视图未识别到",
+          "missing_views": [
+            "侧视图"
+          ]
+        }
+      ],
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_insufficient",
+          "description": "板料线识别失败: 只找到 1 个板料线矩形",
+          "found_count": 1,
+          "required_count": 2
+        }
+      ],
+      "dimension_anomalies": [
+        {
+          "type": "dimension_missing",
+          "description": "零件尺寸缺失: 长度, 宽度, 厚度",
+          "missing_dimensions": [
+            "长度",
+            "宽度",
+            "厚度"
+          ]
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 1
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 0
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 0
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "冲头",
+    "part_code": "PU-10",
+    "length_mm": 0.0,
+    "width_mm": 0.0,
+    "thickness_mm": 0.0,
+    "material": "T00L0X33",
+    "heat_treatment": null,
+    "calculated_weight_kg": 1.41,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(冲头)_PU-10",
+        "M :2 -Φ8.5正钻,正攻M10xP1.5深30.0mm(盲牙螺丝)",
+        "- 1PCS T00L0X33 - 已备料在PU-BL2",
+        "GW:1.41KG",
+        "正面倒角，背面禁止倒角",
+        "型面按3D精铣",
+        "试模抛光后超级氮化"
+      ]
+    },
+    "abnormal_situation": {
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_insufficient",
+          "description": "板料线识别失败: 只找到 1 个板料线矩形",
+          "found_count": 1,
+          "required_count": 2
+        }
+      ],
+      "dimension_anomalies": [
+        {
+          "type": "dimension_missing",
+          "description": "零件尺寸缺失: 长度, 宽度, 厚度",
+          "missing_dimensions": [
+            "长度",
+            "宽度",
+            "厚度"
+          ]
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 1
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 0
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 0
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "冲头拼料板",
+    "part_code": "PU-BL1",
+    "length_mm": 183.0,
+    "width_mm": 114.0,
+    "thickness_mm": 90.3,
+    "material": "T00L0X33",
+    "heat_treatment": null,
+    "calculated_weight_kg": 14.79,
+    "top_view_wire_length": 1112.94,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(冲头拼料板)_PU-BL1",
+        "M :10-Φ8.5正钻,正攻M10xP1.5深30.0mm(盲牙螺丝)",
+        "C :1 -Φ4.0钻穿",
+        ",正沉头Φ10.0深80.0mm",
+        "C1 :4 -Φ4.0钻穿",
+        ",正沉头Φ10.0深79.3mm",
+        "183.0L*114.0W*90.30T 1PCS T00L0X33 - -",
+        "GW:14.79KG",
+        "PU-04",
+        "PU-07",
+        "PU-06",
+        "PU-03",
+        "PU-01",
+        "正面倒角，背面禁止倒角",
+        "型面按3D精铣",
+        "试模抛光后超级氮化",
+        "外形割单+0.00"
+      ]
+    },
+    "abnormal_situation": {
+      "view_anomalies": [
+        {
+          "type": "view_recognition_failed",
+          "description": "视图识别异常: 侧视图未识别到",
+          "missing_views": [
+            "侧视图"
+          ]
+        }
+      ],
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_partial",
+          "description": "板料线识别不全: 缺少侧视图",
+          "found_count": 2,
+          "missing_views": [
+            "侧视图"
+          ],
+          "required_count": 3
+        }
+      ]
+    },
+    "metadata": {
+      "wire_cut_details": [
+        {
+          "code": "外形割单+0.00",
+          "cone": "f",
+          "view": "top_view",
+          "area_num": 5,
+          "instruction": "外形割单+0.00",
+          "slider_angle": 0,
+          "total_length": 1112.94,
+          "is_additional": true,
+          "matched_count": 5,
+          "single_length": 222.59,
+          "expected_count": 1,
+          "matched_line_ids": [
+            2220033871952,
+            2220033873168,
+            2220033874448,
+            2220033879248,
+            2220033870864
+          ]
+        }
+      ]
+    },
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 0
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 2
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "冲头拼料板",
+    "part_code": "PU-BL2",
+    "length_mm": 376.0,
+    "width_mm": 122.0,
+    "thickness_mm": 101.5,
+    "material": "T00L0X33",
+    "heat_treatment": null,
+    "calculated_weight_kg": 36.5,
+    "top_view_wire_length": 1260.95,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(冲头拼料板)_PU-BL2",
+        "M :2 -Φ8.5正钻,正攻M10xP1.5深30.0mm(盲牙螺丝)",
+        "M1 :6 -Φ10.5正钻,正攻M12xP1.75深30.0mm(盲牙螺丝)",
+        "C :4 -Φ4.0钻穿",
+        ",正沉头Φ10.0深83.5mm",
+        "C1 :2 -Φ4.0钻穿",
+        ",正沉头Φ10.0深82.6mm",
+        "376.0L*122.0W*101.50T 1PCS T00L0X33 - -",
+        "GW:36.5KG",
+        "PU-08",
+        "PU-09",
+        "PU-10",
+        "型面按3D精铣",
+        "试模抛光后超级氮化",
+        "外形割单+0.00",
+        "正面倒角，背面禁止倒角"
+      ]
+    },
+    "abnormal_situation": {
+      "view_anomalies": [
+        {
+          "type": "view_recognition_failed",
+          "description": "视图识别异常: 侧视图未识别到",
+          "missing_views": [
+            "侧视图"
+          ]
+        }
+      ],
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_partial",
+          "description": "板料线识别不全: 缺少侧视图",
+          "found_count": 2,
+          "missing_views": [
+            "侧视图"
+          ],
+          "required_count": 3
+        }
+      ]
+    },
+    "metadata": {
+      "wire_cut_details": [
+        {
+          "code": "外形割单+0.00",
+          "cone": "f",
+          "view": "top_view",
+          "area_num": 3,
+          "instruction": "外形割单+0.00",
+          "slider_angle": 0,
+          "total_length": 1260.95,
+          "is_additional": true,
+          "matched_count": 3,
+          "single_length": 420.32,
+          "expected_count": 1,
+          "matched_line_ids": [
+            2220119637840,
+            2220119633680,
+            2220119633232
+          ]
+        }
+      ]
+    },
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 0
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 2
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "上托板",
+    "part_code": "U1-01",
+    "length_mm": 1250.0,
+    "width_mm": 1050.0,
+    "thickness_mm": 27.5,
+    "material": "45#",
+    "heat_treatment": null,
+    "calculated_weight_kg": 283.0,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(上托板)_U1-01",
+        "L :8 -Φ14.00钻穿",
+        "M :32-Φ6.8钻穿,M8xP1.25攻穿(螺丝)",
+        "M1 :4 -Φ17.5钻穿,M20xP2.5攻穿(螺丝)",
+        "M2 :64-M8,Φ9.0钻穿,",
+        ",正沉头Φ14.0深12.5mm(螺丝)",
+        "M3 :64-M10,Φ11.5钻穿,",
+        ",正沉头Φ18.0深12.5mm(螺丝)",
+        "M4 :24-M10,Φ11.5钻穿,",
+        ",正沉头Φ18.0深15.0mm(螺丝)",
+        "M5 :12-M12,Φ13.5钻穿,",
+        ",正沉头Φ20.0深15.0mm(螺丝)",
+        "C :4 -Φ14.0贯通",
+        "C1 :4 -Φ16.0贯通",
+        "C2 :20-Φ20.0贯通",
+        "C3 :18-Φ22.0贯通",
+        "C4 :24-Φ30.0贯通",
+        "C5 :18-Φ42.0贯通",
+        "B :8 -码模槽,实数铣通",
+        "1250.0L*1050.0W*27.50T 1PCS 45# - -",
+        "GW:283KG",
+        "全周倒角C2",
+        "外形缺口实数铣",
+        "分中加工"
+      ]
+    },
+    "abnormal_situation": {
+      "view_anomalies": [
+        {
+          "type": "view_recognition_failed",
+          "description": "视图识别异常: 侧视图未识别到",
+          "missing_views": [
+            "侧视图"
+          ]
+        }
+      ],
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_not_found",
+          "description": "板料线识别失败: 未找到板料线矩形",
+          "found_count": 0,
+          "required_count": 3
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 1
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 2
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "上垫脚",
+    "part_code": "U2-01",
+    "length_mm": 47.0,
+    "width_mm": 850.0,
+    "thickness_mm": 47.7,
+    "material": "45#",
+    "heat_treatment": null,
+    "calculated_weight_kg": 14.96,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(上垫脚)_U2-01",
+        "M :3 -Φ14.0钻穿,M16xP2.0攻穿(螺丝)",
+        "M1 :3 -M16,Φ18.0钻穿,",
+        ",正沉头Φ30.0深27.7mm(螺丝)",
+        "47.0L*850.0W*47.70T 2PCS 45# - -",
+        "GW:14.96KG",
+        "全周倒角C2",
+        "47.7mm等高研磨"
+      ]
+    },
+    "abnormal_situation": {
+      "view_anomalies": [
+        {
+          "type": "view_recognition_failed",
+          "description": "视图识别异常: 正视图未识别到",
+          "missing_views": [
+            "正视图"
+          ]
+        }
+      ],
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_not_found",
+          "description": "板料线识别失败: 未找到板料线矩形",
+          "found_count": 0,
+          "required_count": 3
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 1
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 4
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "上垫脚",
+    "part_code": "U2-02",
+    "length_mm": 47.0,
+    "width_mm": 850.0,
+    "thickness_mm": 40.0,
+    "material": "45#",
+    "heat_treatment": null,
+    "calculated_weight_kg": 12.54,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(上垫脚)_U2-02",
+        "M :3 -Φ10.5钻穿,M12xP1.75攻穿(螺丝)",
+        "M1 :3 -M16,Φ18.0钻穿,",
+        ",正沉头Φ30.0深20.0mm(螺丝)",
+        "C :3 -Φ30.0贯通",
+        "47.0L*850.0W*40.00T 2PCS 45# - -",
+        "GW:12.54KG",
+        "全周倒角C2",
+        "40.0mm等高研磨"
+      ]
+    },
+    "abnormal_situation": {
+      "view_anomalies": [
+        {
+          "type": "view_recognition_failed",
+          "description": "视图识别异常: 正视图未识别到",
+          "missing_views": [
+            "正视图"
+          ]
+        }
+      ],
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_not_found",
+          "description": "板料线识别失败: 未找到板料线矩形",
+          "found_count": 0,
+          "required_count": 3
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 1
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 0
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "上垫脚",
+    "part_code": "U2-03",
+    "length_mm": 260.0,
+    "width_mm": 20.0,
+    "thickness_mm": 47.7,
+    "material": "45#",
+    "heat_treatment": null,
+    "calculated_weight_kg": 1.95,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(上垫脚)_U2-03",
+        "M :4 -M8,Φ9.0钻穿,",
+        ",正沉头Φ14.0深27.7mm(螺丝)",
+        "260.0L*20.0W*47.70T 2PCS 45# - -",
+        "GW:1.95KG",
+        "全周倒角C1",
+        "47.7mm等高研磨"
+      ]
+    },
+    "abnormal_situation": {
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_not_found",
+          "description": "板料线识别失败: 未找到板料线矩形",
+          "found_count": 0,
+          "required_count": 3
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 1
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 2
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "上垫脚",
+    "part_code": "U2-04",
+    "length_mm": 260.0,
+    "width_mm": 20.0,
+    "thickness_mm": 40.0,
+    "material": "45#",
+    "heat_treatment": null,
+    "calculated_weight_kg": 1.63,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(上垫脚)_U2-04",
+        "M :4 -Φ8.5正钻,正攻M10xP1.5深30.0mm(螺丝)",
+        "260.0L*20.0W*40.00T 2PCS 45# - -",
+        "GW:1.63KG",
+        "全周倒角C1",
+        "40.0mm等高研磨"
+      ]
+    },
+    "abnormal_situation": {
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_not_found",
+          "description": "板料线识别失败: 未找到板料线矩形",
+          "found_count": 0,
+          "required_count": 3
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 1
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 2
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "上垫脚",
+    "part_code": "U2-05",
+    "length_mm": 47.0,
+    "width_mm": 850.0,
+    "thickness_mm": 47.7,
+    "material": "45#",
+    "heat_treatment": null,
+    "calculated_weight_kg": 14.96,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(上垫脚)_U2-05",
+        "M :3 -Φ14.0钻穿,M16xP2.0攻穿(螺丝)",
+        "M1 :3 -M16,Φ18.0钻穿,",
+        ",正沉头Φ30.0深27.7mm(螺丝)",
+        "C :1 -Φ20.0贯通",
+        "C1 :1 -Φ22.0贯通",
+        "B :2 -废料滑槽，按3D实数铣",
+        "47.0L*850.0W*47.70T 1PCS 45# - -",
+        "GW:14.96KG",
+        "全周倒角C2",
+        "47.7mm等高研磨",
+        "B1 :3 -让位，实数铣通"
+      ]
+    },
+    "abnormal_situation": {
+      "view_anomalies": [
+        {
+          "type": "view_recognition_failed",
+          "description": "视图识别异常: 侧视图未识别到",
+          "missing_views": [
+            "侧视图"
+          ]
+        }
+      ],
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_insufficient",
+          "description": "板料线识别失败: 只找到 1 个板料线矩形",
+          "found_count": 1,
+          "required_count": 2
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 1
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 0
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "上垫脚",
+    "part_code": "U2-06",
+    "length_mm": 47.0,
+    "width_mm": 850.0,
+    "thickness_mm": 40.0,
+    "material": "45#",
+    "heat_treatment": null,
+    "calculated_weight_kg": 12.54,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(上垫脚)_U2-06",
+        "M :3 -Φ10.5钻穿,M12xP1.75攻穿(螺丝)",
+        "M1 :3 -M16,Φ18.0钻穿,",
+        ",正沉头Φ30.0深20.0mm(螺丝)",
+        "C :1 -Φ20.0贯通",
+        "C1 :1 -Φ22.0贯通",
+        "C2 :3 -Φ30.0贯通",
+        "47.0L*850.0W*40.00T 1PCS 45# - -",
+        "GW:12.54KG",
+        "全周倒角C2",
+        "40.0mm等高研磨",
+        "B :3 -让位，实数铣通"
+      ]
+    },
+    "abnormal_situation": {
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_insufficient",
+          "description": "板料线识别失败: 只找到 1 个板料线矩形",
+          "found_count": 1,
+          "required_count": 2
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 1
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 2
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "上垫脚",
+    "part_code": "U2-07",
+    "length_mm": 130.0,
+    "width_mm": 20.0,
+    "thickness_mm": 40.0,
+    "material": "45#",
+    "heat_treatment": null,
+    "calculated_weight_kg": 0.816,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(上垫脚)_U2-07",
+        "M :2 -Φ8.5正钻,正攻M10xP1.5深30.0mm(螺丝)",
+        "130.0L*20.0W*40.00T 2PCS 45# - -",
+        "GW:0.816KG",
+        "全周倒角C1",
+        "40.0mm等高研磨"
+      ]
+    },
+    "abnormal_situation": {
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_not_found",
+          "description": "板料线识别失败: 未找到板料线矩形",
+          "found_count": 0,
+          "required_count": 3
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 1
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 2
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "上垫脚",
+    "part_code": "U2-08",
+    "length_mm": 130.0,
+    "width_mm": 20.0,
+    "thickness_mm": 47.7,
+    "material": "45#",
+    "heat_treatment": null,
+    "calculated_weight_kg": 0.974,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(上垫脚)_U2-08",
+        "M :2 -M8,Φ9.0钻穿,",
+        ",正沉头Φ14.0深27.7mm(螺丝)",
+        "130.0L*20.0W*47.70T 2PCS 45# - -",
+        "GW:0.974KG",
+        "全周倒角C1",
+        "47.7mm等高研磨"
+      ]
+    },
+    "abnormal_situation": {
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_not_found",
+          "description": "板料线识别失败: 未找到板料线矩形",
+          "found_count": 0,
+          "required_count": 3
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 1
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 2
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "上垫脚",
+    "part_code": "U2-09",
+    "length_mm": 145.0,
+    "width_mm": 20.0,
+    "thickness_mm": 40.0,
+    "material": "45#",
+    "heat_treatment": null,
+    "calculated_weight_kg": 0.911,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(上垫脚)_U2-09",
+        "M :2 -Φ8.5正钻,正攻M10xP1.5深30.0mm(螺丝)",
+        "145.0L*20.0W*40.00T 2PCS 45# - -",
+        "GW:0.911KG",
+        "全周倒角C1",
+        "40.0mm等高研磨"
+      ]
+    },
+    "abnormal_situation": {
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_not_found",
+          "description": "板料线识别失败: 未找到板料线矩形",
+          "found_count": 0,
+          "required_count": 3
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 1
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 2
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "上垫脚",
+    "part_code": "U2-10",
+    "length_mm": 145.0,
+    "width_mm": 20.0,
+    "thickness_mm": 47.7,
+    "material": "45#",
+    "heat_treatment": null,
+    "calculated_weight_kg": 1.09,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(上垫脚)_U2-10",
+        "M :2 -M8,Φ9.0钻穿,",
+        ",正沉头Φ14.0深27.7mm(螺丝)",
+        "145.0L*20.0W*47.70T 2PCS 45# - -",
+        "GW:1.09KG",
+        "全周倒角C1",
+        "47.7mm等高研磨"
+      ]
+    },
+    "abnormal_situation": {
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_not_found",
+          "description": "板料线识别失败: 未找到板料线矩形",
+          "found_count": 0,
+          "required_count": 3
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 1
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 2
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "上垫脚",
+    "part_code": "U2-11",
+    "length_mm": 47.0,
+    "width_mm": 850.0,
+    "thickness_mm": 47.7,
+    "material": "45#",
+    "heat_treatment": null,
+    "calculated_weight_kg": 14.96,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(上垫脚)_U2-11",
+        "M :3 -Φ14.0钻穿,M16xP2.0攻穿(螺丝)",
+        "M1 :3 -M16,Φ18.0钻穿,",
+        ",正沉头Φ30.0深27.7mm(螺丝)",
+        "B :1 -废料滑槽，按3D实数铣",
+        "47.0L*850.0W*47.70T 1PCS 45# - -",
+        "GW:14.96KG",
+        "全周倒角C2",
+        "47.7mm等高研磨",
+        "B1 :5 -让位，实数铣通"
+      ]
+    },
+    "abnormal_situation": {
+      "view_anomalies": [
+        {
+          "type": "view_recognition_failed",
+          "description": "视图识别异常: 侧视图未识别到",
+          "missing_views": [
+            "侧视图"
+          ]
+        }
+      ],
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_insufficient",
+          "description": "板料线识别失败: 只找到 1 个板料线矩形",
+          "found_count": 1,
+          "required_count": 2
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 1
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 4
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "上垫脚",
+    "part_code": "U2-12",
+    "length_mm": 47.0,
+    "width_mm": 850.0,
+    "thickness_mm": 40.0,
+    "material": "45#",
+    "heat_treatment": null,
+    "calculated_weight_kg": 12.54,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(上垫脚)_U2-12",
+        "M :3 -Φ10.5钻穿,M12xP1.75攻穿(螺丝)",
+        "M1 :3 -M16,Φ18.0钻穿,",
+        ",正沉头Φ30.0深20.0mm(螺丝)",
+        "C :3 -Φ30.0贯通",
+        "47.0L*850.0W*40.00T 1PCS 45# - -",
+        "GW:12.54KG",
+        "全周倒角C2",
+        "40.0mm等高研磨",
+        "B :5 -让位，实数铣通"
+      ]
+    },
+    "abnormal_situation": {
+      "view_anomalies": [
+        {
+          "type": "view_recognition_failed",
+          "description": "视图识别异常: 侧视图未识别到",
+          "missing_views": [
+            "侧视图"
+          ]
+        }
+      ],
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_insufficient",
+          "description": "板料线识别失败: 只找到 1 个板料线矩形",
+          "found_count": 1,
+          "required_count": 2
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 1
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 2
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "上垫脚",
+    "part_code": "U2-13",
+    "length_mm": 270.0,
+    "width_mm": 20.0,
+    "thickness_mm": 40.0,
+    "material": "45#",
+    "heat_treatment": null,
+    "calculated_weight_kg": 1.7,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(上垫脚)_U2-13",
+        "M :4 -Φ8.5正钻,正攻M10xP1.5深30.0mm(螺丝)",
+        "270.0L*20.0W*40.00T 2PCS 45# - -",
+        "GW:1.70KG",
+        "全周倒角C1",
+        "40.0mm等高研磨"
+      ]
+    },
+    "abnormal_situation": {
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_not_found",
+          "description": "板料线识别失败: 未找到板料线矩形",
+          "found_count": 0,
+          "required_count": 3
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 1
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 2
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "上垫脚",
+    "part_code": "U2-14",
+    "length_mm": 270.0,
+    "width_mm": 20.0,
+    "thickness_mm": 47.7,
+    "material": "45#",
+    "heat_treatment": null,
+    "calculated_weight_kg": 2.02,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(上垫脚)_U2-14",
+        "M :4 -M8,Φ9.0钻穿,",
+        ",正沉头Φ14.0深27.7mm(螺丝)",
+        "270.0L*20.0W*47.70T 2PCS 45# - -",
+        "GW:2.02KG",
+        "全周倒角C1",
+        "47.7mm等高研磨"
+      ]
+    },
+    "abnormal_situation": {
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_not_found",
+          "description": "板料线识别失败: 未找到板料线矩形",
+          "found_count": 0,
+          "required_count": 3
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 1
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 2
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "上垫板",
+    "part_code": "UB-01",
+    "length_mm": 520.0,
+    "width_mm": 530.0,
+    "thickness_mm": 47.0,
+    "material": "45#",
+    "heat_treatment": null,
+    "calculated_weight_kg": 102.0,
+    "top_view_wire_length": 226.2,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(上垫板)_UB-01",
+        "L :2 -Φ12.00割,单+0.008(合销)",
+        "L1 :4 -Φ12.00割,单+0.008",
+        ",背沉头Φ14.0深7.0mm(合销)",
+        "M :4 -Φ6.8背钻,背攻M8xP1.25深20.0mm(螺丝)",
+        "M1 :12-Φ10.5正钻,正攻M12xP1.75深30.0mm(螺丝)",
+        "M2 :4 -Φ14.0钻穿,正面M16xP2.0攻穿",
+        ",正沉头Φ20.0深27.0mm(螺丝)",
+        "M3 :8 -M12,Φ13.5钻穿,",
+        ",正沉头Φ20.0深27.0mm(螺丝)",
+        "C :3 -Φ10.0贯通",
+        "C1 :5 -Φ16.0贯通",
+        "D :1 -削边基准,按3D精铣",
+        "D1 :4 -背面定位键铣深10.00mm,精铣单+0.01,外形准",
+        "520.0L*530.0W*47.00T 1PCS 45# - -",
+        "GW:102KG",
+        "全周倒角C2",
+        "外形缺口实数铣"
+      ]
+    },
+    "abnormal_situation": {
+      "view_anomalies": [
+        {
+          "type": "view_recognition_failed",
+          "description": "视图识别异常: 侧视图未识别到",
+          "missing_views": [
+            "侧视图"
+          ]
+        }
+      ],
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_insufficient",
+          "description": "板料线识别失败: 只找到 1 个板料线矩形",
+          "found_count": 1,
+          "required_count": 2
+        }
+      ]
+    },
+    "metadata": {
+      "wire_cut_details": [
+        {
+          "code": "L",
+          "cone": "f",
+          "view": "top_view",
+          "area_num": 2,
+          "instruction": "2 -Φ12.00割,单+0.008(合销)",
+          "slider_angle": 0,
+          "total_length": 75.4,
+          "is_additional": false,
+          "matched_count": 2,
+          "single_length": 37.7,
+          "expected_count": 2,
+          "matched_line_ids": [
+            2219990562448,
+            2219990558224
+          ]
+        },
+        {
+          "code": "L1",
+          "cone": "f",
+          "view": "top_view",
+          "area_num": 4,
+          "instruction": "4 -Φ12.00割,单+0.008",
+          "slider_angle": 0,
+          "total_length": 150.8,
+          "is_additional": false,
+          "matched_count": 4,
+          "single_length": 37.7,
+          "expected_count": 4,
+          "matched_line_ids": [
+            2219990560976,
+            2219990552400,
+            2219990555920,
+            2219990555664
+          ]
+        }
+      ]
+    },
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 1
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 2
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 6.0
+  },
+  {
+    "part_name": "上模座",
+    "part_code": "UP-01",
+    "length_mm": 1250.0,
+    "width_mm": 1050.0,
+    "thickness_mm": 67.0,
+    "material": "D2",
+    "heat_treatment": null,
+    "calculated_weight_kg": 690.0,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "加工说明:(上模座)_UP-01",
+        "L :4 -Φ8.00精镗,单+0.008",
+        ",正沉头Φ10.0深37.0mm(合销)",
+        "L1 :8 -Φ10.00精镗,单+0.008(合销)",
+        "L2 :8 -Φ10.00精镗,单+0.008",
+        ",正沉头Φ12.0深2.0mm(合销)",
+        "L3 :4 -Φ12.00精镗,单+0.008(合销)",
+        "L4 :8 -Φ16.00精镗,单+0.008(合销)，穿线孔Φ5.0钻",
+        "M :2 -Φ5.2背钻,背攻M6xP1.0深15.0mm(螺丝)",
+        "M1 :2 -Φ6.8背钻,背攻M8xP1.25深20.0mm(螺丝)",
+        "M2 :24-Φ6.8正钻,正攻M8xP1.25深20.0mm(螺丝)",
+        "M3 :12-Φ8.5背钻,背攻M10xP1.5深30.0mm(螺丝)",
+        "M4 :12-Φ14.0正钻,正攻M16xP2.0深40.0mm(螺丝)",
+        "M5 :4 -M8,Φ9.0钻穿,",
+        ",正沉头Φ14.0深22.0mm(螺丝)",
+        "M6 :8 -M10,Φ11.0钻穿,",
+        ",正沉头Φ18.0深22.0mm(螺丝)",
+        "M7 :12-M10,Φ11.0钻穿,",
+        ",正沉头Φ18.0深27.0mm(螺丝)",
+        "M8 :6 -M12,Φ13.5钻穿,",
+        ",正沉头Φ20.0深27.0mm(螺丝)",
+        "M9 :12-M12,Φ13.5钻穿,",
+        ",正沉头Φ20.0深47.0mm(螺丝)",
+        "K :6 -Φ50.00精镗,单-0.01，穿线孔Φ5.0钻",
+        ",正沉头Φ65.0深23.0mm(导柱)",
+        "X :16-Φ101.0实数铣通(弹簧孔)",
+        "T :4 -Φ26.0钻穿",
+        ",正沉头Φ38.0深34.0mm深度准(等高套筒)",
+        "T1 :14-Φ26.0钻穿",
+        ",正沉头Φ38.0深29.0mm深度准(等高套筒)",
+        "C :14-Φ10.0贯通",
+        "C1 :5 -Φ16.0贯通",
+        "B :8 -让位,正面铣深55.0mm",
+        "B1 :1 -名牌,实数铣",
+        "D :7 -入子槽,背面精铣深25.00mm，深度准底平",
+        "D1 :1 -入子槽,背面精铣深27.00mm，深度准底平",
+        "D2 :8 -精铣槽,侧壁单+0.02，背面精铣深20.00mm，深度准底平",
+        "M10 :2 -Φ27.0背钻,背攻M30xP3.5深60.0mm",
+        ",背沉头Φ32.0深3.0mm(螺丝)",
+        "M11 :2 -Φ27.0正钻,正攻M30xP3.5深60.0mm",
+        ",正沉头Φ32.0深3.0mm(螺丝)",
+        "1250.0L*1050.0W*67.00T 1PCS 45# - -",
+        "GW:690KG",
+        "按3D加工刻字",
+        "全周倒角C2",
+        "精铣槽必检深度和宽度",
+        "外形缺口实数铣",
+        "M12 :2 -Φ27.0背钻,背攻M30xP3.5深60.0mm",
+        ",背沉头Φ32.0深3.0mm(螺丝)",
+        "M13 :2 -Φ27.0正钻,正攻M30xP3.5深60.0mm",
+        ",正沉头Φ32.0深3.0mm(螺丝)"
+      ]
+    },
+    "abnormal_situation": {
+      "wire_cut_anomalies": [
+        {
+          "type": "unmatched_red_lines",
+          "view": "top_view",
+          "description": "俯视图中存在未匹配的线割实线: 38条(2098.62mm)",
+          "total_count": 38,
+          "total_length": 2098.62
+        },
+        {
+          "type": "plate_line_insufficient",
+          "description": "板料线识别失败: 只找到 1 个板料线矩形",
+          "found_count": 1,
+          "required_count": 2
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 1
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 2
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "其他未注解按3D涂色加工",
+    "part_code": "subdrawing_008",
+    "length_mm": 179.7,
+    "width_mm": 7.9,
+    "thickness_mm": 19.0,
+    "material": "Cr12mov",
+    "heat_treatment": "HRC56~58",
+    "calculated_weight_kg": 0.2,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "其他未注解按3D涂色加工",
+        "GW:0.200KG",
+        "179.7Lx7.9Wx19.00T 1PCS Cr12mov HRC56~58 -",
+        "加工说明:",
+        "背面倒C1",
+        "R-BZ-58二次加工图纸 数量：2",
+        "沿红色线割断"
+      ]
+    },
+    "abnormal_situation": {
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_insufficient",
+          "description": "板料线识别失败: 只找到 1 个板料线矩形",
+          "found_count": 1,
+          "required_count": 2
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 1
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 2
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  },
+  {
+    "part_name": "其他未注解按3D涂色加工",
+    "part_code": "subdrawing_009",
+    "length_mm": 179.7,
+    "width_mm": 7.9,
+    "thickness_mm": 19.0,
+    "material": "Cr12mov",
+    "heat_treatment": "HRC56~58",
+    "calculated_weight_kg": 0.2,
+    "top_view_wire_length": 0.0,
+    "front_view_wire_length": 0.0,
+    "side_view_wire_length": 0.0,
+    "processing_instructions": {
+      "frame_1": [
+        "其他未注解按3D涂色加工",
+        "GW:0.200KG",
+        "179.7Lx7.9Wx19.00T 1PCS Cr12mov HRC56~58 -",
+        "加工说明:",
+        "背面倒C1",
+        "R-BZ-58二次加工图纸 数量：2",
+        "沿红色线割断"
+      ]
+    },
+    "abnormal_situation": {
+      "wire_cut_anomalies": [
+        {
+          "type": "plate_line_insufficient",
+          "description": "板料线识别失败: 只找到 1 个板料线矩形",
+          "found_count": 1,
+          "required_count": 2
+        }
+      ]
+    },
+    "metadata": null,
+    "water_mill": {
+      "water_mill_details": [
+        {
+          "thread_ends": 0
+        },
+        {
+          "hanging_table": 0
+        },
+        {
+          "c1_c2_chamfer": 1
+        },
+        {
+          "c3_c5_chamfer": 0
+        },
+        {
+          "r1_r2_chamfer": 0
+        },
+        {
+          "r3_r5_chamfer": 0
+        },
+        {
+          "bevel": []
+        },
+        {
+          "oil_tank": 0
+        },
+        {
+          "grinding": 2
+        }
+      ]
+    },
+    "tooth_hole": null,
+    "boring_num": 0.0
+  }
+]

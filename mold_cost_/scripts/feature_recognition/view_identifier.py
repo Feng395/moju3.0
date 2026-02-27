@@ -52,8 +52,15 @@ class ViewIdentifier:
         try:
             view_anomalies = []
             
-            # 优先尝试通过板料线识别视图
-            views, plate_line_anomaly = self.plate_line_identifier.identify_views_by_plate_lines(msp)
+            # 构建尺寸字典
+            dimensions = {
+                'L': length,
+                'W': width,
+                'T': thickness
+            }
+            
+            # 优先尝试通过板料线识别视图（传入尺寸信息）
+            views, plate_line_anomaly = self.plate_line_identifier.identify_views_by_plate_lines(msp, dimensions)
             
             # 如果板料线识别产生了异常，记录下来
             if plate_line_anomaly:

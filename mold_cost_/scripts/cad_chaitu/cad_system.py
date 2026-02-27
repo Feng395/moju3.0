@@ -440,15 +440,85 @@ class CADAnalysisSystem:
             from ezdxf.addons import Importer
             step_start = datetime.now()
             
-            # 简化的边界判断函数（参考 dxf_split_s1230.py）
-            def intersect(a: Dict, b: Dict, buffer: float = 0.1) -> bool:
-                """判断两个边界框是否相交"""
-                return not (
-                    a['max_x'] + buffer < b['min_x'] or
-                    a['min_x'] - buffer > b['max_x'] or
-                    a['max_y'] + buffer < b['min_y'] or
-                    a['min_y'] - buffer > b['max_y']
-                )
+            # 精确的边界判断函数：两步判断策略
+            def is_entity_in_region(ent_bounds: Dict, target_bounds: Dict) -> bool:
+                """
+                判断实体是否应该被包含在目标区域中
+                
+                策略：
+                1. 对于 INSERT 实体：
+                   - 第一步：检查插入点是否在目标区域内
+                   - 第二步：如果插入点在内，计算块内图形的几何中心，再次判断
+                2. 对于其他实体：
+                   - 检查中心点是否在目标区域内
+                   - 或者实体完全在目标区域内
+                
+                Args:
+                    ent_bounds: 实体边界
+                    target_bounds: 目标区域边界
+                """
+                # 特殊处理：INSERT 实体（块引用）
+                if ent_bounds.get('_is_insert', False):
+                    # 第一步：检查插入点是否在目标区域内
+                    insert_x = (ent_bounds['min_x'] + ent_bounds['max_x']) / 2
+                    insert_y = (ent_bounds['min_y'] + ent_bounds['max_y']) / 2
+                    
+                    insert_in_region = (
+                        target_bounds['min_x'] <= insert_x <= target_bounds['max_x'] and
+                        target_bounds['min_y'] <= insert_y <= target_bounds['max_y']
+                    )
+                    
+                    # 如果插入点不在区域内，直接排除
+                    if not insert_in_region:
+                        return False
+                    
+                    # 第二步：插入点在区域内，计算块内图形的实际几何中心
+                    try:
+                        insert_entity = ent_bounds.get('_insert_entity')
+                        blocks_doc = ent_bounds.get('_blocks_doc')
+                        
+                        if insert_entity and blocks_doc:
+                            block_name = insert_entity.dxf.name
+                            block_def = blocks_doc.get(block_name)
+                            
+                            if block_def:
+                                # 计算块的实际边界
+                                from scripts.cad_chaitu.block_analyzer import OptimizedCADBlockAnalyzer
+                                analyzer = OptimizedCADBlockAnalyzer()
+                                block_bounds = analyzer._calculate_block_bounds(block_def, insert_entity)
+                                
+                                if block_bounds:
+                                    # 使用块的几何中心判断
+                                    block_center_x = (block_bounds['min_x'] + block_bounds['max_x']) / 2
+                                    block_center_y = (block_bounds['min_y'] + block_bounds['max_y']) / 2
+                                    
+                                    return (
+                                        target_bounds['min_x'] <= block_center_x <= target_bounds['max_x'] and
+                                        target_bounds['min_y'] <= block_center_y <= target_bounds['max_y']
+                                    )
+                    except Exception:
+                        pass
+                    
+                    # 兜底：如果无法计算块边界，使用插入点判断
+                    return insert_in_region
+                
+                # 普通实体：计算中心点
+                ent_center_x = (ent_bounds['min_x'] + ent_bounds['max_x']) / 2
+                ent_center_y = (ent_bounds['min_y'] + ent_bounds['max_y']) / 2
+                
+                # 策略1：中心点必须在目标区域内部（使用 <= 允许边界上的实体）
+                if (target_bounds['min_x'] <= ent_center_x <= target_bounds['max_x'] and
+                    target_bounds['min_y'] <= ent_center_y <= target_bounds['max_y']):
+                    return True
+                
+                # 策略2：实体完全在目标区域内
+                if (ent_bounds['min_x'] >= target_bounds['min_x'] and
+                    ent_bounds['max_x'] <= target_bounds['max_x'] and
+                    ent_bounds['min_y'] >= target_bounds['min_y'] and
+                    ent_bounds['max_y'] <= target_bounds['max_y']):
+                    return True
+                
+                return False
             
             # 计算目标边界（加上 pad）
             bounds = region['bounds']
@@ -459,9 +529,10 @@ class CADAnalysisSystem:
                 'max_y': bounds['max_y'] + pad
             }
             
-            # 步骤1: 筛选需要复制的实体（简化判断逻辑）
+            # 步骤1: 筛选需要复制的实体（使用严格的中心点判断）
             select_start = datetime.now()
             selected_entities = []
+            skipped_entities = 0
             
             for ent in source_msp:
                 try:
@@ -471,15 +542,20 @@ class CADAnalysisSystem:
                     if not ent_bounds:
                         continue
                     
-                    # 简单的相交判断（参考 dxf_split_s1230.py）
-                    if intersect(ent_bounds, target_bound):
+                    # 严格判断：只有中心点在目标区域内的实体才包含
+                    if is_entity_in_region(ent_bounds, target_bound):
                         selected_entities.append(ent)
+                    else:
+                        skipped_entities += 1
                         
                 except Exception:
                     continue
             
             select_time = (datetime.now() - select_start).total_seconds()
-            logger.debug(f"[{sub_code}] 筛选实体: {select_time:.2f}s (选中: {len(selected_entities)})")
+            logger.debug(
+                f"[{sub_code}] 筛选实体: {select_time:.2f}s "
+                f"(选中: {len(selected_entities)}, 跳过: {skipped_entities})"
+            )
             
             if len(selected_entities) == 0:
                 logger.warning(f"[{sub_code}] 未找到匹配的实体")

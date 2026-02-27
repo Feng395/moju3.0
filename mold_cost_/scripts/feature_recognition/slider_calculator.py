@@ -52,7 +52,8 @@ class SliderCalculator:
     def detect_inclined_parallel_lines(
         self, 
         msp, 
-        bounds: Dict[str, float]
+        bounds: Dict[str, float],
+        min_length: float = 0.0
     ) -> List[Tuple[Dict, Dict]]:
         """
         检测视图中的倾斜平行线对（实线/虚线，颜色为 [1, 220, 190]）
@@ -60,6 +61,7 @@ class SliderCalculator:
         Args:
             msp: modelspace
             bounds: 视图边界 {'min_x', 'max_x', 'min_y', 'max_y'}
+            min_length: 平行线对的最小长度要求（默认为0，不限制）
         
         Returns:
             List[Tuple[Dict, Dict]]: 倾斜平行线对列表，每对包含两条线的信息
@@ -151,6 +153,7 @@ class SliderCalculator:
         
         # 2. 查找平行线对
         parallel_pairs = []
+        filtered_count = 0  # 记录被长度过滤掉的平行线对数量
         
         for i in range(len(lines)):
             for j in range(i + 1, len(lines)):
@@ -160,6 +163,16 @@ class SliderCalculator:
                 # 检查角度是否接近（平行）
                 angle_diff = abs(line1['angle'] - line2['angle'])
                 if angle_diff > self.ANGLE_TOLERANCE:
+                    continue
+                
+                # 检查长度是否满足最小长度要求
+                # 要求两条线中至少有一条的长度大于等于最小长度
+                max_length = max(line1['length'], line2['length'])
+                if min_length > 0 and max_length < min_length:
+                    filtered_count += 1
+                    logging.debug(
+                        f"过滤短平行线对: 最大长度={max_length:.2f}mm < 最小要求={min_length:.2f}mm"
+                    )
                     continue
                 
                 # 找到一对平行线（可以是实线+实线、虚线+虚线、实线+虚线）
@@ -177,6 +190,9 @@ class SliderCalculator:
                     f"找到平行线对({line_type}): 角度={line1['angle']:.2f}°, "
                     f"长度={line1['length']:.2f}mm / {line2['length']:.2f}mm"
                 )
+        
+        if filtered_count > 0:
+            logging.info(f"过滤掉 {filtered_count} 对长度不足的平行线对（最小长度要求: {min_length:.2f}mm）")
         
         logging.info(f"检测到 {len(parallel_pairs)} 对倾斜平行线")
         
@@ -250,7 +266,10 @@ class SliderCalculator:
         msp, 
         views: Dict[str, Dict],
         wire_cut_details: List[Dict[str, Any]],
-        unmatched_red_lines: Optional[List[Dict]] = None
+        unmatched_red_lines: Optional[List[Dict]] = None,
+        length: float = 0.0,
+        width: float = 0.0,
+        thickness: float = 0.0
     ) -> tuple:
         """
         计算滑块工艺的详细信息并覆盖原有的线割工艺数据
@@ -258,8 +277,9 @@ class SliderCalculator:
         逻辑：
         1. 检查 instruction 中是否有 '滑' 字的工艺
         2. 在侧视图/正视图中检测倾斜平行线对（用于计算角度）
-        3. 在俯视图中计算未被工艺编号匹配的线割实线总长度的一半（用于计算长度）
-        4. 如果检测到平行线对但没有滑块工艺，自动创建一个 code='滑块' 的工艺
+        3. 平行线对长度必须大于长宽厚中的最小值
+        4. 在俯视图中计算未被工艺编号匹配的线割实线总长度的一半（用于计算长度）
+        5. 如果检测到平行线对但没有滑块工艺，自动创建一个 code='滑块' 的工艺
         
         Args:
             msp: modelspace
@@ -268,6 +288,9 @@ class SliderCalculator:
             unmatched_red_lines: 【阶段6】工艺编号匹配后的未匹配线割实线列表
                 格式: [{'view': 'top_view', 'bounds': {...}, 'lines': [...]}, ...]
                 如果为 None，则使用旧逻辑重新计算（向后兼容）
+            length: 零件长度（用于过滤平行线对）
+            width: 零件宽度（用于过滤平行线对）
+            thickness: 零件厚度（用于过滤平行线对）
         
         Returns:
             tuple: (updated_details, slider_anomaly, length_adjustment)
@@ -279,6 +302,15 @@ class SliderCalculator:
         logging.info("=" * 80)
         logging.info("🔧 【滑块工艺计算】开始")
         logging.info("=" * 80)
+        
+        # 计算平行线对的最小长度要求（长宽厚中的最小值）
+        min_length = 0.0
+        if length > 0 and width > 0 and thickness > 0:
+            min_length = min(length, width, thickness)
+            logging.info(f"零件尺寸: 长={length:.2f}mm, 宽={width:.2f}mm, 厚={thickness:.2f}mm")
+            logging.info(f"平行线对最小长度要求: {min_length:.2f}mm")
+        else:
+            logging.info("未提供零件尺寸，不限制平行线对长度")
         
         # 标记是否检测到滑块
         has_slider = False
@@ -305,7 +337,7 @@ class SliderCalculator:
         # 优先检查侧视图
         if views.get('side_view'):
             bounds = views['side_view']['bounds']
-            parallel_pairs = self.detect_inclined_parallel_lines(msp, bounds)
+            parallel_pairs = self.detect_inclined_parallel_lines(msp, bounds, min_length)
             if parallel_pairs:
                 angle_source_view = 'side_view'
                 logging.info(f"在侧视图中检测到 {len(parallel_pairs)} 对倾斜平行线")
@@ -313,7 +345,7 @@ class SliderCalculator:
         # 如果侧视图没有，检查正视图
         if not parallel_pairs and views.get('front_view'):
             bounds = views['front_view']['bounds']
-            parallel_pairs = self.detect_inclined_parallel_lines(msp, bounds)
+            parallel_pairs = self.detect_inclined_parallel_lines(msp, bounds, min_length)
             if parallel_pairs:
                 angle_source_view = 'front_view'
                 logging.info(f"在正视图中检测到 {len(parallel_pairs)} 对倾斜平行线")

@@ -186,6 +186,20 @@ class OptimizedCADBlockAnalyzer:
                     'max_y': center.y + (major_axis.y * ratio)
                 }
 
+            elif entity_type == 'SPLINE':
+                # 使用控制点或拟合点计算边界
+                pts = self._safe_spline_points(e)
+                if pts:
+                    xs = [p[0] for p in pts]
+                    ys = [p[1] for p in pts]
+                    return {
+                        'min_x': min(xs),
+                        'max_x': max(xs),
+                        'min_y': min(ys),
+                        'max_y': max(ys)
+                    }
+                return None
+
             elif entity_type in ('TEXT', 'ATTRIB', 'ATTDEF'):
                 pos = getattr(e.dxf, 'insert', None) or getattr(e.dxf, 'pos', None)
                 if not pos:
@@ -248,15 +262,22 @@ class OptimizedCADBlockAnalyzer:
                 return None
 
             elif entity_type == 'INSERT':
-                # 简化：只返回插入点附近的小区域（避免递归计算块内容）
+                # 优化策略：
+                # 1. 先返回插入点作为初步边界（用于快速筛选）
+                # 2. 在 cad_system.py 中，如果插入点在区域内，再计算详细边界
                 ins = getattr(e.dxf, 'insert', None)
                 if ins:
-                    pad = 10.0
+                    # 返回插入点信息，同时标记这是一个 INSERT 实体
+                    # 使用极小的边界，确保中心点就是插入点
+                    epsilon = 0.01
                     return {
-                        'min_x': ins.x - pad,
-                        'max_x': ins.x + pad,
-                        'min_y': ins.y - pad,
-                        'max_y': ins.y + pad
+                        'min_x': ins.x - epsilon,
+                        'max_x': ins.x + epsilon,
+                        'min_y': ins.y - epsilon,
+                        'max_y': ins.y + epsilon,
+                        '_is_insert': True,  # 标记为 INSERT 实体
+                        '_insert_entity': e,  # 保存实体引用（用于后续详细计算）
+                        '_blocks_doc': blocks_doc  # 保存 blocks 引用
                     }
 
         except Exception:
@@ -872,6 +893,13 @@ class OptimizedCADBlockAnalyzer:
                 pts = entity.get_points(format='xy')
                 if pts:
                     xs, ys = zip(*pts)
+                    return {'min_x': min(xs), 'max_x': max(xs), 'min_y': min(ys), 'max_y': max(ys)}
+            elif t == 'SPLINE':
+                # 使用控制点或拟合点计算边界
+                pts = self._safe_spline_points(entity)
+                if pts:
+                    xs = [p[0] for p in pts]
+                    ys = [p[1] for p in pts]
                     return {'min_x': min(xs), 'max_x': max(xs), 'min_y': min(ys), 'max_y': max(ys)}
         except Exception:
             pass
