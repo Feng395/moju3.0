@@ -182,7 +182,7 @@ app.include_router(chat_router.router)
 app.include_router(file_router.router)
 
 # 账户系统路由
-app.include_router(auth.router, prefix="/api", tags=["认证"])
+app.include_router(auth.router, tags=["认证"])  # auth 路由已包含 /api 前缀
 app.include_router(process_rules.router, prefix="/api/process-rules", tags=["工艺规则"])
 app.include_router(price_items.router, prefix="/api/price-items", tags=["价格项"])
 app.include_router(chat_sessions.router, prefix="/api/chat-sessions", tags=["聊天会话"])
