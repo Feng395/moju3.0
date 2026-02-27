@@ -1,21 +1,21 @@
 """
 数据库连接模块 - 兼容性包装
 提供简单的数据库操作接口，使用 asyncpg
+
+更新日期：2026-02-27
+更新内容：使用统一配置模块 shared.config
 """
-import os
 import asyncpg
-from dotenv import load_dotenv
 from typing import List, Dict, Any
-# TODO 分析是否有存在的必要
-load_dotenv()
+from shared.config import settings
 
 # 构建数据库连接参数
 DB_CONFIG = {
-    'host': os.getenv('DB_HOST', 'localhost'),
-    'port': int(os.getenv('DB_PORT', '5432')),
-    'user': os.getenv('DB_USER', 'postgres'),
-    'password': os.getenv('DB_PASSWORD', 'root'),
-    'database': os.getenv('DB_NAME', 'mold_cost')  # 修改默认值为本地数据库
+    'host': settings.DB_HOST,
+    'port': settings.DB_PORT,
+    'user': settings.DB_USER,
+    'password': settings.DB_PASSWORD,
+    'database': settings.DB_NAME
 }
 
 print(f"[Database] 连接地址: postgresql://{DB_CONFIG['user']}:***@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}")
