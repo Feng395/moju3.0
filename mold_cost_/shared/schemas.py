@@ -106,9 +106,10 @@ class SubgraphResponse(BaseModel):
 
 class SubgraphDetailResponse(SubgraphResponse):
     # 加工时间
-    nc_roughing_time: Optional[Decimal]
-    nc_milling_time: Optional[Decimal]
-    drilling_time: Optional[Decimal]
+    nc_z_time: Optional[Decimal]
+    nc_b_time: Optional[Decimal]
+    nc_c_time: Optional[Decimal]
+    nc_c_b_time: Optional[Decimal]
     
     # 线割长度
     slow_wire_length: Optional[Decimal]
@@ -116,12 +117,23 @@ class SubgraphDetailResponse(SubgraphResponse):
     fast_wire_length: Optional[Decimal]
     
     # 费用明细
-    nc_roughing_cost: Optional[Decimal]
-    nc_milling_cost: Optional[Decimal]
+    nc_z_fee: Optional[Decimal]
+    nc_b_fee: Optional[Decimal]
+    nc_c_fee: Optional[Decimal]
+    nc_c_b_fee: Optional[Decimal]
     slow_wire_cost: Optional[Decimal]
     mid_wire_cost: Optional[Decimal]
     fast_wire_cost: Optional[Decimal]
     processing_cost_total: Optional[Decimal]
+    
+    # NC视图时间和费用
+    nc_z_view_time: Optional[Decimal]
+    nc_b_view_time: Optional[Decimal]
+    nc_z_view_fee: Optional[Decimal]
+    nc_b_view_fee: Optional[Decimal]
+    
+    # 小磨数量
+    small_grinding_count: Optional[int]
 
 
 # ==================== 特征相关 ====================

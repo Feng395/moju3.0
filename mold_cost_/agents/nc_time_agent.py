@@ -103,8 +103,7 @@ class NCTimeAgent(BaseAgent):
                 "summary": {
                     "total_subgraphs": 0,
                     "success_count": 0,
-                    "failed_count": 0,
-                    "skipped": True
+                    "failed_count": 0
                 }
             }
         
@@ -148,16 +147,71 @@ class NCTimeAgent(BaseAgent):
                 prt_file=prt_local_path
             )
             
-            if nc_result.get("code") != 200:
+            code = nc_result.get("code")
+            message = nc_result.get("message", "")
+            
+            # 检查返回码
+            # 200: 完全成功
+            # 206: 部分成功（某些子图失败，但有部分结果可用）
+            # 500: 完全失败
+            if code == 500:
                 error_msg = nc_result.get("message", "NC Agent 调用失败")
-                self.logger.error(f"[NCTimeAgent] NC Agent 返回错误: {error_msg}")
+                self.logger.error(f"[NCTimeAgent] NC Agent 完全失败: {error_msg}")
+                
+                # 发布失败进度
+                if self.progress_publisher:
+                    from shared.progress_stages import ProgressStage, ProgressPercent
+                    self.progress_publisher.publish_progress(
+                        job_id=job_id,
+                        stage=ProgressStage.NC_CALCULATION_FAILED,
+                        progress=ProgressPercent.NC_CALCULATION_STARTED,
+                        message=f"NC 时间计算失败: {error_msg}",
+                        details={"error": error_msg, "code": 500}
+                    )
+                
                 return {"status": "error", "message": error_msg}
+            elif code == 206:
+                self.logger.warning(f"[NCTimeAgent] NC Agent 部分成功: {message}")
+                # 继续处理，但记录警告
+            elif code == 200:
+                self.logger.info(f"[NCTimeAgent] NC Agent 完全成功: {message}")
+            else:
+                self.logger.warning(f"[NCTimeAgent] NC Agent 返回未知代码 {code}: {message}")
             
             # 3. 解析 NC 返回的数据
             json_output = nc_result.get("data", {}).get("json_output", {})
             if not json_output:
+                # 提取更详细的错误信息
+                error_details = nc_result.get("data", {}).get("error_details", "未知错误")
+                failed_step = nc_result.get("data", {}).get("failed_at_step", "未知步骤")
+                
                 self.logger.warning(f"[NCTimeAgent] NC Agent 返回空数据")
-                return {"status": "error", "message": "NC Agent 返回空数据"}
+                self.logger.warning(f"[NCTimeAgent] 失败步骤: Step {failed_step}")
+                self.logger.warning(f"[NCTimeAgent] 错误详情: {error_details[:500]}")  # 只显示前500字符
+                
+                # 发布失败进度
+                if self.progress_publisher:
+                    from shared.progress_stages import ProgressStage, ProgressPercent
+                    self.progress_publisher.publish_progress(
+                        job_id=job_id,
+                        stage=ProgressStage.NC_CALCULATION_FAILED,
+                        progress=ProgressPercent.NC_CALCULATION_STARTED,
+                        message=f"NC 时间计算失败: NC Agent 返回空数据 (Step {failed_step})",
+                        details={
+                            "error": f"NC Agent 返回空数据 (Step {failed_step})",
+                            "failed_step": failed_step,
+                            "error_details": error_details[:500] if error_details else "未知错误"
+                        }
+                    )
+                
+                return {
+                    "status": "error", 
+                    "message": f"NC Agent 处理失败 (Step {failed_step})",
+                    "details": {
+                        "failed_step": failed_step,
+                        "error": error_details[:500] if error_details else "未知错误"
+                    }
+                }
             
             # ========== 打印 NC Agent 返回的原始数据 ==========
             self.logger.info(f"[NCTimeAgent] ========================================")
@@ -213,9 +267,12 @@ class NCTimeAgent(BaseAgent):
                     # ========== 保存子图的原始响应数据 ==========
                     await self._save_subgraph_response(job_id, subgraph_id, subgraph_name, subgraph_data)
                     
-                    # 解析操作数据
+                    # 提取体积数据
+                    volume_data = subgraph_data.get("batch_meta", {}).get("volume_data", {})
+                    
+                    # 解析操作数据（传入体积数据）
                     operations = subgraph_data.get("operations", [])
-                    time_data = self._parse_operations(operations)
+                    time_data = self._parse_operations(operations, volume_data)
                     
                     # 写入数据库
                     await self._save_nc_time_data(subgraph_id, time_data)
@@ -328,7 +385,8 @@ class NCTimeAgent(BaseAgent):
                 'auto_continue': 'true'
             }
             
-            self.logger.info(f"[NCTimeAgent] 上传文件: prt={prt_file}, dwg={dwg_file}")
+            self.logger.info(f"[NCTimeAgent] 上传文件并等待处理完成: prt={prt_file}, dwg={dwg_file}")
+            self.logger.info(f"[NCTimeAgent] 超时设置: {self.timeout}秒")
             
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.post(
@@ -337,7 +395,53 @@ class NCTimeAgent(BaseAgent):
                     data=data
                 )
                 response.raise_for_status()
-                return response.json()
+                result = response.json()
+                
+                # 记录返回的 code
+                code = result.get("code")
+                message = result.get("message", "")
+                self.logger.info(f"[NCTimeAgent] NC Agent 返回: code={code}, message={message}")
+                
+                # 详细记录响应结构（用于调试）
+                import json
+                data_obj = result.get("data", {})
+                self.logger.info(f"[NCTimeAgent] 响应结构详情:")
+                self.logger.info(f"  - data 存在: {data_obj is not None}")
+                self.logger.info(f"  - data 类型: {type(data_obj)}")
+                if data_obj:
+                    self.logger.info(f"  - task_id: {data_obj.get('task_id')}")
+                    self.logger.info(f"  - execution_time: {data_obj.get('execution_time')}")
+                    self.logger.info(f"  - output_dir: {data_obj.get('output_dir')}")
+                    self.logger.info(f"  - steps_completed: {data_obj.get('steps_completed')}")
+                    self.logger.info(f"  - failed_at_step: {data_obj.get('failed_at_step')}")
+                    
+                    json_output = data_obj.get("json_output")
+                    self.logger.info(f"  - json_output 存在: {json_output is not None}")
+                    self.logger.info(f"  - json_output 类型: {type(json_output)}")
+                    if json_output and isinstance(json_output, dict):
+                        self.logger.info(f"  - json_output 子图数量: {len(json_output)}")
+                        self.logger.info(f"  - json_output 子图列表: {list(json_output.keys())[:5]}")  # 只显示前5个
+                    
+                    # 如果有错误详情，记录下来
+                    error_details = data_obj.get("error_details")
+                    if error_details:
+                        self.logger.warning(f"  - error_details: {error_details[:500]}")
+                
+                # 保存完整响应到文件（用于调试）
+                try:
+                    from pathlib import Path
+                    from datetime import datetime
+                    debug_dir = Path("logs") / "nc_agent_debug"
+                    debug_dir.mkdir(parents=True, exist_ok=True)
+                    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+                    debug_file = debug_dir / f"response_{job_id}_{timestamp}.json"
+                    with open(debug_file, 'w', encoding='utf-8') as f:
+                        json.dump(result, f, ensure_ascii=False, indent=2)
+                    self.logger.info(f"[NCTimeAgent] 完整响应已保存: {debug_file}")
+                except Exception as e:
+                    self.logger.warning(f"[NCTimeAgent] 保存响应文件失败: {e}")
+                
+                return result
                 
         finally:
             # 关闭文件句柄
@@ -604,41 +708,37 @@ class NCTimeAgent(BaseAgent):
         except Exception as e:
             self.logger.error(f"[NCTimeAgent] 保存 NC 数据失败: {e}", exc_info=True)
     
-    def _parse_operations(self, operations: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def _parse_operations(self, operations: List[Dict[str, Any]], volume_data: Dict[str, Any] = None) -> Dict[str, Any]:
         """
-        解析操作数据，提取时间信息
+        解析操作数据，按面编码组织时间信息
         
-        分类规则：
-        1. 操作名称包含"粗"字（一般开头两个字是"开粗"）-> nc_roughing_time（开粗）
-        2. 操作名称包含"精"字（一般开头两个字是"半精"或"全精"）-> nc_milling_time（精铣）
-        3. XX_XX_XX 格式（如 Z_M_A14）提取中间部分 -> drilling_time（钻孔）
-        4. XX_ZXZ 格式（如 Z_ZXZ）提取 ZXZ -> drilling_time（钻孔）
+        新规则（按面编码组织）：
+        1. 面编码：使用业务实际编码 ["Z", "B", "C", "C_B", "Z_VIEW", "B_VIEW"]
+        2. 钻孔：提取操作名格式为XX_XX_XX时取中间段，XX_ZXZ时取ZXZ
+        3. 开粗：累加该面所有含"开粗"的操作Toolpath Time
+        4. 精铣：分"半精""全精"两类，分别累加
+        5. 空值约束：某面无任何加工类型时，details为空数组
         
         Args:
             operations: 操作列表
+            volume_data: 体积数据（可选）
         
         Returns:
             {
-                "nc_roughing_time": Decimal,  # 开粗时间（分钟）
-                "nc_milling_time": Decimal,   # 精铣时间（分钟）
-                "drilling_time": Decimal,     # 钻孔时间（分钟）
-                "nc_details": [               # 详细数据（按类型汇总）
-                    {"code": "M", "value": "1.2"},
-                    {"code": "L", "value": "3.5"},
-                    {"code": "M1", "value": "2.0"},
-                    {"code": "ZXZ", "value": "2.1"},
-                    {"code": "开粗", "value": "150.0"},
-                    {"code": "半精", "value": "80.0"},
-                    {"code": "全精", "value": "75.0"}
-                ]
+                "nc_details": [
+                    {"face_code": "Z", "details": [{"code": "开粗", "value": "150.0"}, ...]},
+                    {"face_code": "B", "details": [...]},
+                    ...
+                ],
+                "volume_mm3": 12345.678  # 体积（立方毫米）
             }
         """
-        nc_roughing_time = Decimal("0")  # 开粗（分钟）
-        nc_milling_time = Decimal("0")   # 精铣（分钟）
-        drilling_time = Decimal("0")     # 钻孔（分钟）
+        # 初始化6个面的数据结构（使用业务实际编码）
+        face_codes = ["Z", "B", "C", "C_B", "Z_VIEW", "B_VIEW"]
+        face_data = {face: {} for face in face_codes}  # {face_code: {code: total_time}}
         
-        # 用于汇总各类型的时间
-        code_totals = {}  # {code: total_time}
+        # 追踪当前面（只有遇到明确的面标识时才切换）
+        current_face = "B_VIEW"  # 默认面
         
         for operation in operations:
             operation_name = operation.get("operation_name", "")
@@ -648,70 +748,104 @@ class NCTimeAgent(BaseAgent):
             if time_value is None:
                 continue
             
-            # 分类判断（按优先级）
-            code = None
+            # 判断加工类型
+            process_code = None
             
-            # 1. 检查是否包含"粗"字（开粗）
-            if "粗" in operation_name:
-                nc_roughing_time += time_value
-                code = "开粗"
-            
-            # 2. 检查是否包含"精"字（半精、全精）
-            elif "精" in operation_name:
-                nc_milling_time += time_value
-                # 区分半精和全精
-                if operation_name.startswith("半精"):
-                    code = "半精"
-                elif operation_name.startswith("全精"):
-                    code = "全精"
+            # 1. 检查操作名是否以面标识开头，如果是则切换当前面
+            # 注意：必须先检查复合前缀（Z_VIEW_、B_VIEW_、C_B_），再检查单字母前缀（Z_、B_、X_）
+            if "_" in operation_name:
+                # 先检查复合前缀
+                if operation_name.startswith("Z_VIEW_"):
+                    current_face = "Z_VIEW"
+                    if self._is_drilling_operation(operation_name):
+                        process_code = self._extract_operation_code(operation_name)
+                
+                elif operation_name.startswith("B_VIEW_"):
+                    current_face = "B_VIEW"
+                    if self._is_drilling_operation(operation_name):
+                        process_code = self._extract_operation_code(operation_name)
+                
+                elif operation_name.startswith("C_B_"):
+                    current_face = "C_B"
+                    if self._is_drilling_operation(operation_name):
+                        process_code = self._extract_operation_code(operation_name)
+                
+                # 再检查单字母前缀
                 else:
-                    code = "精铣"  # 其他包含"精"的操作
+                    prefix = operation_name.split("_")[0]
+                    
+                    if prefix == "Z":
+                        current_face = "Z"
+                        if self._is_drilling_operation(operation_name):
+                            process_code = self._extract_operation_code(operation_name)
+                    
+                    elif prefix == "B":
+                        current_face = "B"
+                        if self._is_drilling_operation(operation_name):
+                            process_code = self._extract_operation_code(operation_name)
+                    
+                    elif prefix == "X":
+                        current_face = "C"
+                        if self._is_drilling_operation(operation_name):
+                            process_code = self._extract_operation_code(operation_name)
             
-            # 3. 检查是否为钻孔操作（XX_XX_XX 或 XX_ZXZ 格式）
-            # 包括 Z_、B_、X_ 等前缀
-            elif self._is_drilling_operation(operation_name):
-                drilling_time += time_value
-                # 提取操作代码（如 M, L, M1, C, ZXZ）
-                code = self._extract_operation_code(operation_name)
+            # 2. 检查是否包含"粗"字（开粗）- 归属到当前面
+            if not process_code and "粗" in operation_name:
+                process_code = "开粗"
+            
+            # 3. 检查是否包含"精"字（半精、全精）- 归属到当前面
+            elif not process_code and "精" in operation_name:
+                if "半精" in operation_name:
+                    process_code = "半精"
+                elif "全精" in operation_name:
+                    process_code = "全精"
+                else:
+                    process_code = "精铣"
             
             # 如果没有匹配到任何类型，跳过
-            else:
+            if not process_code:
                 self.logger.warning(f"[NCTimeAgent] 无法分类操作: {operation_name}")
                 continue
             
-            # 汇总到对应的 code
-            if code not in code_totals:
-                code_totals[code] = Decimal("0")
-            code_totals[code] += time_value
+            # 汇总到当前面和对应的代码
+            if process_code not in face_data[current_face]:
+                face_data[current_face][process_code] = Decimal("0")
+            face_data[current_face][process_code] += time_value
         
-        # 构建 nc_details（按固定顺序，包含所有可能的类型）
+        # 构建 nc_details（按面编码组织）
         nc_details = []
         
-        # 定义所有可能的钻孔类型（按字母顺序）
-        all_drilling_codes = ["C", "L", "M", "M1", "M2", "ZXZ"]
-        
-        # 先输出钻孔类型
-        for code in all_drilling_codes:
-            value = code_totals.get(code, Decimal("0"))
+        for face_code in face_codes:
+            details = []
+            
+            # 获取该面的所有加工类型
+            face_processes = face_data[face_code]
+            
+            # 只添加有值的加工类型（不添加0值项）
+            for code, value in face_processes.items():
+                if value > 0:
+                    details.append({
+                        "code": code,
+                        "value": value  # 保留原始浮点精度
+                    })
+            
+            # 添加面数据（即使details为空也要添加）
             nc_details.append({
-                "code": code,
-                "value": str(round(value, 2)) if value > 0 else "0"
+                "face_code": face_code,
+                "details": details
             })
         
-        # 再输出加工类型（开粗、半精、全精）
-        for code in ["开粗", "半精", "全精"]:
-            value = code_totals.get(code, Decimal("0"))
-            nc_details.append({
-                "code": code,
-                "value": str(round(value, 2)) if value > 0 else "0"
-            })
-        
-        return {
-            "nc_roughing_time": round(nc_roughing_time, 2),
-            "nc_milling_time": round(nc_milling_time, 2),
-            "drilling_time": round(drilling_time, 2),
+        result = {
             "nc_details": nc_details
         }
+        
+        # 添加体积数据（如果有）
+        if volume_data:
+            volume_mm3 = volume_data.get("volume_mm3")
+            if volume_mm3 is not None:
+                result["volume_mm3"] = volume_mm3
+        
+        return result
     
     def _extract_toolpath_time(self, operation: Dict[str, Any]) -> Decimal:
         """
@@ -797,42 +931,56 @@ class NCTimeAgent(BaseAgent):
     
     async def _save_nc_time_data(self, subgraph_id: str, time_data: Dict[str, Any]):
         """
-        保存 NC 时间数据到数据库
+        保存 NC 时间数据到数据库（只写入 features 表）
         
         Args:
             subgraph_id: 子图ID
-            time_data: 时间数据
+            time_data: 时间数据，格式：
+                {
+                    "nc_details": [
+                        {"face_code": "A", "details": [{"code": "开粗", "value": 150.0}, ...]},
+                        ...
+                    ],
+                    "volume_mm3": 12345.678  # 可选
+                }
         """
         async for db in get_db():
-            # 1. 更新 subgraphs 表
-            await db.execute(
-                update(Subgraph)
-                .where(Subgraph.subgraph_id == subgraph_id)
-                .values(
-                    nc_roughing_time=time_data["nc_roughing_time"],
-                    nc_milling_time=time_data["nc_milling_time"],
-                    drilling_time=time_data["drilling_time"],
-                    updated_at=datetime.utcnow()
-                )
-            )
+            # 转换 Decimal 类型为 float（JSON 序列化需要）
+            def convert_decimals(obj):
+                """递归转换 Decimal 为 float"""
+                from decimal import Decimal
+                if isinstance(obj, Decimal):
+                    return float(obj)
+                elif isinstance(obj, dict):
+                    return {k: convert_decimals(v) for k, v in obj.items()}
+                elif isinstance(obj, list):
+                    return [convert_decimals(item) for item in obj]
+                return obj
             
-            # 2. 更新 features 表（nc_time_cost 字段）
+            # 准备更新数据
+            nc_time_cost_data = convert_decimals({"nc_details": time_data["nc_details"]})
+            update_values = {
+                "nc_time_cost": nc_time_cost_data,
+                "created_at": datetime.utcnow()
+            }
+            
+            # 如果有体积数据，也一起更新
+            if "volume_mm3" in time_data:
+                update_values["volume_mm3"] = float(time_data["volume_mm3"]) if isinstance(time_data["volume_mm3"], Decimal) else time_data["volume_mm3"]
+            
+            # 更新 features 表（nc_time_cost 和 volume_mm3 字段）
             await db.execute(
                 update(Feature)
                 .where(Feature.subgraph_id == subgraph_id)
-                .values(
-                    nc_time_cost={"nc_details": time_data["nc_details"]},
-                    created_at=datetime.utcnow()
-                )
+                .values(**update_values)
             )
             
             await db.commit()
             
             self.logger.debug(
-                f"[NCTimeAgent] 保存 NC 时间数据: subgraph_id={subgraph_id}, "
-                f"roughing={time_data['nc_roughing_time']}分, "
-                f"milling={time_data['nc_milling_time']}分, "
-                f"drilling={time_data['drilling_time']}分"
+                f"[NCTimeAgent] 保存 NC 时间数据到 features 表: subgraph_id={subgraph_id}, "
+                f"faces={len(time_data['nc_details'])}, "
+                f"volume_mm3={time_data.get('volume_mm3', 'N/A')}"
             )
             
             break

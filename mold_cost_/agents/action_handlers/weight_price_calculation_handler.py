@@ -109,6 +109,7 @@ class WeightPriceCalculationHandler(BaseActionHandler):
             await self._save_pending_action(job_id, {
                 "action_type": "WEIGHT_PRICE_CALCULATION",
                 "api_url": self.weight_price_api_url,
+                # "api_url": "http://192.168.1.153:8300/api/price_wg",
                 "api_params": api_params,
                 "subgraph_ids": subgraph_ids
             })

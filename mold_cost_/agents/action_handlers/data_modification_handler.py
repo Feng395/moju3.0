@@ -459,9 +459,10 @@ class DataModificationHandler(BaseActionHandler):
             logger.info(f"✅ 用户明确指定了范围（开头/结尾），不需要推断")
             return parsed_changes
         
-        # 🆕 检查用户输入是否包含零件编码模式（如 UB-01, DIE-03, UB开头）
+        # 🆕 检查用户输入是否包含零件编码模式（如 UB-01, DIE-03, B1-01, UB开头）
         import re
-        if re.search(r'[A-Z]{2,}[-\d]', user_message) or re.search(r'[A-Z]{2,}开头', user_message):
+        # 修复：支持 1 个或多个大写字母 + 连字符/数字
+        if re.search(r'[A-Z]+[-\d]', user_message) or re.search(r'[A-Z]{2,}开头', user_message):
             logger.info(f"✅ 用户输入包含零件标识符，不需要推断")
             return parsed_changes
         

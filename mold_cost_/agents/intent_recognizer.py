@@ -380,6 +380,13 @@ class IntentRecognizer:
   * 如果用户问"线割特殊"或"特殊工艺"，则 query_type = "wire_special"
   * 如果用户问"牙孔"，则 query_type = "tooth_hole_time"
   * 如果用户问"线割标准"，则 query_type = "wire_standard"
+  * 🆕 如果用户问"NC是怎么算的"或"NC计算"或"NC费用"，则 query_type = "nc"（包含所有 NC 相关：nc_base, nc_z, nc_b, nc_c, nc_total）
+  * 🆕 如果用户问"主视图的时间"或"主视图加工时间"或"主视图费用"，则 query_type = "nc"（需要 nc_z 和 nc_total）
+  * 🆕 如果用户问"背面的时间"或"背面加工时间"或"背面费用"，则 query_type = "nc"（需要 nc_b 和 nc_total）
+  * 🆕 如果用户问"侧面的时间"或"侧面加工时间"或"侧面费用"，则 query_type = "nc"（需要 nc_c 和 nc_total）
+  * 🆕 如果用户问"侧背的时间"或"侧背加工时间"或"侧背费用"，则 query_type = "nc"（需要 nc_c_b 和 nc_total）
+  * 🆕 如果用户问"正面的时间"或"正面加工时间"或"正面费用"，则 query_type = "nc"（需要 nc_z_view 和 nc_total）
+  * 🆕 如果用户问"正面的背面的时间"或"正面的背面加工时间"或"正面的背面费用"，则 query_type = "nc"（需要 nc_b_view 和 nc_total）
   * 如果用户问"NC开粗"，则 query_type = "nc_roughing"
   * 如果用户问"NC精铣"，则 query_type = "nc_milling"
   * 如果用户问"NC钻床"或"钻床"，则 query_type = "nc_drilling"

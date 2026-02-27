@@ -290,6 +290,24 @@ class NLPParser:
 ]
 ```
 
+### 示例2.5：批量修改某类零件的材质（⚠️ 重要：使用 filter）
+用户指令: "下模板类的材料改成Cr12mov"
+输出:
+```json
+[
+  {{
+    "table": "features",
+    "filter": {{
+      "part_name_contains": "下模板",
+      "match_type": "contains"
+    }},
+    "field": "material",
+    "value": "Cr12mov",
+    "original_text": "下模板类的材料改成Cr12mov"
+  }}
+]
+```
+
 ### 示例3：修改工艺信息
 用户指令: "上夹板工艺改为快丝割一刀"
 （⚠️ 注意：工艺修改应该修改 subgraphs 表的 wire_process 和 wire_process_note 字段）
@@ -1916,6 +1934,18 @@ class NLPParser:
             logger.info(f"🔍 匹配到类型筛选模式: {part_type}")
             return (part_type, process_desc)
         
+        # 🆕 模式0.6: "XX类的零件工艺改成 工艺描述"（批量修改特定类型，不带"全部"）
+        # ⚠️ 优先级高于模式1，避免提取出"XX类的零件"
+        # 匹配: "下模板类的零件工艺改成慢丝割一修二"
+        pattern0_6 = r'(.+?类)(?:的)?零件\s*(?:的)?(?:线割工艺|工艺|线割方式)\s*(?:改为|改成|修改为|设置为)\s*(.+)'
+        match = re.search(pattern0_6, text)
+        if match:
+            part_type = match.group(1).strip()  # "下模板类"
+            process_desc = match.group(2).strip()
+            # 返回类型标识，后续会根据类型筛选零件
+            logger.info(f"🔍 匹配到类型筛选模式（不带全部）: {part_type}")
+            return (part_type, process_desc)
+        
         # 🆕 模式0: "全部工艺改为 工艺描述"（真正的全部修改）
         # ⚠️ 必须在开头匹配"全部/所有/全体"，避免误匹配
         pattern0 = r'^(?:全部|所有|全体|这套)\s*(?:的)?(?:线割工艺|工艺|线割方式)?\s*(?:改为|改成|修改为|设置为|都改成)\s*(.+)'
@@ -2055,6 +2085,12 @@ class NLPParser:
             logger.warning("⚠️  context 中没有 display_view，无法进行包含匹配")
             return []
         
+        # 🆕 调试：输出 display_view 的大小和前几个零件名称
+        logger.info(f"📊 display_view 包含 {len(display_view)} 个零件")
+        if display_view:
+            sample_names = [item.get("part_name", "N/A") for item in display_view[:5]]
+            logger.info(f"📋 前5个零件名称: {sample_names}")
+        
         # 🆕 检查是否为概念词，如果是则展开为多个关键词
         from agents.action_handlers.base_handler import BaseActionHandler
         keywords = BaseActionHandler.CONCEPT_KEYWORD_MAPPING.get(keyword, [keyword])
@@ -2070,9 +2106,11 @@ class NLPParser:
             matched_items = []
             for item in display_view:
                 part_name = item.get("part_name", "")
-                if kw in part_name:
+                part_code = item.get("part_code", "")
+                # 🆕 不区分大小写的匹配（同时匹配 part_name 和 part_code）
+                if kw.upper() in part_name.upper() or kw.upper() in part_code.upper():
                     matched_items.append(item)
-                    logger.debug(f"✅ 包含匹配: {part_name} (关键词: {kw})")
+                    logger.debug(f"✅ 包含匹配: {part_name} ({part_code}) (关键词: {kw})")
             
             if matched_items:
                 all_matched_items.extend(matched_items)
@@ -2112,10 +2150,34 @@ class NLPParser:
             if not subgraph_id:
                 continue
             
+            # 🆕 根据表名选择正确的 ID
+            table = change["table"]
+            if table == "features":
+                # features 表使用 feature_id
+                record_id = source.get("feature_id")
+                if not record_id:
+                    logger.warning(f"⚠️  零件 {item.get('part_name')} 缺少 feature_id，跳过")
+                    continue
+            elif table == "subgraphs":
+                # subgraphs 表使用 subgraph_id
+                record_id = subgraph_id
+            elif table == "job_price_snapshots":
+                # job_price_snapshots 表使用 snapshot_id
+                # 根据字段判断是 wire 还是 material
+                if change["field"] == "price":
+                    # 需要根据上下文判断是修改工艺价格还是材质价格
+                    # 这里暂时使用 subgraph_id（后续会在验证时处理）
+                    record_id = subgraph_id
+                else:
+                    record_id = subgraph_id
+            else:
+                # 其他表使用 subgraph_id
+                record_id = subgraph_id
+            
             # 生成修改操作
             expanded_changes.append({
-                "table": change["table"],
-                "id": subgraph_id,
+                "table": table,
+                "id": record_id,
                 "field": change["field"],
                 "value": change["value"],
                 "original_text": change.get("original_text", ""),

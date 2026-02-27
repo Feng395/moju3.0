@@ -162,26 +162,16 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 # 注册路由
-app.include_router(jobs.router, prefix="/api/v1")
-app.include_router(websocket_router.router, tags=["websocket"])
-app.include_router(interactions.router)
-app.include_router(review_router.router)  # 审核系统路由
-app.include_router(chat_router.router)    # SSE 流式聊天路由
-app.include_router(file_router.router)    # 文件管理路由
+from api_gateway.routers import features, pricing, jobs, reports, weight_price
+from api_gateway import websocket
 
-# 🆕 补充 mold_cost-main 的路由
-from .routers import features, pricing, reports
-app.include_router(features.router)  # 特征识别路由
-app.include_router(pricing.router)   # 价格计算路由
-app.include_router(reports.router)   # 报表导出路由
-
-# 🆕 账户系统路由（从 mold_cost_account 迁移）
-from .routers.account import auth, process_rules, price_items, chat_sessions
-app.include_router(auth.router, tags=["认证"])
-app.include_router(process_rules.router, prefix="/api/process-rules", tags=["工艺规则"])
-app.include_router(price_items.router, prefix="/api/price-items", tags=["价格项"])
-app.include_router(chat_sessions.router, prefix="/api/chat-sessions", tags=["聊天会话"])
-
+app.include_router(features.router)
+app.include_router(pricing.router)
+app.include_router(jobs.router)
+app.include_router(jobs.router_legacy)  # 兼容旧版本路由
+app.include_router(reports.router)
+app.include_router(weight_price.router)  # 价格加权路由
+app.include_router(websocket.router)  # WebSocket路由
 
 @app.get("/")
 async def root():
@@ -194,6 +184,7 @@ async def root():
             "jobs": "/api/v1/jobs",
             "features": "/api/features",
             "pricing": "/api/pricing",
+            "weight_price": "/api/price_wg",
             "reports": "/api/v1/reports",
             "interactions": "/api/interactions",
             "reviews": "/api/reviews",
@@ -214,43 +205,6 @@ async def root():
         }
     }
 
-
 @app.get("/health")
 async def health_check():
-    """健康检查"""
-    return {
-        "status": "healthy",
-        "rabbitmq": "connected" if rabbitmq_client.connection else "disconnected"
-    }
-
-
-# 直接运行支持
-if __name__ == "__main__":
-    import uvicorn
-    
-    print("=" * 60)
-    print("模具成本核算系统 - API网关")
-    print("=" * 60)
-    print(f"访问地址: http://localhost:8211")
-    print(f"API文档: http://localhost:8211/docs")
-    print(f"健康检查: http://localhost:8211/health")
-    print("=" * 60)
-    print("按Ctrl+C停止服务")
-    print("=" * 60)
-    
-    uvicorn.run(
-        "api_gateway.main:app",
-        host="0.0.0.0",
-        port=8211,
-        reload=True,  # 开发模式自动重载
-        reload_excludes=[
-            "logs/*",           # 排除日志目录
-            "*.log",            # 排除日志文件
-            "__pycache__/*",    # 排除缓存目录
-            "*.pyc",            # 排除编译文件
-            ".pytest_cache/*",  # 排除测试缓存
-            "minio-data/*"      # 排除 MinIO 数据
-        ],
-        log_level="info"
-    )
-
+    return {"status": "healthy"}

@@ -250,6 +250,7 @@ class ConfirmHandler:
             
             # 调用特征识别 API
             api_url = self.feature_api_url
+            # api_url = "http://192.168.1.153:8300/api/features/reprocess"
             
             logger.info(f"📤 调用特征识别 API: {api_url}")
             logger.info(f"📋 请求参数: {api_params}")
@@ -378,6 +379,7 @@ class ConfirmHandler:
             
             # 调用价格计算 API
             api_url = self.pricing_api_url
+            # api_url = "http://192.168.1.153:8300/api/pricing/recalculate"
             
             logger.info(f"📤 调用价格计算 API: {api_url}")
             logger.info(f"📋 请求参数: {api_params}")
@@ -503,6 +505,7 @@ class ConfirmHandler:
             # 获取 API 参数和 URL
             api_params = pending_action.get("api_params")
             api_url = pending_action.get("api_url", self.weight_price_api_url)
+            # api_url = pending_action.get("api_url", "http://192.168.1.153:8300/api/price_wg")
             
             if not api_params:
                 return {

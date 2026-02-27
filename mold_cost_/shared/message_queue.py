@@ -37,6 +37,9 @@ if not RABBITMQ_URL:
     password = os.getenv("RABBITMQ_PASSWORD", "guest")
     RABBITMQ_URL = f"amqp://{user}:{password}@{host}:{port}/"
 
+# 心跳间隔配置（秒），默认24小时
+RABBITMQ_HEARTBEAT = int(os.getenv("RABBITMQ_HEARTBEAT", "86400"))
+
 print(f"[MessageQueue] 连接地址: amqp://{user}:***@{host}:{port}/")
 
 class MessageQueue:
@@ -50,7 +53,11 @@ class MessageQueue:
         """建立连接"""
         self.connection = await aio_pika.connect_robust(
             RABBITMQ_URL,
-            heartbeat=60  # 每60秒发送心跳，保持连接活跃
+            heartbeat=RABBITMQ_HEARTBEAT,  # 使用配置的心跳间隔，默认24小时
+            # TCP keepalive 配置，防止网络设备断开空闲连接
+            client_properties={
+                "connection_name": "mold_cost_worker",
+            }
         )
         self.channel = await self.connection.channel()
         # prefetch_count 设置为 10，支持多个队列的并发消费

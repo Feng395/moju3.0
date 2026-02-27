@@ -131,28 +131,12 @@ class QueryDetailsHandler(BaseActionHandler):
             )
             
             if not detail:
-                # 核算前没有计算详情，尝试查询特征识别的基本数据（features + subgraphs）
-                logger.info(f"📋 未找到计算详情，尝试查询特征基本数据: {subgraph_id}")
-                basic_info = await self._query_basic_info(db_session, job_id, subgraph_id)
-                
-                if basic_info:
-                    # 有特征数据，格式化返回
-                    formatted_message = self._format_basic_info(
-                        subgraph_id, basic_info, intent_result.raw_message
-                    )
-                    return ActionResult(
-                        status="ok",
-                        message=formatted_message,
-                        requires_confirmation=False,
-                        data={"subgraph_id": subgraph_id, "basic_info": basic_info}
-                    )
-                else:
-                    return ActionResult(
-                        status="ok",
-                        message=f"{subgraph_id} 暂无数据。\n\n可能原因：\n1. 该子图不存在\n2. 特征识别尚未完成",
-                        requires_confirmation=False,
-                        data={}
-                    )
+                return ActionResult(
+                    status="ok",
+                    message=f"{subgraph_id} 暂无计算详情。\n\n可能原因：\n1. 该子图还未进行价格计算\n2. 计算详情尚未保存到数据库\n\n建议：先执行价格计算，然后再查询详情。",
+                    requires_confirmation=False,
+                    data={}
+                )
             
             # 4. 格式化 calculation_steps
             # 优先使用 LLM 格式化
@@ -216,176 +200,6 @@ class QueryDetailsHandler(BaseActionHandler):
                 message=f"查询详情失败：{str(e)}",
                 data={}
             )
-    
-    async def _query_basic_info(
-        self,
-        db_session,
-        job_id: str,
-        subgraph_id: str
-    ) -> Optional[Dict[str, Any]]:
-        """
-        查询子图的基本信息（特征识别后即可用，无需核算）
-        从 features 表和 subgraphs 表获取数据
-        
-        Args:
-            db_session: 数据库会话
-            job_id: 任务ID
-            subgraph_id: 子图ID（支持短名称）
-        
-        Returns:
-            基本信息字典，如果不存在返回 None
-        """
-        try:
-            from shared.models import Feature, Subgraph
-            
-            # 先尝试精确匹配 subgraph
-            result = await db_session.execute(
-                select(Subgraph).where(
-                    Subgraph.subgraph_id == subgraph_id,
-                    Subgraph.job_id == job_id
-                )
-            )
-            subgraph = result.scalar_one_or_none()
-            
-            # 后缀匹配
-            if not subgraph:
-                result = await db_session.execute(
-                    select(Subgraph).where(
-                        Subgraph.subgraph_id.like(f'%_{subgraph_id}'),
-                        Subgraph.job_id == job_id
-                    )
-                )
-                all_matches = result.scalars().all()
-                if all_matches:
-                    subgraph = min(all_matches, key=lambda x: len(x.subgraph_id))
-            
-            if not subgraph:
-                return None
-            
-            actual_subgraph_id = subgraph.subgraph_id
-            
-            # 查询 feature
-            result = await db_session.execute(
-                select(Feature).where(
-                    Feature.subgraph_id == actual_subgraph_id,
-                    Feature.job_id == job_id
-                )
-            )
-            feature = result.scalar_one_or_none()
-            
-            info = {
-                "subgraph_id": actual_subgraph_id,
-                "part_name": subgraph.part_name,
-                "part_code": subgraph.part_code,
-                "process_description": subgraph.process_description,
-                "weight_kg": float(subgraph.weight_kg) if subgraph.weight_kg else None,
-                "material_unit_price": float(subgraph.material_unit_price) if subgraph.material_unit_price else None,
-                "material_cost": float(subgraph.material_cost) if subgraph.material_cost else None,
-                "heat_treatment_unit_price": float(subgraph.heat_treatment_unit_price) if subgraph.heat_treatment_unit_price else None,
-                "heat_treatment_cost": float(subgraph.heat_treatment_cost) if subgraph.heat_treatment_cost else None,
-                "wire_process": subgraph.wire_process,
-                "status": subgraph.status,
-            }
-            
-            if feature:
-                info.update({
-                    "material": feature.material,
-                    "length_mm": float(feature.length_mm) if feature.length_mm else None,
-                    "width_mm": float(feature.width_mm) if feature.width_mm else None,
-                    "thickness_mm": float(feature.thickness_mm) if feature.thickness_mm else None,
-                    "quantity": feature.quantity,
-                    "heat_treatment": feature.heat_treatment,
-                    "calculated_weight_kg": float(feature.calculated_weight_kg) if feature.calculated_weight_kg else None,
-                    "has_auto_material": feature.has_auto_material,
-                    "boring_length_mm": float(feature.boring_length_mm) if feature.boring_length_mm else None,
-                    "processing_instructions": feature.processing_instructions,
-                })
-            
-            logger.info(f"✅ 查询到基本信息: {actual_subgraph_id}")
-            return info
-            
-        except Exception as e:
-            logger.error(f"❌ 查询基本信息失败: {e}", exc_info=True)
-            return None
-    
-    def _format_basic_info(
-        self,
-        subgraph_id: str,
-        info: Dict[str, Any],
-        user_question: str
-    ) -> str:
-        """
-        格式化基本信息为友好文本
-        
-        Args:
-            subgraph_id: 子图ID（用户输入的短名称）
-            info: 基本信息字典
-            user_question: 用户原始问题
-        
-        Returns:
-            格式化后的文本
-        """
-        # 提取短名称用于显示
-        display_id = subgraph_id
-        actual_id = info.get("subgraph_id", subgraph_id)
-        if "_" in actual_id:
-            display_id = actual_id.split("_", 1)[-1]
-        
-        lines = [f"📋 {display_id} 的基本信息：\n"]
-        
-        # 零件信息
-        if info.get("part_name"):
-            lines.append(f"  名称：{info['part_name']}")
-        if info.get("part_code"):
-            lines.append(f"  编号：{info['part_code']}")
-        
-        # 材质和规格
-        if info.get("material"):
-            lines.append(f"  材质：{info['material']}")
-        
-        dims = []
-        if info.get("length_mm"):
-            dims.append(str(info["length_mm"]))
-        if info.get("width_mm"):
-            dims.append(str(info["width_mm"]))
-        if info.get("thickness_mm"):
-            dims.append(str(info["thickness_mm"]))
-        if dims:
-            lines.append(f"  规格：{'×'.join(dims)} mm")
-        
-        if info.get("quantity"):
-            lines.append(f"  数量：{info['quantity']}")
-        
-        # 重量
-        if info.get("calculated_weight_kg"):
-            lines.append(f"  计算重量：{info['calculated_weight_kg']} kg")
-        if info.get("weight_kg"):
-            lines.append(f"  实际重量：{info['weight_kg']} kg")
-        
-        # 热处理
-        if info.get("heat_treatment"):
-            lines.append(f"  热处理：{info['heat_treatment']}")
-        
-        # 工艺
-        if info.get("process_description"):
-            lines.append(f"  工艺说明：{info['process_description']}")
-        if info.get("wire_process"):
-            lines.append(f"  线割工艺：{info['wire_process']}")
-        
-        # 费用（如果已有）
-        if info.get("material_cost"):
-            lines.append(f"  材料费：{info['material_cost']} 元")
-        if info.get("heat_treatment_cost"):
-            lines.append(f"  热处理费：{info['heat_treatment_cost']} 元")
-        
-        # 镗孔
-        if info.get("boring_length_mm"):
-            lines.append(f"  镗孔长度：{info['boring_length_mm']} mm")
-        
-        # 状态提示
-        lines.append(f"\n⏳ 尚未进行价格核算，以上为特征识别数据。")
-        
-        return "\n".join(lines)
     
     async def _query_calculation_detail(
         self,
@@ -506,17 +320,30 @@ class QueryDetailsHandler(BaseActionHandler):
         else:
             steps = calculation_steps
         
-        # 防止 steps 为 None
-        if not steps:
-            return f"{subgraph_id} 暂无计算详情数据。"
-        
         # 如果指定了 query_type，只提取对应的 category
         if query_type:
             filtered_steps = []
             for item in steps:
-                if item.get("category") == query_type:
+                category = item.get("category", "")
+                
+                # 🔴 特殊处理：如果 query_type 是 "nc"，包含所有 NC 相关的 category
+                if query_type in ["nc", "NC"]:
+                    if category.startswith("nc_") or category == "nc":
+                        filtered_steps.append(item)
+                # 🔴 特殊处理：如果 query_type 是 "water_mill"，包含所有水磨相关的 category
+                elif query_type in ["water_mill", "水磨"]:
+                    if category.startswith("water_mill_") or category == "water_mill":
+                        filtered_steps.append(item)
+                # 🔴 特殊处理：如果 query_type 是 "wire"，包含所有线割相关的 category
+                elif query_type in ["wire", "线割"]:
+                    if category.startswith("wire_") or category == "wire":
+                        filtered_steps.append(item)
+                # 普通情况：精确匹配
+                elif category == query_type:
                     filtered_steps.append(item)
+            
             steps = filtered_steps
+            logger.info(f"🔍 query_type={query_type}, 过滤后保留 {len(filtered_steps)} 个 category")
         
         # 动态构建字段说明
         field_glossary = self._build_field_glossary(steps)
@@ -585,6 +412,23 @@ class QueryDetailsHandler(BaseActionHandler):
 {json.dumps(steps, ensure_ascii=False, indent=2)}
 ```
 
+🔴🔴🔴 **最重要的规则（必须第一步执行）** 🔴🔴🔴
+
+**在回答任何问题之前，你必须先执行以下操作：**
+
+1. **列出所有 category**：遍历整个 JSON 数组，列出所有的 "category" 字段值
+2. **确认数据存在性**：根据用户问题，确认相关的 category 是否存在
+3. **只有在确认 category 不存在后**，才能说"数据未提供"
+
+**示例（NC 相关问题）**：
+- 用户问："NC是怎么算的？"
+- ❌ 错误做法：直接回答"JSON中未提供nc_z数据"
+- ✅ 正确做法：
+  1. 先在内部检查所有 category（不要输出这个过程）
+  2. 确认：nc_z ✓存在、nc_b ✓存在、nc_c ✓存在、nc_total ✓存在
+  3. 然后用业务语言回答："PU-02 的 NC 计算包含基础工时和各面加工时间..."
+  4. **注意**：不要在回答中说 "我看到以下 category" 或 "nc_z ✓存在"
+
 🔴 **重要提示**：
 - JSON 数据中的 `wire_base` 类别包含了所有线割工序的详细信息
 - 每个工序都有一个 `"code"` 字段（如 "G", "L", "W", "Z"）
@@ -601,14 +445,49 @@ class QueryDetailsHandler(BaseActionHandler):
 - 列出主要费用项目及其金额
 - 不要只回答单个工序的详细数据
 
-**情况 2：用户问单个工序（如 "L的线长是多少"）**
+**情况 2：用户问 NC 计算（如 "NC是怎么算的"）**
+🔴 **强制要求：必须先列出所有 category，确认 nc_z、nc_b、nc_c、nc_total 是否存在**
+
+1. ✅ **第一步：列出所有 category（内部检查，不要输出）**
+   - 遍历整个 JSON 数组
+   - 列出所有 "category" 字段的值
+   - **注意**：这一步是内部检查，不要在回答中输出 "我看到以下 category：material, wire_base, ..."
+   - 直接进入第二步
+   
+2. ✅ **第二步：确认 NC 相关 category 存在**
+   - 检查是否有 nc_base（基础工时）
+   - 检查是否有 nc_z（Z面/主视图）
+   - 检查是否有 nc_b（B面/背面）
+   - 检查是否有 nc_c（C面/侧面）
+   - 检查是否有 nc_total（总费用）
+   
+3. ✅ **第三步：提取 nc_base 信息**
+   - 从 nc_base 类别中找到 nc_base_hours（基础工时）
+   
+4. ✅ **第四步：提取各面的时间信息**
+   - 从 nc_z 类别中找 total_hours（Z面/主视图时间）
+   - 从 nc_b 类别中找 total_hours（B面/背面时间）
+   - 从 nc_c 类别中找 total_hours（C面/侧面时间）
+   - 如果某个面的 category 不存在，才说该面无数据
+   
+5. ✅ **第五步：提取费用信息**
+   - 从 nc_total 类别的 final_fees 中提取各面费用
+   - 汇总得到 NC 总费用
+   
+6. ✅ **第六步：组织回答**
+   - 说明基础工时
+   - 列出各面的实际工时和费用
+   - 说明比较取最大值的逻辑
+   - 给出总费用
+
+**情况 3：用户问单个工序（如 "L的线长是多少"）**
 1. ✅ 定位到 `wire_base` 类别（不是 wire_total）
 2. ✅ 在 `steps` 数组中查找 `"code": "L"` 的对象
 3. ✅ 从该对象中提取 `"total_length"` 字段的值
 4. ✅ 直接使用该值回答，不要计算或推测
 5. ❌ **严禁**使用 `wire_total` 类别中的 `wire_length` 或 `slow_wire_length`
 
-**情况 3：用户问特定类型费用（如 "材料费是多少"）**
+**情况 4：用户问特定类型费用（如 "材料费是多少"）**
 - 定位到对应的类别（如 `material`）
 - 提取该类别中的费用信息
 
@@ -617,6 +496,10 @@ class QueryDetailsHandler(BaseActionHandler):
 - ✅ 正确：用户问 "L的线长"，回答 158.8（这是 wire_base 中 code="L" 的 total_length）
 - ❌ 错误：用户问 "G的线长"，回答"暂无数据"（明明 wire_base 中有 code="G" 的数据）
 - ✅ 正确：用户问 "G的线长"，回答 217.63（这是 wire_base 中 code="G" 的 total_length）
+- ❌ 错误：用户问 "NC是怎么算的"，回答"JSON中未提供nc_z数据"（明明有完整的 nc_z category）
+- ✅ 正确：用户问 "NC是怎么算的"，先列出所有 category，确认 nc_z、nc_b、nc_c 存在，然后提取数据回答
+- ❌ 错误：没有检查完所有 category 就说"数据未提供"
+- ✅ 正确：必须遍历整个 JSON 数组，检查所有 category 后才能下结论
 - 解释计算过程
 {processing_instructions_section}
 
@@ -659,6 +542,79 @@ class QueryDetailsHandler(BaseActionHandler):
 - **side_view（侧视图）** → 对应 **length_mm（长度）**
 
 例如：如果 top_view 的线长是 1200mm，厚度是 50mm，那么计算时使用的尺寸就是 50mm。
+
+## 🆕 NC 计算过程说明（重要！）
+
+### NC 面代码含义（用户常用中文说法）
+用户通常会用中文询问，需要将中文映射到对应的面代码：
+
+| 用户说法 | 面代码 | category名称 | 说明 |
+|---------|--------|-------------|------|
+| 主视图、Z面 | Z | nc_z | 主视图加工 |
+| 背面、B面 | B | nc_b | 背面加工 |
+| 侧面、侧面正面、C面 | C | nc_c | 侧面正面加工 |
+| 侧背、C_B面 | C_B | nc_c_b | 侧背加工 |
+| 正面、Z_VIEW面 | Z_VIEW | nc_z_view | 正面加工 |
+| 正面的背面、B_VIEW面 | B_VIEW | nc_b_view | 正面的背面加工 |
+
+**重要提示**：
+- 用户问"主视图的时间"或"Z面的时间"，都是指 nc_z 类别
+- 用户问"背面的费用"或"B面的费用"，都是指 nc_total 中的 nc_b_fee
+- 用户问"侧面的时间"或"C面的时间"，都是指 nc_c 类别
+
+### NC 计算流程
+1. **nc_base**: 计算 NC 基本时间（模板1小时，零件0.5小时）
+2. **nc_z, nc_b, nc_c 等**: 按面代码分别计算各面的 NC 时间
+   - 从 metadata 中提取各面的工序数据（details 数组）
+   - 每个工序有 code（如 ZXZ, C1, M, 开粗, 半精, 全精）和 value（时间，单位：分钟）
+   - 按分类汇总：精铣（半精、全精）、开粗、钻床（其他所有 code）
+   - 将分钟转换为小时：total_hours = total_minutes / 60
+   - **重要**：nc_z、nc_b、nc_c 等 category 包含了实际的加工时间数据
+3. **nc_total**: 计算 NC 总费用
+   - 判断工时单价（根据零件尺寸）
+   - 与 nc_base_cost 比较，取最大值（如果某面时间为0则跳过比较）
+   - 乘以数量得到最终时间
+   - 乘以工时单价得到最终费用
+   - **重要**：nc_total 中的 final_fees 包含了各面的实际费用
+
+### NC 数据结构示例
+```json
+{{
+  "category": "nc_z",
+  "steps": [
+    {{
+      "step": "计算 Z 面",
+      "face_code": "Z",
+      "details": [
+        {{"code": "ZXZ", "value": 1.52, "category": "钻床"}},
+        {{"code": "开粗", "value": 172.20, "category": "开粗"}},
+        {{"code": "半精", "value": 14.24, "category": "精铣"}}
+      ],
+      "summary": {{"精铣": 14.24, "开粗": 172.20, "钻床": 1.52}},
+      "total_minutes": 187.96,
+      "total_hours": 3.13,
+      "formula": "(14.24 + 172.20 + 1.52) / 60 = 3.13"
+    }}
+  ]
+}}
+```
+
+### 回答 NC 相关问题的要点
+- **如果用户问"NC是怎么算的"**：
+  1. 先说明 nc_base（基础工时）
+  2. 然后列出各面的实际工时（从 nc_z、nc_b、nc_c 等 category 中获取）
+  3. 说明与基础工时比较取最大值的逻辑
+  4. 最后给出各面费用和总费用（从 nc_total 的 final_fees 中获取）
+- **如果用户问"主视图的时间"或"Z面的时间"**：从 `nc_z` 类别中找 `total_hours` 字段
+- **如果用户问"背面的时间"或"B面的时间"**：从 `nc_b` 类别中找 `total_hours` 字段
+- **如果用户问"侧面的时间"或"C面的时间"**：从 `nc_c` 类别中找 `total_hours` 字段
+- **如果用户问"主视图的费用"或"Z面的费用"**：从 `nc_total` 类别的 `final_fees` 中找 `nc_z_fee`
+- **如果用户问"背面的费用"或"B面的费用"**：从 `nc_total` 类别的 `final_fees` 中找 `nc_b_fee`
+- **如果用户问"侧面的费用"或"C面的费用"**：从 `nc_total` 类别的 `final_fees` 中找 `nc_c_fee`
+- 如果用户问"NC总费用"，从 `nc_total` 类别的 `final_fees` 中汇总所有面的费用
+- 注意区分时间（小时）和费用（元）
+- **重要**：不要说"JSON中未提供nc_z数据"，要仔细检查所有 category
+- **重要**：用户可能用中文说"主视图"、"背面"、"侧面"，要能识别并映射到对应的面代码
 
 ---
 
@@ -706,13 +662,86 @@ class QueryDetailsHandler(BaseActionHandler):
 - 不要生成"小建议"、"如果你以后要报价"等额外内容
 - 不要询问"需要吗？"、"还需要什么帮助？"等互动性问题
 
+🔴🔴🔴 **输出格式要求（非常重要）** 🔴🔴🔴
+
+**严禁在回答中输出技术性代码或字段名**，包括但不限于：
+- ❌ 不要输出："我看到以下 category：material, wire_base, nc_z, nc_b, nc_c, nc_total, ..."
+- ❌ 不要输出："nc_z ✓存在、nc_b ✓存在、nc_c ✓存在"
+- ❌ 不要输出："从 nc_base 类别中找到..."
+- ❌ 不要输出："category"、"nc_z"、"wire_base"、"total_hours" 等技术字段名
+- ❌ 不要输出："Z面"、"B面"、"C面"、"C_B面"、"Z_VIEW面"、"B_VIEW面" 等面代码
+
+**正确的做法**：
+- ✅ 直接用中文描述："根据计算数据，PU-02 的 NC 包含以下几个部分..."
+- ✅ 用业务术语："基础工时 1.0小时"（不说 "nc_base_hours"）
+- ✅ 用中文说明："主视图加工时间 1.36小时"（不说 "nc_z 的 total_hours" 或 "Z面"）
+- ✅ 用通俗语言："主视图"、"背面"、"侧面"（不说 "Z面"、"B面"、"C面"）
+
+**示例对比**：
+
+❌ **错误示例（包含技术代码）**：
+```
+我看到以下 category：material, wire_base, nc_z, nc_b, nc_c, nc_total
+
+✅ 第一步：确认 NC 相关 category 存在性
+nc_base ✓ 存在（已提供）
+nc_z ✓ 存在
+nc_b ✓ 存在
+nc_c ✓ 存在
+nc_total ✓ 存在
+
+从 nc_base 类别中找到 nc_base_hours = 1.0小时
+从 nc_z 类别中找到 total_hours = 1.36小时
+```
+
+✅ **正确示例（用户友好）**：
+```
+PU-02 的 NC（数控铣削）费用计算如下：
+
+1. 基础工时：1.0小时
+   零件尺寸 560mm × 560mm × 64.5mm，判定为模板类零件，基础工时为 1小时
+
+2. 各面实际加工时间：
+   - 主视图：1.36小时（81.39分钟）
+   - 背面：3.75小时（225.17分钟）
+   - 侧面：3.37小时（202.35分钟）
+
+3. 计费逻辑：
+   每个面与基础工时比较，取较大值作为计费工时
+
+4. 费用计算（工时单价 60元/小时）：
+   - 主视图：1.36 × 60 = 81.6元
+   - 背面：3.75 × 60 = 225.0元
+   - 侧面：3.37 × 60 = 202.2元
+   - NC总费用：508.8元
+```
+
+**重要提醒**：
+- 你的回答对象是业务人员，不是程序员
+- 他们不需要知道数据结构、字段名、category 等技术细节
+- 他们只需要知道"是什么"、"怎么算的"、"多少钱"
+- 保持回答简洁、专业、易懂
+
 请开始回答："""
 
         # 🆕 构建消息数组（包含历史对话）
         messages = [
             {
                 "role": "system",
-                "content": "你是一个模具成本计算专家，擅长用通俗易懂的语言解释复杂的计算过程。你的回答要专业、准确、简洁。回答完成后以总结结束，不要提供额外的建议或询问用户是否需要其他帮助。"
+                "content": """你是一个模具成本计算专家，擅长用通俗易懂的语言解释复杂的计算过程。
+
+🔴 **核心规则（最高优先级）**：
+1. **在回答任何问题之前，必须先列出 JSON 中所有的 category**
+2. **只有在确认某个 category 不存在后，才能说"数据未提供"**
+3. **绝对不允许在没有检查完所有 category 的情况下说"未提供数据"**
+
+🔴 **输出格式规则（非常重要）**：
+1. **严禁输出技术性代码**：不要在回答中出现 "category"、"nc_z"、"wire_base"、"total_hours" 等技术字段名
+2. **使用业务语言**：用 "基础工时"、"主视图加工时间"、"主视图费用" 等业务术语（不要说 "Z面"、"B面"、"C面"）
+3. **面向业务人员**：你的读者是业务人员，不是程序员，他们不需要知道数据结构
+4. **直接回答问题**：不要说 "我看到以下 category"、"从 nc_base 类别中找到"，直接说结果
+
+你的回答要专业、准确、简洁。回答完成后以总结结束，不要提供额外的建议或询问用户是否需要其他帮助。"""
             }
         ]
         
@@ -1169,6 +1198,42 @@ class QueryDetailsHandler(BaseActionHandler):
             # NC 时间相关 (🆕 P1)
             "classification_rules": "分类规则",
             "value": "时间值(分钟)",
+            "face_code": "面代码(Z=主视图/B=背面/C=侧面正面/C_B=侧背/Z_VIEW=正面/B_VIEW=正面的背面)",
+            "total_minutes": "总时间(分钟)",
+            "total_hours": "总时间(小时)",
+            "face_costs": "各面时间(小时)",
+            "nc_z_cost": "Z面(主视图)时间(小时)",
+            "nc_b_cost": "B面(背面)时间(小时)",
+            "nc_c_cost": "C面(侧面正面)时间(小时)",
+            "nc_c_b_cost": "C_B面(侧背)时间(小时)",
+            "nc_z_view_cost": "Z_VIEW面(正面)时间(小时)",
+            "nc_b_view_cost": "B_VIEW面(正面的背面)时间(小时)",
+            
+            # NC 总费用相关 (🆕 UPDATE 2026-02-07)
+            "nc_base_cost": "NC基本时间(小时)",
+            "comparisons": "时间比较结果",
+            "final_times": "最终时间(小时)",
+            "final_fees": "最终费用(元)",
+            "nc_z_time": "Z面(主视图)时间(小时)",
+            "nc_b_time": "B面(背面)时间(小时)",
+            "nc_c_time": "C面(侧面正面)时间(小时)",
+            "nc_c_b_time": "C_B面(侧背)时间(小时)",
+            "nc_z_view_time": "Z_VIEW面(正面)时间(小时)",
+            "nc_b_view_time": "B_VIEW面(正面的背面)时间(小时)",
+            "nc_z_fee": "Z面(主视图)费用(元)",
+            "nc_b_fee": "B面(背面)费用(元)",
+            "nc_c_fee": "C面(侧面正面)费用(元)",
+            "nc_c_b_fee": "C_B面(侧背)费用(元)",
+            "nc_z_view_fee": "Z_VIEW面(正面)费用(元)",
+            "nc_b_view_fee": "B_VIEW面(正面的背面)费用(元)",
+            
+            # 价格加权相关 (🆕 UPDATE 2026-02-07)
+            "weight_price": "加权价格(元)",
+            "matched_range": "匹配的重量范围",
+            "rule_price": "规则价格系数",
+            "sub_category": "规则子类别",
+            "missing_fields": "缺少的字段列表",
+            "status": "状态(success/failed)",
             
             # 其他
             "quantity": "数量",
@@ -1207,7 +1272,9 @@ class QueryDetailsHandler(BaseActionHandler):
         # 优先显示 category（如果存在）
         category_fields = [
             "weight", "material", "heat", "wire_base", "wire_special", "wire_speci",
-            "nc_base", "nc_roughing", "nc_milling", "nc_drilling",
+            "nc_base", "nc_z", "nc_b", "nc_c", "nc_c_b", "nc_z_view", "nc_b_view",  # 🆕 UPDATE 2026-02-07: 添加 NC 各面
+            "nc_total",  # 🆕 UPDATE 2026-02-07: 添加 NC 总费用
+            "nc_roughing", "nc_milling", "nc_drilling",
             "water_mill_high", "water_mill_long_strip", "water_mill_chamfer",
             "add_auto_material", "standard",
             "tooth_hole_time", "wire_standard", "total",  # 🆕 P0
@@ -1215,7 +1282,8 @@ class QueryDetailsHandler(BaseActionHandler):
             # 🆕 P2 水磨相关
             "water_mill_thread_ends", "water_mill_hanging_table", "water_mill_bevel",
             "water_mill_oil_tank", "water_mill_high_cost", "water_mill_plate",
-            "water_mill_component", "water_mill_grinding"
+            "water_mill_component", "water_mill_grinding",
+            "weight_price",  # 🆕 UPDATE 2026-02-07: 添加价格加权
         ]
         
         found_categories = [f for f in category_fields if f in used_fields]
@@ -1230,8 +1298,12 @@ class QueryDetailsHandler(BaseActionHandler):
             "费用相关": ["unit_price", "cost_single", "cost_total", "material_cost", "heat_treatment_cost", 
                        "basic_processing_cost", "special_base_cost", "final_price", "base_price",
                        "discharge_cost", "hole_cost", "standard_base_cost", "processing_cost_total", "total_cost",
-                       "wire_cost_base", "wire_cost_per_unit", "material_cost_total", "heat_treatment_cost_total"],  # 🆕 UPDATE
-            "工时相关": ["nc_base_hours", "kai_cu_hours", "jing_xi_hours", "drill_hours", "time_per_hole", "total_time"],  # 🆕 P0
+                       "wire_cost_base", "wire_cost_per_unit", "material_cost_total", "heat_treatment_cost_total",
+                       "weight_price"],  # 🆕 UPDATE 2026-02-07: 添加 weight_price
+            "工时相关": ["nc_base_hours", "kai_cu_hours", "jing_xi_hours", "drill_hours", "time_per_hole", "total_time",
+                       "nc_base_cost", "total_minutes", "total_hours",  # 🆕 UPDATE 2026-02-07: 添加 NC 时间字段
+                       "nc_z_time", "nc_b_time", "nc_c_time", "nc_c_b_time", "nc_z_view_time", "nc_b_view_time",
+                       "nc_z_fee", "nc_b_fee", "nc_c_fee", "nc_c_b_fee", "nc_z_view_fee", "nc_b_view_fee"],  # 🆕 UPDATE 2026-02-07
             "类型判断": ["part_type", "mill_type", "wire_type", "is_template", "has_auto_material", 
                        "needs_heat_treatment", "has_side_cut", "is_through", "hole_type"],  # 🆕 P0
             "线割相关": ["view", "cone", "code", "instruction", "total_length", "area_num", "multipliers",
@@ -1249,6 +1321,13 @@ class QueryDetailsHandler(BaseActionHandler):
                 # 大水磨
                 "plate_cost", "long_strip_cost", "component_cost",
                 "grinding", "mill_type", "area", "max_length"
+            ],
+            "NC相关": [  # 🆕 UPDATE 2026-02-07: 新增 NC 相关分组
+                "face_code", "face_costs", "comparisons", "final_times", "final_fees",
+                "nc_z_cost", "nc_b_cost", "nc_c_cost", "nc_c_b_cost", "nc_z_view_cost", "nc_b_view_cost"
+            ],
+            "价格加权相关": [  # 🆕 UPDATE 2026-02-07: 新增价格加权分组
+                "matched_range", "rule_price", "sub_category", "missing_fields", "status"
             ],
         }
         
@@ -1317,7 +1396,14 @@ class QueryDetailsHandler(BaseActionHandler):
                 "wire_standard": "线割标准基本费",  # 🆕 P0
                 "total": "最终总价计算",  # 🆕 P0
                 "wire_total": "线割总价计算",  # 🆕 UPDATE (2026-02-03)
-                "nc_base": "NC基本费用",  # 🆕 P0
+                "nc_base": "NC基本时间",  # 🆕 UPDATE 2026-02-07
+                "nc_z": "NC Z面时间",  # � UPDATE 2026-02-07
+                "nc_b": "NC B面时间",  # 🆕 UPDATE 2026-02-07
+                "nc_c": "NC C面时间",  # 🆕 UPDATE 2026-02-07
+                "nc_c_b": "NC C_B面时间",  # 🆕 UPDATE 2026-02-07
+                "nc_z_view": "NC Z_VIEW面时间",  # 🆕 UPDATE 2026-02-07
+                "nc_b_view": "NC B_VIEW面时间",  # 🆕 UPDATE 2026-02-07
+                "nc_total": "NC总费用计算",  # 🆕 UPDATE 2026-02-07
                 "nc_roughing": "NC开粗费用",  # 🆕 P0
                 "nc_milling": "NC精铣费用",  # 🆕 P0
                 "nc_drilling": "NC钻床费用",  # 🆕 P0
@@ -1333,6 +1419,7 @@ class QueryDetailsHandler(BaseActionHandler):
                 "water_mill_plate": "水磨板",
                 "water_mill_component": "水磨零件",
                 "water_mill_grinding": "水磨磨削",
+                "weight_price": "价格加权计算",  # 🆕 UPDATE 2026-02-07
             }
             
             for item in steps:
@@ -1393,6 +1480,12 @@ class QueryDetailsHandler(BaseActionHandler):
                             'long_strip_cost', 'max_length',
                             'component_cost', 'grinding',
                             'mill_type', 'has_material_preparation',
+                            # 🆕 UPDATE 2026-02-07: NC 相关
+                            'face_code', 'total_minutes', 'total_hours', 'face_costs',
+                            'nc_base_cost', 'comparisons', 'final_times', 'final_fees',
+                            'nc_z_time', 'nc_b_time', 'nc_c_time',
+                            # 🆕 UPDATE 2026-02-07: 价格加权相关
+                            'weight_price', 'matched_range', 'rule_price', 'status',
                         ]
                         
                         for key in important_keys:
@@ -1435,6 +1528,12 @@ class QueryDetailsHandler(BaseActionHandler):
             'thread_ends_cost', 'hanging_table_cost', 'total_chamfer_cost',
             'total_bevel_cost', 'oil_tank_cost', 'high_cost',
             'plate_cost', 'long_strip_cost', 'component_cost',
+            # 🆕 UPDATE 2026-02-07: NC 相关结果字段
+            'nc_base_cost', 'total_hours', 'nc_z_time', 'nc_b_time', 'nc_c_time',
+            'nc_c_b_time', 'nc_z_view_time', 'nc_b_view_time',
+            'nc_z_fee', 'nc_b_fee', 'nc_c_fee', 'nc_c_b_fee', 'nc_z_view_fee', 'nc_b_view_fee',
+            # 🆕 UPDATE 2026-02-07: 价格加权结果字段
+            'weight_price',
         ]
         
         for key in result_keys:
@@ -1535,6 +1634,33 @@ class QueryDetailsHandler(BaseActionHandler):
             'grinding': '研磨面数',
             'max_length_width': '长宽最大值(mm)',
             'component_cost': '零件费用(元)',
+            # 🆕 UPDATE 2026-02-07: NC 相关
+            'face_code': '面代码(Z=主视图/B=背面/C=侧面正面/C_B=侧背/Z_VIEW=正面/B_VIEW=正面的背面)',
+            'total_minutes': '总时间(分钟)',
+            'total_hours': '总时间(小时)',
+            'face_costs': '各面时间(小时)',
+            'nc_base_cost': 'NC基本时间(小时)',
+            'comparisons': '时间比较结果',
+            'final_times': '最终时间(小时)',
+            'final_fees': '最终费用(元)',
+            'nc_z_time': 'Z面(主视图)时间(小时)',
+            'nc_b_time': 'B面(背面)时间(小时)',
+            'nc_c_time': 'C面(侧面正面)时间(小时)',
+            'nc_c_b_time': 'C_B面(侧背)时间(小时)',
+            'nc_z_view_time': 'Z_VIEW面(正面)时间(小时)',
+            'nc_b_view_time': 'B_VIEW面(正面的背面)时间(小时)',
+            'nc_z_fee': 'Z面(主视图)费用(元)',
+            'nc_b_fee': 'B面(背面)费用(元)',
+            'nc_c_fee': 'C面(侧面正面)费用(元)',
+            'nc_c_b_fee': 'C_B面(侧背)费用(元)',
+            'nc_z_view_fee': 'Z_VIEW面(正面)费用(元)',
+            'nc_b_view_fee': 'B_VIEW面(正面的背面)费用(元)',
+            # 🆕 UPDATE 2026-02-07: 价格加权相关
+            'weight_price': '加权价格(元)',
+            'matched_range': '匹配的重量范围',
+            'rule_price': '规则价格系数',
+            'sub_category': '规则子类别',
+            'status': '状态',
         }
         
         return translations.get(key, key)
@@ -1572,10 +1698,6 @@ class QueryDetailsHandler(BaseActionHandler):
             else:
                 steps = calculation_steps
             
-            # 防止 steps 为 None
-            if not steps:
-                return f"{subgraph_id} 暂无 {query_type} 相关的计算详情数据。"
-            
             # 查找对应的 category
             target_item = None
             for item in steps:
@@ -1599,7 +1721,14 @@ class QueryDetailsHandler(BaseActionHandler):
                 "tooth_hole_time": "牙孔时间费用",  # 🆕 P0
                 "wire_standard": "线割标准基本费",  # 🆕 P0
                 "total": "最终总价计算",  # 🆕 P0
-                "nc_base": "NC基本费用",  # 🆕 P0
+                "nc_base": "NC基本时间",  # 🆕 UPDATE 2026-02-07
+                "nc_z": "NC Z面(主视图)时间",  # 🆕 UPDATE 2026-02-07
+                "nc_b": "NC B面(背面)时间",  # 🆕 UPDATE 2026-02-07
+                "nc_c": "NC C面(侧面正面)时间",  # 🆕 UPDATE 2026-02-07
+                "nc_c_b": "NC C_B面(侧背)时间",  # 🆕 UPDATE 2026-02-07
+                "nc_z_view": "NC Z_VIEW面(正面)时间",  # 🆕 UPDATE 2026-02-07
+                "nc_b_view": "NC B_VIEW面(正面的背面)时间",  # 🆕 UPDATE 2026-02-07
+                "nc_total": "NC总费用计算",  # 🆕 UPDATE 2026-02-07
                 "nc_roughing": "NC开粗费用",  # 🆕 P0
                 "nc_milling": "NC精铣费用",  # 🆕 P0
                 "nc_drilling": "NC钻床费用",  # 🆕 P0
@@ -1616,6 +1745,7 @@ class QueryDetailsHandler(BaseActionHandler):
                 "water_mill_component": "水磨零件",
                 "water_mill_grinding": "水磨磨削",
                 "wire_total": "线割总价计算",  # 🆕 UPDATE (2026-02-03)
+                "weight_price": "价格加权计算",  # 🆕 UPDATE 2026-02-07
             }
             
             category_name = category_map.get(query_type, query_type)
@@ -1683,6 +1813,12 @@ class QueryDetailsHandler(BaseActionHandler):
                         'long_strip_cost', 'max_length',
                         'component_cost', 'grinding',
                         'mill_type', 'has_material_preparation',
+                        # 🆕 UPDATE 2026-02-07: NC 相关
+                        'face_code', 'total_minutes', 'total_hours', 'face_costs',
+                        'nc_base_cost', 'comparisons', 'final_times', 'final_fees',
+                        'nc_z_time', 'nc_b_time', 'nc_c_time',
+                        # 🆕 UPDATE 2026-02-07: 价格加权相关
+                        'weight_price', 'matched_range', 'rule_price', 'status',
                     ]
                     
                     for key in important_keys:
