@@ -27,6 +27,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi import APIRouter
 
 # 加载环境变量 - 必须在最开始
 load_dotenv()
@@ -169,11 +170,16 @@ from api_gateway.routers.account import auth, process_rules, price_items, chat_s
 # 业务路由
 app.include_router(features.router)
 app.include_router(pricing.router)
-app.include_router(jobs.router)
-app.include_router(jobs.router_legacy)  # 兼容旧版本路由
+app.include_router(jobs.router)  # /jobs 前缀
+app.include_router(jobs.router_legacy)  # /api/jobs 前缀（兼容）
 app.include_router(reports.router)
 app.include_router(weight_price.router)  # 价格加权路由
 app.include_router(websocket_router.router)  # WebSocket路由
+
+# 添加 /api/v1/jobs 前缀的路由（前端使用）
+router_v1_jobs = APIRouter(prefix="/api/v1")
+router_v1_jobs.include_router(jobs.router)
+app.include_router(router_v1_jobs)
 
 # 交互路由
 app.include_router(interactions.router)
