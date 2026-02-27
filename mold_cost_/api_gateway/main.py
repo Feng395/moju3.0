@@ -163,7 +163,10 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # 注册路由
 from api_gateway.routers import features, pricing, jobs, reports, weight_price, websocket_router
+from api_gateway.routers import interactions, review_router, chat_router, file_router
+from api_gateway.routers.account import auth, process_rules, price_items, chat_sessions
 
+# 业务路由
 app.include_router(features.router)
 app.include_router(pricing.router)
 app.include_router(jobs.router)
@@ -171,6 +174,18 @@ app.include_router(jobs.router_legacy)  # 兼容旧版本路由
 app.include_router(reports.router)
 app.include_router(weight_price.router)  # 价格加权路由
 app.include_router(websocket_router.router)  # WebSocket路由
+
+# 交互路由
+app.include_router(interactions.router)
+app.include_router(review_router.router)
+app.include_router(chat_router.router)
+app.include_router(file_router.router)
+
+# 账户系统路由
+app.include_router(auth.router, prefix="/api", tags=["认证"])
+app.include_router(process_rules.router, prefix="/api/process-rules", tags=["工艺规则"])
+app.include_router(price_items.router, prefix="/api/price-items", tags=["价格项"])
+app.include_router(chat_sessions.router, prefix="/api/chat-sessions", tags=["聊天会话"])
 
 @app.get("/")
 async def root():

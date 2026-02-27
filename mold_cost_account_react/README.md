@@ -45,6 +45,7 @@ yarn install
 
 ### 开发模式
 ```bash
+cd mold_cost_account_react
 npm run dev
 # 或
 yarn dev
