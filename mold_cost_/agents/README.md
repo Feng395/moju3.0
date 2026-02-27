@@ -2,7 +2,7 @@
 
 ## 📋 概述
 
-AI Agents 模块是模具成本核算系统的核心智能层，负责处理用户交互、任务编排、CAD解析、特征识别和价格计算等复杂业务逻辑。采用 LangChain 和 LangGraph 框架构建多Agent协作系统。
+AI Agents 模块是模具成本核算系统的核心智能层，负责处理用户交互、任务编排、CAD解析、特征识别和价格计算等复杂==业务逻辑==。采用 LangChain 和 LangGraph 框架构建多Agent协作系统。
 
 ## 🏗️ 架构设计
 
@@ -49,6 +49,43 @@ agents/
 ├── review_status.py            # 审核状态管理
 └── phase2/                     # 第二期功能
     └── sheet_line_agent.py     # 板材线Agent
+```
+
+### Agent 业务处理
+
+| Agent                 | 主要业务操作                                                |
+| --------------------- | ----------------------------------------------------------- |
+| **OrchestratorAgent** | 任务编排：CAD拆图 → 特征识别 → NC时间计算 → 价格计算 → 完成 |
+| **InteractionAgent**  | 用户交互：启动审核流程、处理修改请求、确认修改、刷新数据    |
+| **CADAgent**          | CAD处理：调用 MCP 服务执行拆图和特征识别                    |
+| **PricingAgent**      | 价格计算：并发搜索数据 → 并发计算费用 → 汇总结果            |
+| **DecisionAgent**     | 工艺决策：根据特征参数决定工艺参数（线割模式、刀数等）      |
+| **IntentRecognizer**  | 意图识别：使用 LLM/规则识别用户意图（7种类型）              |
+
+### Handler 业务处理
+
+| Handler                           | 业务操作                                                     |
+| --------------------------------- | ------------------------------------------------------------ |
+| **FeatureRecognitionHandler**     | 1. 提取 subgraph_ids 2. 准备 API 参数 3. 保存到 Redis 4. 返回确认消息 |
+| **PriceCalculationHandler**       | 1. 提取 subgraph_ids 2. 准备价格计算参数 3. 保存到 Redis 4. 返回确认消息 |
+| **DataModificationHandler**       | 1. NLPParser 解析自然语言 2. ModificationValidator 验证 3. 应用修改到临时数据 4. 重新构建展示视图 5. 保存到 Redis |
+| **QueryDetailsHandler**           | 1. 提取 subgraph_id 2. 查询 calculation_steps 3. LLM 格式化计算过程 4. 直接返回（无需确认） |
+| **GeneralChatHandler**            | 1. 构建上下文信息 2. 调用 LLM 生成回复 3. 直接返回           |
+| **WeightPriceCalculationHandler** | 1. 提取 subgraph_ids 2. 准备按重量计算参数 3. 保存到 Redis 4. 返回确认消息 |
+| **WeightPriceQueryHandler**       | 1. 提取 subgraph_id 2. 查询 weight_price_steps 3. LLM 格式化计算过程 4. 直接返回 |
+
+### 核心业务流程
+
+```
+用户输入 → IntentRecognizer(识别意图) 
+    ↓
+    ├─→ FEATURE_RECOGNITION → FeatureRecognitionHandler → Redis → ConfirmHandler → CADAgent
+    ├─→ PRICE_CALCULATION → PriceCalculationHandler → Redis → ConfirmHandler → PricingAgent
+    ├─→ DATA_MODIFICATION → DataModificationHandler → Redis → ConfirmHandler → DB Update
+    ├─→ QUERY_DETAILS → QueryDetailsHandler → 直接返回 calculation_steps
+    ├─→ WEIGHT_PRICE_CALCULATION → WeightPriceCalculationHandler → Redis → ConfirmHandler
+    ├─→ WEIGHT_PRICE_QUERY → WeightPriceQueryHandler → 直接返回 weight_price_steps
+    └─→ GENERAL_CHAT → GeneralChatHandler → 直接返回 LLM 回复
 ```
 
 ## 🤖 核心 Agents

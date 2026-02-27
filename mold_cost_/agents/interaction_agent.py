@@ -245,7 +245,7 @@ class InteractionAgent(BaseAgent):
         db_session=None
     ) -> OpResult:
         """
-        处理用户修改请求（集成意图识别）
+        处理用户自然语言消息请求（集成意图识别）
         
         流程：
         1. 意图识别（使用 IntentRecognizer）

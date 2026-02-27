@@ -75,6 +75,88 @@ api_gateway/
 └── websocket.py               # WebSocket管理
 ```
 
+
+
+`api_gateway` 就是传统意义上的后端，采用了经典的分层架构：
+
+## API Gateway 分层架构
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      api_gateway                            │
+├─────────────────────────────────────────────────────────────┤
+│  routers/              ← Controller 层                      │
+│  ├── jobs.py           处理 HTTP 请求/响应                   │
+│  ├── interactions.py   路由定义                              │
+│  ├── review_router.py  参数验证                              │
+│  └── ...                                                    │
+├─────────────────────────────────────────────────────────────┤
+│  services/             ← Service 层                         │
+│  ├── job_service.py    业务逻辑处理                          │
+│  ├── file_service.py   事务管理                              │
+│  └── interaction_service.py 调用 Repository                 │
+├─────────────────────────────────────────────────────────────┤
+│  repositories/         ← Mapper/DAO 层                      │
+│  ├── job_repository.py 数据库操作                            │
+│  ├── audit_repository.py SQL 查询                           │
+│  └── snapshot_repository.py 数据访问                        │
+├─────────────────────────────────────────────────────────────┤
+│  utils/                ← 基础设施                           │
+│  ├── minio_client.py   MinIO 客户端                          │
+│  ├── redis_client.py   Redis 客户端                          │
+│  ├── rabbitmq_client.py RabbitMQ 客户端                     │
+│  └── validators.py     工具函数                              │
+├─────────────────────────────────────────────────────────────┤
+│  models/               ← 数据模型                           │
+│  └── interaction_models.py Pydantic 模型                     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 对比传统后端架构
+
+| 层级           | api_gateway         | 传统后端   | 职责                         |
+| -------------- | ------------------- | ---------- | ---------------------------- |
+| **Controller** | `routers/*.py`      | Controller | 接收请求、参数校验、返回响应 |
+| **Service**    | `services/*.py`     | Service    | 业务逻辑、事务编排           |
+| **Repository** | `repositories/*.py` | Mapper/DAO | 数据库操作、SQL              |
+| **Utils**      | `utils/*.py`        | -          | 外部服务客户端、工具         |
+
+### 代码示例
+
+**Controller (routers/jobs.py)**:
+
+```python
+@router.post("/upload")
+async def upload_files(dwg_file: UploadFile = File(...)):
+    # 参数校验、调用 Service
+    result = await job_service.create_job_from_upload(...)
+    return result
+```
+
+**Service (services/job_service.py)**:
+
+```python
+async def create_job_from_upload(self, db, user_id, dwg_file):
+    # 业务逻辑
+    dwg_info = await self._upload_files(dwg_file)
+    job_id = await self.job_repo.create_job(db, job_id, user_id, dwg_info)
+    await self._publish_job_message(job_id)
+    return {"job_id": job_id}
+```
+
+**Repository (repositories/job_repository.py)**:
+
+```python
+async def create_job(self, db, job_id, user_id, dwg_info):
+    # 数据库操作
+    sql = text("INSERT INTO jobs ...")
+    await db.execute(sql, {...})
+```
+
+所以 `api_gateway` 确实是传统后端，**Agents 才是真正的 AI 智能层**，负责复杂的业务决策和编排。
+
+
+
 ## 🚀 快速开始
 
 ### 启动服务
@@ -93,7 +175,7 @@ uvicorn api_gateway.main:app --host 0.0.0.0 --port 8000 --workers 4
 - **ReDoc**: http://localhost:8000/redoc
 - **健康检查**: http://localhost:8000/health
 
-## 📡 API 路由
+## ==📡 API 路由==
 
 ### 1. 认证模块 (`/api`)
 

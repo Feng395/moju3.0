@@ -11,8 +11,16 @@ API Gateway - 主入口
   2. 补充 mold_cost-main 的路由（features, pricing, reports）
   3. 统一路由注册和端点信息
 """
-import logging
+import sys
 import os
+from pathlib import Path
+
+# 添加项目根目录到 Python 路径（确保调试模式下也能找到 shared 模块）
+project_root = Path(__file__).parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+import logging
 import asyncio
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
