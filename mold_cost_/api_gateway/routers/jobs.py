@@ -44,6 +44,9 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
+# 兼容旧版本路由（不带前缀，用于向后兼容）
+router_legacy = APIRouter(prefix="/api/jobs", tags=["jobs-legacy"])
+
 
 @router.post("/upload")
 async def upload_files(
@@ -374,6 +377,7 @@ async def _execute_continue_job(orchestrator, job_id: str):
 
 
 @router.get("/{job_id}")
+@router_legacy.get("/{job_id}")
 async def get_job(
     job_id: str,
     current_user: dict = Depends(get_current_user),
@@ -447,6 +451,7 @@ async def get_job(
 
 
 @router.get("/")
+@router_legacy.get("/")
 async def list_jobs(
     skip: int = 0,
     limit: int = 20,
@@ -463,6 +468,7 @@ async def list_jobs(
 
 
 @router.post("/")
+@router_legacy.post("/")
 async def create_job(
     dwg_file: UploadFile = File(...),
     prt_file: Optional[UploadFile] = File(None),
@@ -515,6 +521,7 @@ async def create_job(
 
 
 @router.post("/{job_id}/continue")
+@router_legacy.post("/{job_id}/continue")
 async def continue_job(
     job_id: str,
     current_user: dict = Depends(get_current_user)
