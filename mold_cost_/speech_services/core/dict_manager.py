@@ -53,10 +53,20 @@ class DictionaryManager:
         if self.dict_path:
             return self.dict_path
 
-        # 否则使用默认路径
+        # 优先使用模具行业字典（针对模具成本核算系统优化）
         root = get_project_root()
+        mold_dict = os.path.join(root, 'dictionaries', 'mold_industry_terms.json')
+        if os.path.exists(mold_dict):
+            debug(f"✓ 使用模具行业字典: {mold_dict}")
+            return mold_dict
+
+        # 回退到程序员术语字典
         default_path = os.path.join(root, 'dictionaries', 'programmer_terms.json')
-        return default_path if os.path.exists(default_path) else None
+        if os.path.exists(default_path):
+            debug(f"✓ 使用程序员术语字典: {default_path}")
+            return default_path
+        
+        return None
 
     def _parse_dict(self, data: List[Dict]) -> List[Dict]:
         """解析字典数据"""

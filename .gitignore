@@ -3,6 +3,10 @@ mold_cost_account_react/src/services/speechRecognitionService.ts
 mold_cost_account_react/src/services/speechSynthesisService.ts
 mold_cost_/.env.interaction_agent
 
+# 个人笔记文件
+CXH.md
+Y.md
+
 # 排除的目录（文档、示例、测试、旧版本）
 mold_cost_/CXH/
 mold_cost_/docs/
