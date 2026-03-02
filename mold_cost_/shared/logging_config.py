@@ -91,6 +91,37 @@ class JSONFormatter(logging.Formatter):
 
 # ========== 自定义 Console Formatter ==========
 
+class ModuleFilter(logging.Filter):
+    """
+    模块过滤器
+    
+    只允许特定模块的日志通过
+    """
+    
+    def __init__(self, module_prefix: str):
+        """
+        初始化过滤器
+        
+        Args:
+            module_prefix: 模块前缀（如 "api_gateway", "workers"）
+        """
+        super().__init__()
+        self.module_prefix = module_prefix
+    
+    def filter(self, record: logging.LogRecord) -> bool:
+        """
+        过滤日志记录
+        
+        Args:
+            record: 日志记录
+        
+        Returns:
+            bool: True 表示允许通过，False 表示过滤掉
+        """
+        # 检查 logger 名称是否以指定前缀开头
+        return record.name.startswith(self.module_prefix)
+
+
 class ColoredFormatter(logging.Formatter):
     """
     彩色控制台格式化器
@@ -144,6 +175,7 @@ def setup_logging(
     enable_console: bool = True,
     enable_file: bool = True,
     enable_json: bool = False,
+    enable_module_logs: bool = True,  # 新增：是否启用模块分类日志
     max_bytes: int = 10 * 1024 * 1024,  # 10MB
     backup_count: int = 5
 ):
@@ -156,8 +188,20 @@ def setup_logging(
         enable_console: 是否启用控制台输出
         enable_file: 是否启用文件输出
         enable_json: 是否启用 JSON 格式文件输出
+        enable_module_logs: 是否启用模块分类日志（按功能模块分文件）
         max_bytes: 单个日志文件最大大小
         backup_count: 保留的日志文件数量
+    
+    日志文件结构：
+        logs/
+        ├── app.log              # 所有日志（总日志）
+        ├── error.log            # 错误日志（ERROR及以上）
+        ├── api_gateway.log      # API Gateway 日志
+        ├── workers.log          # Workers 日志
+        ├── agents.log           # Agents 日志
+        ├── mcp_services.log     # MCP 服务日志
+        ├── scripts.log          # Scripts 日志
+        └── database.log         # 数据库操作日志
     """
     # 从环境变量获取日志级别
     if level is None:
@@ -189,7 +233,13 @@ def setup_logging(
         log_path = Path(log_dir)
         log_path.mkdir(parents=True, exist_ok=True)
         
-        # 普通文本日志
+        # 标准格式化器
+        file_formatter = logging.Formatter(
+            fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S"
+        )
+        
+        # 1. 总日志文件（所有日志）
         file_handler = logging.handlers.RotatingFileHandler(
             filename=log_path / "app.log",
             maxBytes=max_bytes,
@@ -197,17 +247,10 @@ def setup_logging(
             encoding="utf-8"
         )
         file_handler.setLevel(log_level)
-        
-        # 使用标准格式化器
-        file_formatter = logging.Formatter(
-            fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S"
-        )
         file_handler.setFormatter(file_formatter)
-        
         root_logger.addHandler(file_handler)
         
-        # 错误日志单独记录
+        # 2. 错误日志文件（ERROR及以上）
         error_handler = logging.handlers.RotatingFileHandler(
             filename=log_path / "error.log",
             maxBytes=max_bytes,
@@ -216,8 +259,66 @@ def setup_logging(
         )
         error_handler.setLevel(logging.ERROR)
         error_handler.setFormatter(file_formatter)
-        
         root_logger.addHandler(error_handler)
+        
+        # ========== 模块分类日志 ==========
+        if enable_module_logs:
+            # 定义模块日志配置
+            module_configs = [
+                {
+                    "name": "api_gateway",
+                    "filename": "api_gateway.log",
+                    "filter_prefix": "api_gateway",
+                    "description": "API Gateway 日志"
+                },
+                {
+                    "name": "workers",
+                    "filename": "workers.log",
+                    "filter_prefix": "workers",
+                    "description": "Workers 日志"
+                },
+                {
+                    "name": "agents",
+                    "filename": "agents.log",
+                    "filter_prefix": "agents",
+                    "description": "Agents 日志"
+                },
+                {
+                    "name": "mcp_services",
+                    "filename": "mcp_services.log",
+                    "filter_prefix": "mcp_services",
+                    "description": "MCP 服务日志"
+                },
+                {
+                    "name": "scripts",
+                    "filename": "scripts.log",
+                    "filter_prefix": "scripts",
+                    "description": "Scripts 日志"
+                },
+                {
+                    "name": "shared",
+                    "filename": "shared.log",
+                    "filter_prefix": "shared",
+                    "description": "Shared 模块日志"
+                }
+            ]
+            
+            # 为每个模块创建专用日志文件
+            for config in module_configs:
+                module_handler = logging.handlers.RotatingFileHandler(
+                    filename=log_path / config["filename"],
+                    maxBytes=max_bytes,
+                    backupCount=backup_count,
+                    encoding="utf-8"
+                )
+                module_handler.setLevel(log_level)
+                module_handler.setFormatter(file_formatter)
+                
+                # 添加过滤器，只记录特定模块的日志
+                module_handler.addFilter(ModuleFilter(config["filter_prefix"]))
+                
+                root_logger.addHandler(module_handler)
+
     
     # ========== JSON 格式日志 ==========
     if enable_json:

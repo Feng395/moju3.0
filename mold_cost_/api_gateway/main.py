@@ -40,6 +40,7 @@ setup_logging(
     level=os.getenv("LOG_LEVEL", "INFO"),
     enable_console=True,
     enable_file=True,
+    enable_module_logs=True,  # 启用模块分类日志
     enable_json=os.getenv("ENABLE_JSON_LOG", "false").lower() == "true"
 )
 

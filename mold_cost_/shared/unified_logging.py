@@ -52,6 +52,20 @@ _initialized = False
 
 # ========== 彩色控制台格式化器 ==========
 
+class ModuleFilter(logging.Filter):
+    """
+    模块过滤器
+    只允许特定模块的日志通过
+    """
+    
+    def __init__(self, module_prefix: str):
+        super().__init__()
+        self.module_prefix = module_prefix
+    
+    def filter(self, record: logging.LogRecord) -> bool:
+        return record.name.startswith(self.module_prefix)
+
+
 class ColoredConsoleFormatter(logging.Formatter):
     """
     彩色控制台格式化器
@@ -99,6 +113,7 @@ def init_logging(
     log_dir: str = None,
     enable_console: bool = True,
     enable_file: bool = True,
+    enable_module_logs: bool = True,  # 新增：启用模块分类日志
     colored_console: bool = True,
     force_reinit: bool = False
 ):
@@ -110,6 +125,7 @@ def init_logging(
         log_dir: 日志文件目录（默认：logs）
         enable_console: 是否启用控制台输出（默认：True）
         enable_file: 是否启用文件输出（默认：True）
+        enable_module_logs: 是否启用模块分类日志（默认：True）
         colored_console: 是否使用彩色控制台（默认：True）
         force_reinit: 是否强制重新初始化（默认：False）
     
@@ -163,7 +179,12 @@ def init_logging(
         log_path = Path(log_dir)
         log_path.mkdir(parents=True, exist_ok=True)
         
-        # 2.1 普通日志文件（所有级别）
+        file_formatter = logging.Formatter(
+            fmt=FILE_FORMAT,
+            datefmt=DATE_FORMAT
+        )
+        
+        # 2.1 总日志文件（所有级别）
         file_handler = logging.handlers.RotatingFileHandler(
             filename=log_path / "app.log",
             maxBytes=MAX_BYTES,
@@ -171,11 +192,6 @@ def init_logging(
             encoding="utf-8"
         )
         file_handler.setLevel(log_level)
-        
-        file_formatter = logging.Formatter(
-            fmt=FILE_FORMAT,
-            datefmt=DATE_FORMAT
-        )
         file_handler.setFormatter(file_formatter)
         root_logger.addHandler(file_handler)
         
@@ -189,6 +205,29 @@ def init_logging(
         error_handler.setLevel(logging.ERROR)
         error_handler.setFormatter(file_formatter)
         root_logger.addHandler(error_handler)
+        
+        # 2.3 模块分类日志
+        if enable_module_logs:
+            module_configs = [
+                ("api_gateway", "api_gateway.log"),
+                ("workers", "workers.log"),
+                ("agents", "agents.log"),
+                ("mcp_services", "mcp_services.log"),
+                ("scripts", "scripts.log"),
+                ("shared", "shared.log"),
+            ]
+            
+            for module_prefix, filename in module_configs:
+                module_handler = logging.handlers.RotatingFileHandler(
+                    filename=log_path / filename,
+                    maxBytes=MAX_BYTES,
+                    backupCount=BACKUP_COUNT,
+                    encoding="utf-8"
+                )
+                module_handler.setLevel(log_level)
+                module_handler.setFormatter(file_formatter)
+                module_handler.addFilter(ModuleFilter(module_prefix))
+                root_logger.addHandler(module_handler)
     
     # 标记为已初始化
     _initialized = True
@@ -199,6 +238,7 @@ def init_logging(
         f"level={level}, "
         f"console={enable_console}, "
         f"file={enable_file}, "
+        f"module_logs={enable_module_logs}, "
         f"log_dir={log_dir}"
     )
 
