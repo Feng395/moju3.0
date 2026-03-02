@@ -8,11 +8,7 @@ MCP (Model Context Protocol) Services 是独立的微服务模块，提供 CAD �
 
 ```
 mcp_services/
-├── cad_parser_mcp/          # CAD 解析服务
-│   └── server.py
-├── cad_price_search_mcp/    # CAD 价格搜索服务（主要）
-│   └── server.py
-├── pricing_server_mcp/      # 价格计算服务
+├── cad_price_search_mcp/    # CAD 价格搜索服务（整合所有功能）
 │   └── server.py
 ├── main.py                  # 统一启动入口
 ├── start_mcp.bat           # Windows 启动脚本
@@ -53,16 +49,38 @@ python main.py
 
 ## 🔌 服务说明
 
-### 1. CAD Price Search MCP (主要服务)
+### CAD Price Search MCP（整合服务）
 
 **端口**: 8200  
-**功能**: CAD 文件解析和价格搜索
+**功能**: 整合了 CAD 解析、价格搜索和价格计算的完整服务
 
-**提供的接口**:
-- CAD 文件格式转换
-- 特征识别
-- 价格数据搜索
-- 材料信息查询
+**提供的功能**:
+- **CAD 处理** (3 个工具)
+  - 完整的 CAD 处理流程（拆图 + 特征识别）
+  - 单独的 CAD 拆图功能
+  - 单独的特征识别功能
+
+- **价格搜索** (12 个工具)
+  - 基础信息搜索
+  - 材料信息搜索
+  - 热处理信息搜索
+  - 齿孔信息搜索
+  - 水磨信息搜索
+  - 线切割信息搜索
+  - NC 信息搜索
+  - 密度信息搜索
+  - 等...
+
+- **价格计算** (23 个工具)
+  - 材料成本计算
+  - 热处理成本计算
+  - 重量计算
+  - 齿孔成本计算
+  - 水磨成本计算
+  - 线切割成本计算
+  - NC 成本计算
+  - 总成本计算
+  - 等...
 
 **健康检查**:
 ```bash
@@ -73,51 +91,33 @@ curl http://localhost:8200/health
 ```python
 import requests
 
-# CAD 解析
-response = requests.post('http://localhost:8200/parse', json={
-    'file_path': 'path/to/file.dwg',
-    'job_id': 'job-123'
+# 通过 HTTP 调用工具
+response = requests.post('http://localhost:8200/call_tool', json={
+    'tool_name': 'process_cad_and_features',
+    'arguments': {
+        'job_id': 'job-123',
+        'dwg_url': 'path/to/file.dwg'
+    }
 })
 
 # 价格搜索
-response = requests.post('http://localhost:8200/search_price', json={
-    'material': '45#钢',
-    'process_type': 'NC'
+response = requests.post('http://localhost:8200/call_tool', json={
+    'tool_name': 'search_material',
+    'arguments': {
+        'job_id': 'job-123',
+        'subgraph_ids': []
+    }
 })
 ```
-
-### 2. CAD Parser MCP
-
-**端口**: 8101  
-**功能**: 专注于 CAD 文件解析
-
-**提供的接口**:
-- DWG → DXF 转换
-- 图层分析
-- 文本提取
-- 图块识别
-
-### 3. Pricing Server MCP
-
-**端口**: 8105  
-**功能**: 价格计算服务
-
-**提供的接口**:
-- 材料价格计算
-- 加工成本计算
-- 总价汇总
 
 ## ⚙️ 配置
 
 ### 环境变量
 
 ```bash
-# MCP 服务端口
+# MCP 服务配置
 CAD_PRICE_SEARCH_MCP_PORT=8200
-CAD_PARSER_MCP_PORT=8101
-PRICING_SERVER_MCP_PORT=8105
-
-# MCP 服务地址
+CAD_PRICE_SEARCH_MCP_HOST=0.0.0.0
 CAD_PRICE_SEARCH_MCP_URL=http://localhost:8200
 
 # ODA 转换器路径

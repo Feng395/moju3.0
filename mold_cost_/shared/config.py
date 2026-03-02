@@ -148,14 +148,9 @@ class Settings(BaseSettings):
     API_TIMEOUT: int = 60
     
     # ========== MCP服务配置 ==========
-    CAD_PARSER_MCP_URL: str = "http://localhost:8101"
     CAD_PRICE_SEARCH_MCP_URL: str = "http://localhost:8200"
     CAD_PRICE_SEARCH_MCP_HOST: str = "0.0.0.0"
     CAD_PRICE_SEARCH_MCP_PORT: int = 8200
-    FEATURE_RECOGNITION_MCP_URL: str = "http://localhost:8102"
-    NC_CONNECTOR_MCP_URL: str = "http://localhost:8103"
-    PRICING_SERVER_MCP_URL: str = "http://localhost:8105"
-    REPORT_GENERATOR_MCP_URL: str = "http://localhost:8107"
     
     # ========== 性能配置 ==========
     MAX_RETRIES: int = 3
