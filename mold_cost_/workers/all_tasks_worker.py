@@ -28,7 +28,9 @@ from agents import get_orchestrator_agent, get_pricing_agent
 
 # 初始化统一日志系统
 init_logging()
-logger = get_logger(__name__)
+
+# 使用固定的模块名称，确保日志正确分类
+logger = get_logger("workers.all_tasks_worker")
 
 # 从环境变量读取并发配置
 JOB_PROCESSING_CONCURRENCY = int(os.getenv("JOB_PROCESSING_CONCURRENCY", "1"))

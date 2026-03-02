@@ -20,7 +20,9 @@ from agents import get_pricing_agent
 
 # 初始化统一日志系统
 init_logging()
-logger = get_logger(__name__)
+
+# 使用固定的模块名称，确保日志正确分类
+logger = get_logger("workers.pricing_recalculate_worker")
 
 
 class PricingRecalculateWorker:

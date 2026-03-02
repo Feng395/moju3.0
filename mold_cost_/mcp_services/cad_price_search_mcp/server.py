@@ -44,7 +44,10 @@ sys.path.insert(0, str(project_root / "scripts"))
 
 # 初始化统一日志系统
 init_logging()
-logger = get_logger(__name__)
+
+# 使用固定的模块名称，而不是 __name__
+# 这样即使作为主程序运行，也能正确分类到 mcp_services.log
+logger = get_logger("mcp_services.cad_price_search_mcp.server")
 
 # ============================================================================
 # 导入 CAD 处理模块（可选）

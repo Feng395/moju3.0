@@ -23,7 +23,9 @@ from agents.orchestrator_agent import OrchestratorAgent
 
 # 初始化统一日志系统
 init_logging()
-logger = get_logger(__name__)
+
+# 使用固定的模块名称，确保日志正确分类
+logger = get_logger("workers.orchestrator_worker")
 
 
 class OrchestratorWorker:
