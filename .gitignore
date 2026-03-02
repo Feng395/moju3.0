@@ -1,6 +1,6 @@
 # 敏感配置文件
-mold_cost_account_react/src/services/speechRecognitionService.ts
-mold_cost_account_react/src/services/speechSynthesisService.ts
+# mold_cost_account_react/src/services/speechRecognitionService.ts
+# mold_cost_account_react/src/services/speechSynthesisService.ts
 mold_cost_/.env.interaction_agent
 
 # 个人笔记文件
