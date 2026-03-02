@@ -15,6 +15,8 @@ import sys
 import tempfile
 from pathlib import Path
 from typing import Optional
+from datetime import datetime
+import shutil
 
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
@@ -28,6 +30,10 @@ import torch
 PROJECT_ROOT = Path(__file__).parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
+
+# 音频文件暂存目录
+AUDIO_STORAGE_DIR = Path(__file__).parent / "audio"
+AUDIO_STORAGE_DIR.mkdir(exist_ok=True)
 
 # 导入核心模块
 from speech_services.core.transcriber import CodeWhisper
@@ -99,12 +105,20 @@ async def root():
 @app.get("/api/health")
 async def health_check():
     """健康检查"""
+    # 获取模型缓存目录
+    model_cache_dir = None
+    if whisper_instances:
+        # 从第一个实例获取缓存目录
+        first_instance = next(iter(whisper_instances.values()))
+        model_cache_dir = getattr(first_instance, 'download_root', None)
+    
     return {
         "status": "healthy",
         "service": "speech_services",
         "loaded_models": list(whisper_instances.keys()),
         "gpu_available": GPU_AVAILABLE,
-        "device": "cuda" if GPU_AVAILABLE else "cpu"
+        "device": "cuda" if GPU_AVAILABLE else "cpu",
+        "model_cache_dir": model_cache_dir
     }
 
 
@@ -153,6 +167,7 @@ async def transcribe_audio(
     - stats: 统计信息（如果启用详细模式）
     """
     temp_file = None
+    saved_file = None
     
     try:
         # 验证模型
@@ -168,10 +183,21 @@ async def transcribe_audio(
                 detail=f"不支持的文件格式: {file_ext}。支持的格式: {', '.join(allowed_extensions)}"
             )
         
-        # 保存上传的文件到临时文件
+        # 读取文件内容
+        content = await file.read()
+        
+        # 生成唯一的文件名（使用时间戳）
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        saved_filename = f"{timestamp}_{file.filename}"
+        saved_file = AUDIO_STORAGE_DIR / saved_filename
+        
+        # 保存到暂存目录
+        with open(saved_file, "wb") as f:
+            f.write(content)
+        
+        # 同时创建临时文件用于处理
         with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp:
             temp_file = tmp.name
-            content = await file.read()
             tmp.write(content)
         
         print(f"\n{'='*60}")
@@ -186,6 +212,8 @@ async def transcribe_audio(
         print(f"   学习习惯: {learn}")
         print(f"   详细模式: {verbose}")
         print(f"   临时文件: {temp_file}")
+        print(f"   暂存文件: {saved_file}")
+        print(f"   暂存路径: {saved_file.relative_to(PROJECT_ROOT)}")
         
         # 检查文件大小
         if len(content) < 1000:  # 小于 1KB
@@ -288,16 +316,31 @@ async def transcribe_audio(
         return JSONResponse(content=response)
     
     except Exception as e:
-        print(f"❌ 转录失败: {str(e)}")
+        print(f"\n❌ 转录失败")
+        print(f"{'='*60}")
+        print(f"   错误类型: {type(e).__name__}")
+        print(f"   错误信息: {str(e)}")
+        print(f"   文件: {file.filename if file else 'unknown'}")
+        print(f"   模型: {model}")
+        print(f"{'='*60}\n")
+        
+        import traceback
+        traceback.print_exc()
+        
         raise HTTPException(status_code=500, detail=f"转录失败: {str(e)}")
     
     finally:
-        # 清理临时文件
+        # 清理临时文件（保留暂存文件）
         if temp_file and os.path.exists(temp_file):
             try:
                 os.remove(temp_file)
-            except:
-                pass
+                print(f"🗑️  已清理临时文件: {temp_file}")
+            except Exception as e:
+                print(f"⚠️  清理临时文件失败: {e}")
+        
+        # 暂存文件保留，不删除
+        if saved_file and saved_file.exists():
+            print(f"💾 音频文件已暂存: {saved_file.relative_to(PROJECT_ROOT)}")
 
 
 @app.post("/api/transcribe/stream")
@@ -386,10 +429,75 @@ async def get_stats():
     # 使用第一个加载的模型获取统计
     whisper = list(whisper_instances.values())[0]
     
+    # 统计暂存文件
+    audio_files = list(AUDIO_STORAGE_DIR.glob("*"))
+    total_size = sum(f.stat().st_size for f in audio_files if f.is_file())
+    
     return {
         "loaded_models": list(whisper_instances.keys()),
         "dict_stats": whisper.get_dict_stats(),
-        "dict_categories": whisper.get_dict_categories()
+        "dict_categories": whisper.get_dict_categories(),
+        "audio_storage": {
+            "directory": str(AUDIO_STORAGE_DIR.relative_to(PROJECT_ROOT)),
+            "file_count": len(audio_files),
+            "total_size": total_size,
+            "total_size_mb": round(total_size / 1024 / 1024, 2)
+        }
+    }
+
+
+@app.get("/api/audio/list")
+async def list_audio_files():
+    """列出所有暂存的音频文件"""
+    audio_files = []
+    
+    for file_path in sorted(AUDIO_STORAGE_DIR.glob("*"), key=lambda x: x.stat().st_mtime, reverse=True):
+        if file_path.is_file():
+            stat = file_path.stat()
+            audio_files.append({
+                "filename": file_path.name,
+                "size": stat.st_size,
+                "size_kb": round(stat.st_size / 1024, 2),
+                "created_at": datetime.fromtimestamp(stat.st_ctime).isoformat(),
+                "modified_at": datetime.fromtimestamp(stat.st_mtime).isoformat()
+            })
+    
+    return {
+        "total_count": len(audio_files),
+        "files": audio_files
+    }
+
+
+@app.delete("/api/audio/clean")
+async def clean_audio_files(
+    older_than_hours: int = Form(24, description="删除多少小时前的文件")
+):
+    """清理旧的音频文件"""
+    from datetime import timedelta
+    
+    cutoff_time = datetime.now() - timedelta(hours=older_than_hours)
+    deleted_files = []
+    deleted_size = 0
+    
+    for file_path in AUDIO_STORAGE_DIR.glob("*"):
+        if file_path.is_file():
+            mtime = datetime.fromtimestamp(file_path.stat().st_mtime)
+            if mtime < cutoff_time:
+                size = file_path.stat().st_size
+                try:
+                    file_path.unlink()
+                    deleted_files.append(file_path.name)
+                    deleted_size += size
+                except Exception as e:
+                    print(f"删除文件失败: {file_path.name}, 错误: {e}")
+    
+    return {
+        "success": True,
+        "deleted_count": len(deleted_files),
+        "deleted_size": deleted_size,
+        "deleted_size_mb": round(deleted_size / 1024 / 1024, 2),
+        "cutoff_time": cutoff_time.isoformat(),
+        "files": deleted_files
     }
 
 

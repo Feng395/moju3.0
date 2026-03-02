@@ -785,6 +785,24 @@
                             "description": "同音误识别"
                         }
                     ]
+                },
+                "0.0018": {
+                    "correct": "0.0018",
+                    "description": "价格数值（常见的单价）",
+                    "variants": [
+                        {
+                            "wrong": "0.001吧",
+                            "description": "语气词误识别"
+                        },
+                        {
+                            "wrong": "0.001 吧",
+                            "description": "语气词误识别（带空格）"
+                        },
+                        {
+                            "wrong": "零点零零一吧",
+                            "description": "数字中文化+语气词"
+                        }
+                    ]
                 }
             }
         }

@@ -330,14 +330,18 @@ def extract_points_from_lines(lines: list) -> list:
 def identify_grinding_pairs(grinding_blocks: list, 
                             length_mm: float, 
                             width_mm: float, 
-                            thickness_mm: float) -> dict:
+                            thickness_mm: float) -> list:
     """
-    识别研磨标记块对，判断研磨的面
+    识别研磨标记块对，判断研磨的面（改进版）
     
     规则：
     - 同一水平线（Y坐标相近）上的两个标记，插入点距离 ≈ 长度 → 左右面
     - 同一水平线（Y坐标相近）上的两个标记，插入点距离 ≈ 宽度 → 前后面
     - 同一垂直线（X坐标相近）上的两个标记，插入点距离 ≈ 厚度 → 上下面
+    
+    改进点：
+    - 返回列表而不是字典，支持同一方向的多对研磨符号
+    - 避免重复配对（使用已配对标记）
     
     Args:
         grinding_blocks: 研磨标记块列表（包含 x, y 位置）
@@ -346,19 +350,26 @@ def identify_grinding_pairs(grinding_blocks: list,
         thickness_mm: 零件厚度
     
     Returns:
-        dict: 研磨对字典，例如 {'left_right': {...}, 'front_back': {...}, 'top_bottom': {...}}
+        list: 研磨对列表，每个元素包含 {'blocks': [...], 'distance': ..., 'dimension': ...}
     """
-    tolerance = 1  # 距离匹配容差（0.1mm）
-    alignment_tolerance = 15.0  # 对齐容差（判断是否在同一直线上，10mm）
+    tolerance = 1  # 距离匹配容差（1mm）
+    alignment_tolerance = 15.0  # 对齐容差（判断是否在同一直线上，15mm）
     
     logging.info(f"🔍 开始识别研磨对: L={length_mm}, W={width_mm}, T={thickness_mm}")
     logging.info(f"   容差设置: 距离匹配={tolerance}mm, 对齐={alignment_tolerance}mm")
     
-    grinding_pairs = {}
+    grinding_pairs = []
+    used_indices = set()  # 记录已配对的研磨符号索引，避免重复配对
     
     # 遍历所有标记块对
     for i, block1 in enumerate(grinding_blocks):
+        if i in used_indices:
+            continue
+            
         for j, block2 in enumerate(grinding_blocks[i+1:], start=i+1):
+            if j in used_indices:
+                continue
+                
             x1, y1 = block1['x'], block1['y']
             x2, y2 = block2['x'], block2['y']
             
@@ -374,41 +385,50 @@ def identify_grinding_pairs(grinding_blocks: list,
                 # 检查距离是否匹配长度（左右面）
                 diff_length = abs(distance - length_mm)
                 if diff_length < tolerance:
-                    if 'left_right' not in grinding_pairs:
-                        grinding_pairs['left_right'] = {
-                            'blocks': [block1, block2],
-                            'distance': distance,
-                            'dimension': 'length'
-                        }
-                        logging.info(
-                            f"   ✓ 识别到左右面研磨: 块对{i}-{j}, 距离={distance:.2f}mm ≈ 长度={length_mm:.2f}mm"
-                        )
+                    grinding_pairs.append({
+                        'blocks': [block1, block2],
+                        'distance': distance,
+                        'dimension': 'length',
+                        'direction': 'left_right'
+                    })
+                    used_indices.add(i)
+                    used_indices.add(j)
+                    logging.info(
+                        f"   ✓ 识别到左右面研磨: 块对{i}-{j}, 距离={distance:.2f}mm ≈ 长度={length_mm:.2f}mm"
+                    )
+                    break  # 找到配对后跳出内层循环
                 
                 # 检查距离是否匹配宽度（前后面）
                 diff_width = abs(distance - width_mm)
                 if diff_width < tolerance:
-                    if 'front_back' not in grinding_pairs:
-                        grinding_pairs['front_back'] = {
-                            'blocks': [block1, block2],
-                            'distance': distance,
-                            'dimension': 'width'
-                        }
-                        logging.info(
-                            f"   ✓ 识别到前后面研磨: 块对{i}-{j}, 距离={distance:.2f}mm ≈ 宽度={width_mm:.2f}mm"
-                        )
+                    grinding_pairs.append({
+                        'blocks': [block1, block2],
+                        'distance': distance,
+                        'dimension': 'width',
+                        'direction': 'front_back'
+                    })
+                    used_indices.add(i)
+                    used_indices.add(j)
+                    logging.info(
+                        f"   ✓ 识别到前后面研磨: 块对{i}-{j}, 距离={distance:.2f}mm ≈ 宽度={width_mm:.2f}mm"
+                    )
+                    break
                 
                 # 检查距离是否匹配厚度（上下面）
                 diff_thickness = abs(distance - thickness_mm)
                 if diff_thickness < tolerance:
-                    if 'top_bottom' not in grinding_pairs:
-                        grinding_pairs['top_bottom'] = {
-                            'blocks': [block1, block2],
-                            'distance': distance,
-                            'dimension': 'thickness'
-                        }
-                        logging.info(
-                            f"   ✓ 识别到上下面研磨: 块对{i}-{j}, 距离={distance:.2f}mm ≈ 厚度={thickness_mm:.2f}mm"
-                        )
+                    grinding_pairs.append({
+                        'blocks': [block1, block2],
+                        'distance': distance,
+                        'dimension': 'thickness',
+                        'direction': 'top_bottom'
+                    })
+                    used_indices.add(i)
+                    used_indices.add(j)
+                    logging.info(
+                        f"   ✓ 识别到上下面研磨: 块对{i}-{j}, 距离={distance:.2f}mm ≈ 厚度={thickness_mm:.2f}mm"
+                    )
+                    break
             
             # 判断是否在同一垂直线上（X坐标相近）
             elif dx < alignment_tolerance:
@@ -417,39 +437,48 @@ def identify_grinding_pairs(grinding_blocks: list,
                 
                 # 检查距离是否匹配厚度（上下面）
                 if abs(distance - thickness_mm) < tolerance:
-                    if 'top_bottom' not in grinding_pairs:
-                        grinding_pairs['top_bottom'] = {
-                            'blocks': [block1, block2],
-                            'distance': distance,
-                            'dimension': 'thickness'
-                        }
-                        logging.info(
-                            f"   ✓ 识别到上下面研磨: 块对{i}-{j}, 距离={distance:.2f}mm ≈ 厚度={thickness_mm:.2f}mm"
-                        )
+                    grinding_pairs.append({
+                        'blocks': [block1, block2],
+                        'distance': distance,
+                        'dimension': 'thickness',
+                        'direction': 'top_bottom'
+                    })
+                    used_indices.add(i)
+                    used_indices.add(j)
+                    logging.info(
+                        f"   ✓ 识别到上下面研磨: 块对{i}-{j}, 距离={distance:.2f}mm ≈ 厚度={thickness_mm:.2f}mm"
+                    )
+                    break
                 
                 # 检查距离是否匹配宽度（前后面）
                 if abs(distance - width_mm) < tolerance:
-                    if 'front_back' not in grinding_pairs:
-                        grinding_pairs['front_back'] = {
-                            'blocks': [block1, block2],
-                            'distance': distance,
-                            'dimension': 'width'
-                        }
-                        logging.info(
-                            f"   ✓ 识别到前后面研磨: 块对{i}-{j}, 距离={distance:.2f}mm ≈ 宽度={width_mm:.2f}mm"
-                        )
+                    grinding_pairs.append({
+                        'blocks': [block1, block2],
+                        'distance': distance,
+                        'dimension': 'width',
+                        'direction': 'front_back'
+                    })
+                    used_indices.add(i)
+                    used_indices.add(j)
+                    logging.info(
+                        f"   ✓ 识别到前后面研磨: 块对{i}-{j}, 距离={distance:.2f}mm ≈ 宽度={width_mm:.2f}mm"
+                    )
+                    break
                 
                 # 检查距离是否匹配长度（左右面）
                 if abs(distance - length_mm) < tolerance:
-                    if 'left_right' not in grinding_pairs:
-                        grinding_pairs['left_right'] = {
-                            'blocks': [block1, block2],
-                            'distance': distance,
-                            'dimension': 'length'
-                        }
-                        logging.info(
-                            f"   ✓ 识别到左右面研磨: 块对{i}-{j}, 距离={distance:.2f}mm ≈ 长度={length_mm:.2f}mm"
-                        )
+                    grinding_pairs.append({
+                        'blocks': [block1, block2],
+                        'distance': distance,
+                        'dimension': 'length',
+                        'direction': 'left_right'
+                    })
+                    used_indices.add(i)
+                    used_indices.add(j)
+                    logging.info(
+                        f"   ✓ 识别到左右面研磨: 块对{i}-{j}, 距离={distance:.2f}mm ≈ 长度={length_mm:.2f}mm"
+                    )
+                    break
     
     return grinding_pairs
 
@@ -532,13 +561,20 @@ def get_grinding_symbol_reference_point(points: list, direction: str) -> tuple:
 
 def is_grinding_symbol_pattern(points: list) -> dict:
     """
-    基于"三个相同三角形"的几何特征识别研磨符号
+    基于"三个相同三角形"的几何特征识别研磨符号（改进版）
     
     核心逻辑：
     1. 识别所有三角形（尖角）
     2. 判断三角形是否相似（高度/宽度相近）
-    3. 至少有 3 个相似的三角形
+    3. 组合判断：
+       - 标准情况：至少3个相似的三角形 → 识别
+       - 特殊情况：总共有3个三角形，其中至少2个相似 → 也识别
     4. 三角形方向一致
+    
+    改进点：
+    - 解决"2个对齐+1个不对齐"的情况（如PU-04）
+    - 不会误识别只有2个三角形的情况
+    - 保持对标准研磨符号的识别能力
     
     Args:
         points: 顶点列表 [(x1, y1), (x2, y2), ...]
@@ -561,11 +597,22 @@ def is_grinding_symbol_pattern(points: list) -> dict:
         # 检测垂直方向的三角形（X方向的尖角）
         vertical_triangles = detect_triangles(points, 'vertical')
         
-        # 判断哪个方向有更多相似的三角形
+        # 统计相似三角形数量
         h_similar = count_similar_triangles(horizontal_triangles)
         v_similar = count_similar_triangles(vertical_triangles)
         
-        if h_similar >= 3 and h_similar > v_similar:
+        # 统计总三角形数量
+        h_total = len(horizontal_triangles)
+        v_total = len(vertical_triangles)
+        
+        # 组合判断逻辑（关键改进）：
+        # 1. 标准情况：至少3个相似 → 识别
+        # 2. 特殊情况：总共有3个，其中至少2个相似 → 也识别
+        # 这样可以识别"2个对齐+1个不对齐"的情况，同时不会误识别只有2个三角形的情况
+        h_valid = (h_similar >= 3) or (h_total >= 3 and h_similar >= 2)
+        v_valid = (v_similar >= 3) or (v_total >= 3 and v_similar >= 2)
+        
+        if h_valid and h_similar > v_similar:
             # 获取水平锯齿的代表顶点位置
             reference_point = get_grinding_symbol_reference_point(points, 'horizontal')
             
@@ -575,7 +622,7 @@ def is_grinding_symbol_pattern(points: list) -> dict:
                 'triangles': h_similar,
                 'first_peak_pos': reference_point
             }
-        elif v_similar >= 3:
+        elif v_valid:
             # 获取垂直锯齿的代表顶点位置
             reference_point = get_grinding_symbol_reference_point(points, 'vertical')
             
@@ -704,7 +751,12 @@ def count_similar_triangles(triangles: list) -> int:
 
 def find_similar_group(triangles: list) -> int:
     """
-    在一组三角形中找到最大的相似组
+    在一组三角形中找到最大的相似组（改进版）
+    
+    改进点：
+    - 不使用所有三角形的平均值（避免异常值污染）
+    - 以每个三角形为基准，找与它相似的其他三角形
+    - 返回最大的相似组大小
     
     Args:
         triangles: 同类型的三角形列表
@@ -716,24 +768,45 @@ def find_similar_group(triangles: list) -> int:
         return len(triangles)
     
     try:
-        # 计算平均高度和宽度
-        avg_height = sum(t['height'] for t in triangles) / len(triangles)
-        avg_width = sum(t['width'] for t in triangles) / len(triangles)
-        
-        # 相似度阈值：30%
-        height_tolerance = avg_height * 0.3
-        width_tolerance = avg_width * 0.3
-        
-        # 统计符合相似标准的三角形
-        similar_count = 0
-        for t in triangles:
-            height_diff = abs(t['height'] - avg_height)
-            width_diff = abs(t['width'] - avg_width)
+        # 如果只有2个三角形，直接判断它们是否相似
+        if len(triangles) == 2:
+            t1, t2 = triangles[0], triangles[1]
+            height_diff = abs(t1['height'] - t2['height'])
+            width_diff = abs(t1['width'] - t2['width'])
+            avg_height = (t1['height'] + t2['height']) / 2
+            avg_width = (t1['width'] + t2['width']) / 2
             
-            if height_diff < height_tolerance and width_diff < width_tolerance:
-                similar_count += 1
+            # 相似度阈值：30%
+            if (height_diff < avg_height * 0.3 and 
+                width_diff < avg_width * 0.3):
+                return 2
+            return 0
         
-        return similar_count
+        # 3个或更多：找最大的相似组
+        # 方法：以每个三角形为基准，找与它相似的其他三角形
+        max_similar = 0
+        
+        for i in range(len(triangles)):
+            similar_count = 1  # 包括基准三角形自己
+            base_height = triangles[i]['height']
+            base_width = triangles[i]['width']
+            
+            for j in range(len(triangles)):
+                if i == j:
+                    continue
+                
+                height_diff = abs(triangles[j]['height'] - base_height)
+                width_diff = abs(triangles[j]['width'] - base_width)
+                
+                # 与基准三角形比较（不是与平均值比较）
+                # 相似度阈值：30%
+                if (height_diff < base_height * 0.3 and 
+                    width_diff < base_width * 0.3):
+                    similar_count += 1
+            
+            max_similar = max(max_similar, similar_count)
+        
+        return max_similar
         
     except Exception as e:
         logging.debug(f"查找相似组失败: {e}")

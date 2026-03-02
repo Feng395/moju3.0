@@ -5,6 +5,8 @@
 import whisper
 import torch
 import re
+import os
+from pathlib import Path
 from typing import Dict, Optional, Tuple, List
 
 import numpy as np
@@ -17,15 +19,24 @@ from .console import info, debug
 class CodeWhisper:
     """主转录引擎"""
 
-    def __init__(self, model_name: str = "medium", dict_path: Optional[str] = None):
+    def __init__(self, model_name: str = "medium", dict_path: Optional[str] = None, download_root: Optional[str] = None):
         """
          CodeWhisper 初始化，同时预加载字典的特定术语并将其构建为提示词喂给Whisper进行预热；模型默认medium
         Args:
             model_name: Whisper 模型 (tiny, base, small, medium, large)
             dict_path: 自定义字典路径，支持后续拓展todo
+            download_root: 模型下载/缓存目录，默认使用项目目录下的 models 文件夹
         """
         info(f"📦 Whisper 模型: {model_name}")
 
+        # 设置模型下载目录
+        if download_root is None:
+            # 默认使用项目目录下的 models 文件夹
+            project_root = Path(__file__).parent.parent
+            download_root = str(project_root / "models")
+            os.makedirs(download_root, exist_ok=True)
+            info(f"📁 模型缓存目录: {download_root}")
+        
         # 显式设定设备与精度：优先使用 NVIDIA CUDA，其次回退 CPU
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         
@@ -39,8 +50,10 @@ class CodeWhisper:
             info(f"   提示：安装 CUDA 版本的 PyTorch 可启用 GPU 加速")
 
         # openai-whisper 会在 CUDA 上自动使用 fp16，在 CPU 上用 fp32
-        self.model = whisper.load_model(model_name, device=self.device)
+        # 使用自定义的 download_root
+        self.model = whisper.load_model(model_name, device=self.device, download_root=download_root)
         self.model_name = model_name
+        self.download_root = download_root
 
         debug("📚 加载字典管理器")
         self.dict_manager = DictionaryManager(dict_path)

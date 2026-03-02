@@ -49,12 +49,19 @@ if errorlevel 1 (
 
 echo [INFO] 正在启动 Speech Services...
 echo [INFO] 端口: 8888
-echo [INFO] 模型: small
+echo [INFO] 模型: small (推荐，速度快且准确)
 echo [INFO] API 文档: http://localhost:8888/docs
 echo [INFO] 按 Ctrl+C 停止服务
 echo.
+echo [提示] 如需使用其他模型，请编辑此脚本修改 --model 参数
+echo         tiny   - 最快，准确率较低
+echo         base   - 很快，准确率一般
+echo         small  - 较快，准确率较高 (推荐)
+echo         medium - 中等速度，准确率高
+echo         large  - 较慢，准确率最高
+echo.
 
-REM 直接运行 main.py，不使用 uvicorn 命令行
+REM 直接运行 main.py，使用 small 模型
 python main.py --host 0.0.0.0 --port 8888 --model small %*
 
 pause
