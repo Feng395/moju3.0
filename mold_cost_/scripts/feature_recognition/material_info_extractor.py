@@ -756,8 +756,7 @@ if __name__ == '__main__':
     import sys
     
     # 日志已统一配置，无需重复初始化
-# logging.basicConfig(...)s - %(levelname)s - %(message)s'
-    )
+    # logging.basicConfig(...)
     
     # 测试材质提取函数
     print("\n" + "=" * 80)

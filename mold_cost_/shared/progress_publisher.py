@@ -158,8 +158,7 @@ class ProgressPublisher:
 if __name__ == "__main__":
     # 配置日志
     # 日志已统一配置，无需重复初始化
-# logging.basicConfig(...)s - %(name)s - %(levelname)s - %(message)s'
-    )
+    # logging.basicConfig(...)
     
     # 创建发布器
     publisher = ProgressPublisher()

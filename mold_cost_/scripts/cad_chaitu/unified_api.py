@@ -21,8 +21,7 @@ load_dotenv()
 
 # 配置日志
 # 日志已统一配置，无需重复初始化
-# logging.basicConfig(...)s - %(name)s - %(levelname)s - %(message)s'
-)
+# logging.basicConfig(...)
 logger = get_logger(__name__)
 
 # 导入处理函数

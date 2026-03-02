@@ -572,8 +572,7 @@ if __name__ == '__main__':
     import sys
     
     # 日志已统一配置，无需重复初始化
-# logging.basicConfig(...)s - %(levelname)s - %(message)s'
-    )
+    # logging.basicConfig(...)
     
     if len(sys.argv) < 2:
         print("用法: python frame_text_extractor.py <dxf_file_path>")
