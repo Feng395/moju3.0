@@ -174,16 +174,35 @@ async def transcribe_audio(
             content = await file.read()
             tmp.write(content)
         
-        print(f"📝 转录请求: file={file.filename}, size={len(content)} bytes, model={model}")
+        print(f"\n{'='*60}")
+        print(f"📝 转录请求")
+        print(f"{'='*60}")
+        print(f"   文件名: {file.filename}")
+        print(f"   文件大小: {len(content)} bytes ({len(content)/1024:.2f} KB)")
+        print(f"   文件格式: {file_ext}")
+        print(f"   模型: {model}")
+        print(f"   语言: {language}")
+        print(f"   修正术语: {fix_terms}")
+        print(f"   学习习惯: {learn}")
+        print(f"   详细模式: {verbose}")
+        print(f"   临时文件: {temp_file}")
         
         # 检查文件大小
         if len(content) < 1000:  # 小于 1KB
-            print(f"⚠️  警告：音频文件太小 ({len(content)} bytes)，可能无法识别")
+            print(f"\n⚠️  警告：音频文件太小 ({len(content)} bytes)，可能无法识别")
+        elif len(content) > 10 * 1024 * 1024:  # 大于 10MB
+            print(f"\n⚠️  警告：音频文件较大 ({len(content)/1024/1024:.2f} MB)，处理可能需要较长时间")
         
         # 获取 Whisper 实例
+        print(f"\n🔄 加载 Whisper 模型...")
         whisper = get_whisper_instance(model)
+        print(f"✅ 模型加载完成")
         
         # 转录
+        print(f"\n🎤 开始转录...")
+        import time
+        start_time = time.time()
+        
         result = whisper.transcribe(
             temp_file,
             language=language,
@@ -192,14 +211,34 @@ async def transcribe_audio(
             verbose=verbose
         )
         
+        elapsed_time = time.time() - start_time
+        print(f"⏱️  转录耗时: {elapsed_time:.2f} 秒")
+        
         # 检查识别结果
         text = result.get("text", "").strip()
+        detected_language = result.get("language", language)
+        
+        print(f"\n📊 转录结果")
+        print(f"{'='*60}")
+        print(f"   识别文本: {text if text else '(空)'}")
+        print(f"   文本长度: {len(text)} 字符")
+        print(f"   检测语言: {detected_language}")
+        
         if not text:
-            print(f"⚠️  警告：识别结果为空，可能原因：")
-            print(f"   - 录音时间太短（建议至少 1-2 秒）")
-            print(f"   - 没有说话或声音太小")
-            print(f"   - 音频格式不正确")
-            print(f"   - 环境噪音太大")
+            print(f"\n⚠️  警告：识别结果为空")
+            print(f"{'='*60}")
+            print(f"可能原因：")
+            print(f"   1. 录音时间太短（建议至少 1-2 秒）")
+            print(f"   2. 没有说话或声音太小")
+            print(f"   3. 音频格式不正确或损坏")
+            print(f"   4. 环境噪音太大")
+            print(f"   5. 麦克风权限未授予")
+            print(f"\n建议：")
+            print(f"   - 检查麦克风是否正常工作")
+            print(f"   - 尝试增加录音时长")
+            print(f"   - 在安静环境下录音")
+            print(f"   - 确保音频文件完整")
+            print(f"{'='*60}")
         
         # 构建响应
         response = {
@@ -212,22 +251,39 @@ async def transcribe_audio(
         if fix_terms:
             corrections = whisper.dict_manager.get_corrections()
             stats = whisper.get_dict_stats()
+            correction_count = stats.get("replacements_made", 0)
+            
+            print(f"\n🔧 术语修正")
+            print(f"{'='*60}")
+            print(f"   修正次数: {correction_count}")
+            if correction_count > 0 and verbose:
+                print(f"   修正详情:")
+                for corr in corrections:
+                    print(f"      {corr.get('original', '')} → {corr.get('corrected', '')}")
             
             response["corrections"] = {
-                "count": stats.get("replacements_made", 0),
+                "count": correction_count,
                 "details": corrections if verbose else []
             }
         
         # 添加详细信息
         if verbose:
+            dict_stats = whisper.get_dict_stats()
             response["stats"] = {
                 "model": model,
                 "file_size": len(content),
                 "file_type": file_ext,
-                "dict_rules": whisper.get_dict_stats().get("total_rules", 0)
+                "dict_rules": dict_stats.get("total_rules", 0),
+                "processing_time": elapsed_time
             }
+            
+            print(f"\n📈 详细统计")
+            print(f"{'='*60}")
+            print(f"   字典规则数: {dict_stats.get('total_rules', 0)}")
+            print(f"   处理时间: {elapsed_time:.2f} 秒")
         
-        print(f"✅ 转录成功: text_length={len(response['text'])}")
+        print(f"\n✅ 转录成功")
+        print(f"{'='*60}\n")
         
         return JSONResponse(content=response)
     

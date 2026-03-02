@@ -27,11 +27,11 @@ export interface GetSessionsParams {
 class SessionService {
   /**
    * 获取会话列表
-   * 注意：此接口使用独立的域名（http://localhost:8000）
+   * 注意：此接口使用独立的域名（http://192.168.1.143:8000）
    */
   async getSessions(params: GetSessionsParams = {}): Promise<SessionsResponse> {
     const { limit = 5, offset = 0 } = params
-    
+
     try {
       // 使用独立的 axios 实例调用获取会话列表接口
       const token = localStorage.getItem(AUTH_STORAGE_KEYS.TOKEN)
@@ -49,7 +49,7 @@ class SessionService {
           timeout: 10000000
         }
       )
-      
+
       // 适配新的返回格式
       const apiResponse = response.data
       if (apiResponse.success && apiResponse.data) {
@@ -59,7 +59,7 @@ class SessionService {
           user_id: apiResponse.data.sessions[0]?.user_id, // 从第一个会话中获取 user_id
         }
       }
-      
+
       // 如果格式不符合预期，返回空数据
       return {
         sessions: [],
@@ -75,7 +75,7 @@ class SessionService {
           throw new Error('未认证，请先登录')
         }
       }
-      
+
       throw new Error(error.response?.data?.message || '获取会话列表失败')
     }
   }
@@ -89,7 +89,7 @@ class SessionService {
 
   /**
    * 删除会话
-   * 注意：此接口使用独立的域名（http://localhost:8000）
+   * 注意：此接口使用独立的域名（http://192.168.1.143:8000）
    */
   async deleteSession(jobId: string): Promise<void> {
     try {
@@ -108,7 +108,7 @@ class SessionService {
           timeout: 10000000
         }
       )
-      
+
       return response.data
     } catch (error: any) {
       throw new Error(error.response?.data?.message || '删除会话失败')
@@ -117,7 +117,7 @@ class SessionService {
 
   /**
    * 重命名会话
-   * 注意：此接口使用独立的域名（http://localhost:8000）
+   * 注意：此接口使用独立的域名（http://192.168.1.143:8000）
    */
   async renameSession(jobId: string, name: string): Promise<void> {
     try {
@@ -137,7 +137,7 @@ class SessionService {
           timeout: 10000000
         }
       )
-      
+
       return response.data
     } catch (error: any) {
       throw new Error(error.response?.data?.message || '重命名会话失败')
@@ -146,7 +146,7 @@ class SessionService {
 
   /**
    * 批量删除会话
-   * 注意：此接口使用独立的域名（http://localhost:8000）
+   * 注意：此接口使用独立的域名（http://192.168.1.143:8000）
    * @param jobIds - 要删除的 job_id 数组，最多支持 100 个
    */
   async batchDeleteSessions(jobIds: string[]): Promise<{
@@ -190,7 +190,7 @@ class SessionService {
           timeout: 30000 // 批量删除可能需要更长时间
         }
       )
-      
+
       return response.data
     } catch (error: any) {
       throw new Error(error.response?.data?.message || '批量删除会话失败')

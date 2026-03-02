@@ -14,11 +14,11 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: 'http://192.168.1.143:8000',  // 使用局域网IP
         changeOrigin: true,
       },
       '/ws': {
-        target: 'ws://localhost:8000',
+        target: 'ws://192.168.1.143:8000',  // 使用局域网IP
         ws: true,
       },
     },
