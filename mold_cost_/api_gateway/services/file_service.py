@@ -10,6 +10,7 @@
 File Service
 负责文件下载和访问相关的业务逻辑
 """
+from shared.unified_logging import get_logger
 import logging
 from typing import Optional
 from fastapi import HTTPException
@@ -19,7 +20,7 @@ from sqlalchemy import text
 from ..utils.minio_client import minio_client
 from ..repositories.job_repository import JobRepository
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class FileService:

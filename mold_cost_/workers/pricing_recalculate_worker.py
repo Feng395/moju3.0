@@ -5,6 +5,7 @@
 运行方式:
     python -m workers.pricing_recalculate_worker
 """
+from shared.unified_logging import init_logging, get_logger
 import asyncio
 import logging
 import sys
@@ -17,12 +18,9 @@ sys.path.insert(0, str(project_root))
 from shared.message_queue import MessageQueue, QUEUE_PRICING_RECALCULATE
 from agents import get_pricing_agent
 
-# 配置日志
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+# 初始化统一日志系统
+init_logging()
+logger = get_logger(__name__)
 
 
 class PricingRecalculateWorker:

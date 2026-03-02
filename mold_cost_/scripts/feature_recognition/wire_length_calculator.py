@@ -7,7 +7,8 @@ import logging
 import math
 from typing import Optional
 
-logging.basicConfig(level=logging.INFO)
+# 日志已统一配置，无需重复初始化
+# logging.basicConfig(...)
 
 # 线割工艺颜色列表（001=红色, 220=黄色, 190=橙色）
 WIRE_CUT_COLORS = [1, 220, 190]

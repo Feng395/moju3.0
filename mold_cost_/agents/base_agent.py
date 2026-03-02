@@ -28,13 +28,14 @@ BaseAgent 增强功能：
 - build_error_result() - 标准错误构造
 - _log_operation() - 操作日志记录到数据库
 """
+from shared.unified_logging import get_logger
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 import logging
 from shared.timezone_utils import now_shanghai
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 class OpResult:
     """

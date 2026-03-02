@@ -4,13 +4,14 @@ WeightPriceCalculationHandler - 按重量计算模架价格处理器
 
 处理按重量计算模架价格的意图，准备 API 参数并保存到 Redis
 """
+from shared.unified_logging import get_logger
 import logging
 from typing import Dict, Any
 
 from .base_handler import BaseActionHandler
 from agents.intent_types import IntentResult, ActionResult
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class WeightPriceCalculationHandler(BaseActionHandler):

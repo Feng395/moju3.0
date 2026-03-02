@@ -7,12 +7,13 @@
 2. 验证字段值范围
 3. 验证字段格式
 """
+from shared.unified_logging import get_logger
 import re
 from typing import Any, Optional
 from decimal import Decimal
 import logging
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class FieldValidator:

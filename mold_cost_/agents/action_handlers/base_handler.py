@@ -4,6 +4,7 @@ BaseActionHandler - 动作处理器基类
 
 定义动作处理器的接口和公共方法
 """
+from shared.unified_logging import get_logger
 import json
 import logging
 from abc import ABC, abstractmethod
@@ -13,7 +14,7 @@ from shared.timezone_utils import now_shanghai
 
 from agents.intent_types import IntentResult, ActionResult, IntentType
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class BaseActionHandler(ABC):

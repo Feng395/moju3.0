@@ -24,6 +24,7 @@ ProcessRulesRepository - 工艺规则仓储
 - slow_and_two: 慢丝割一修二
 - slow_and_three: 慢丝割一修三
 """
+from shared.unified_logging import get_logger
 import json
 import logging
 from typing import List, Dict, Any, Optional
@@ -31,7 +32,7 @@ from sqlalchemy import select, and_, or_, distinct
 from sqlalchemy.ext.asyncio import AsyncSession
 from shared.models import PriceItem
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ProcessRulesRepository:

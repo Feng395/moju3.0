@@ -10,6 +10,7 @@
 Job Service
 负责任务相关的业务逻辑
 """
+from shared.unified_logging import get_logger
 import uuid
 import logging
 from datetime import datetime
@@ -26,7 +27,7 @@ from ..utils.rabbitmq_client import rabbitmq_client
 from ..utils.validators import validate_dwg_file, validate_prt_file
 from ..utils.encryption import process_file_encryption
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class JobService:

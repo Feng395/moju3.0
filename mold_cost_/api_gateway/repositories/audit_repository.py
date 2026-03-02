@@ -10,6 +10,7 @@
 Audit Repository
 负责审计日志的数据库操作
 """
+from shared.unified_logging import get_logger
 import json
 import logging
 from datetime import datetime
@@ -17,7 +18,7 @@ from typing import Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class AuditRepository:

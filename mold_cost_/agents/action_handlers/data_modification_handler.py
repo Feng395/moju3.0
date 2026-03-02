@@ -4,6 +4,7 @@ DataModificationHandler - 数据修改处理器
 
 处理数据修改意图，复用现有的 NLPParser 和 ModificationValidator
 """
+from shared.unified_logging import get_logger
 import logging
 import copy
 import uuid
@@ -14,7 +15,7 @@ from shared.timezone_utils import now_shanghai
 from .base_handler import BaseActionHandler
 from agents.intent_types import IntentResult, ActionResult
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class DataModificationHandler(BaseActionHandler):

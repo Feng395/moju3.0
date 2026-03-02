@@ -13,6 +13,7 @@ InteractionAgent - 数据审核和交互Agent (重构版)
 
 架构：事件驱动（非阻塞）
 """
+from shared.unified_logging import get_logger
 from typing import Dict, Any, List, Optional
 from .base_agent import BaseAgent, OpResult
 import logging
@@ -23,7 +24,7 @@ import hashlib
 import os
 from shared.timezone_utils import now_shanghai, format_shanghai_time
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class InteractionAgent(BaseAgent):

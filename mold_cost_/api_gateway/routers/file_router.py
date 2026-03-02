@@ -10,6 +10,7 @@
 文件管理路由
 负责文件预签名URL生成等文件相关操作
 """
+from shared.unified_logging import get_logger
 import logging
 from datetime import datetime, timedelta
 from typing import Optional
@@ -21,7 +22,7 @@ from ..auth import get_current_user
 from ..utils.minio_client import minio_client
 from ..config import settings
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/v1/files", tags=["files"])
 

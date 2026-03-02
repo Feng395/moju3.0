@@ -13,6 +13,7 @@ Subgraphs 成本汇总检索脚本（阶段 5）
 阶段 4: 总价计算 (price_wire_total, price_water_mill_total)
 阶段 5: 成本汇总检索 (本脚本) ← 从 subgraphs 表读取最终结果
 """
+from shared.unified_logging import get_logger
 from typing import List, Dict, Any
 import logging
 import asyncio
@@ -26,7 +27,7 @@ if __name__ == "__main__":
 
 from api_gateway.database import db
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # MCP 工具元数据
 MCP_TOOL_META = {
@@ -151,7 +152,8 @@ def search_by_job_id_sync(job_id: str, subgraph_ids: List[str]) -> Dict[str, Any
 
 # 测试入口
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    # 日志已统一配置，无需重复初始化
+# logging.basicConfig(...)
     
     if len(sys.argv) < 3:
         print("Usage: python search.py <job_id> <subgraph_id1> [subgraph_id2 ...]")

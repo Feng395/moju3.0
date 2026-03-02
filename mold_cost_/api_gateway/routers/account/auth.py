@@ -1,4 +1,5 @@
 """认证路由"""
+from shared.unified_logging import get_logger
 from fastapi import APIRouter, Request, Depends, HTTPException
 from api_gateway.models.account.auth_models import (
     LoginRequest, LoginResponse,
@@ -10,7 +11,7 @@ from api_gateway.utils.account.jwt_helper import create_access_token, verify_tok
 from api_gateway.dependencies import get_current_user
 import logging
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 router = APIRouter()
 
 

@@ -1,4 +1,5 @@
 """认证服务"""
+from shared.unified_logging import get_logger
 import logging
 from datetime import datetime
 from typing import Tuple, Optional
@@ -11,7 +12,7 @@ from api_gateway.config import settings
 
 load_dotenv()
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class DatabaseConnection:

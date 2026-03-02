@@ -13,6 +13,7 @@
 6. 更新 subgraphs 表的 separate_item_cost 字段
 7. 更新 processing_cost_calculation_details 表的 weight_price_steps 字段
 """
+from shared.unified_logging import get_logger
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field, ConfigDict
 from pydantic_settings import BaseSettings
@@ -22,7 +23,7 @@ import logging
 import json
 import os
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/price_wg", tags=["weight_price"])
 

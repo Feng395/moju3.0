@@ -15,6 +15,7 @@
    - 中丝/快丝：standard_base_cost = (boring_num × boring_fee) + (数量 × base_fee)
 5. 更新 processing_cost_calculation_details 表的 standard_base_cost 字段和步骤字段
 """
+from shared.unified_logging import get_logger
 from typing import List, Dict, Any
 import logging
 import asyncio
@@ -23,7 +24,7 @@ import json
 from api_gateway.database import db
 from ._batch_update_helper import batch_upsert_with_steps
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # MCP 工具元数据
 MCP_TOOL_META = {
@@ -376,7 +377,8 @@ if __name__ == "__main__":
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     sys.path.insert(0, project_root)
     
-    logging.basicConfig(level=logging.INFO)
+    # 日志已统一配置，无需重复初始化
+# logging.basicConfig(...)
     
     if len(sys.argv) < 3:
         print("Usage: python price_wire_standard.py <job_id> <subgraph_id1> [subgraph_id2 ...]")

@@ -9,6 +9,7 @@
 4. 计算公式: weight = density * length_mm * width_mm * thickness_mm
 5. 更新表: subgraphs.weight_kg, features.calculated_weight_kg, processing_cost_calculation_details.weight
 """
+from shared.unified_logging import get_logger
 from typing import List, Dict, Any, Optional
 from decimal import Decimal, ROUND_HALF_UP
 import logging
@@ -18,7 +19,7 @@ import json
 from api_gateway.database import db
 from ._batch_update_helper import batch_upsert_with_steps
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # MCP 工具元数据
 MCP_TOOL_META = {
@@ -359,7 +360,8 @@ if __name__ == "__main__":
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     sys.path.insert(0, project_root)
     
-    logging.basicConfig(level=logging.INFO)
+    # 日志已统一配置，无需重复初始化
+# logging.basicConfig(...)
     
     if len(sys.argv) < 3:
         print("Usage: python price_weight.py <job_id> <subgraph_id1> [subgraph_id2 ...]")

@@ -1,6 +1,7 @@
 """
 功能：发布任务进度到Redis，供WebSocket监听
 """
+from shared.unified_logging import get_logger
 import redis
 import json
 import logging
@@ -12,7 +13,7 @@ from dotenv import load_dotenv
 # 加载环境变量
 load_dotenv()
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ProgressPublisher:
@@ -156,9 +157,8 @@ class ProgressPublisher:
 # 使用示例
 if __name__ == "__main__":
     # 配置日志
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    # 日志已统一配置，无需重复初始化
+# logging.basicConfig(...)s - %(name)s - %(levelname)s - %(message)s'
     )
     
     # 创建发布器

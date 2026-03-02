@@ -1,6 +1,7 @@
 """
 MCP Client with connection pooling and retry mechanism
 """
+from shared.unified_logging import get_logger
 import requests
 import json
 import logging
@@ -10,7 +11,7 @@ import os
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class MCPClient:

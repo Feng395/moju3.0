@@ -7,10 +7,11 @@
 2. 生成缺失字段报告
 3. 生成 LLM 补全提示
 """
+from shared.unified_logging import get_logger
 from typing import Dict, Any, List, Optional
 import logging
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class CompletenessValidator:

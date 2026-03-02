@@ -6,13 +6,14 @@
 Step 1: job_price_snapshots表 -> 查询 category 为 tooth_hole、screw、stop_screw 的 sub_category、price、unit
 注：查询时忽略 subgraph_id 字段，只根据 job_id 查询
 """
+from shared.unified_logging import get_logger
 from typing import List, Dict, Any
 import logging
 import asyncio
 
 from api_gateway.database import db
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # MCP 工具元数据
 MCP_TOOL_META = {
@@ -109,7 +110,8 @@ if __name__ == "__main__":
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     sys.path.insert(0, project_root)
     
-    logging.basicConfig(level=logging.INFO)
+    # 日志已统一配置，无需重复初始化
+# logging.basicConfig(...)
     
     if len(sys.argv) < 2:
         print("Usage: python tooth_hole_search.py <job_id> [subgraph_ids...]")

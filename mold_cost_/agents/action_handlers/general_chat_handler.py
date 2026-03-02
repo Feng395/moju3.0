@@ -4,6 +4,7 @@ GeneralChatHandler - 普通聊天处理器
 
 处理普通聊天意图，使用 LLM 生成友好的回复
 """
+from shared.unified_logging import get_logger
 import os
 import logging
 from typing import Dict, Any
@@ -11,7 +12,7 @@ from typing import Dict, Any
 from .base_handler import BaseActionHandler
 from agents.intent_types import IntentResult, ActionResult
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class GeneralChatHandler(BaseActionHandler):

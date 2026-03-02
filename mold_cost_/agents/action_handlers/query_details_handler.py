@@ -4,6 +4,7 @@ QueryDetailsHandler - 查询详情处理器
 
 处理查询计算详情的意图，从数据库查询并格式化 calculation_steps
 """
+from shared.unified_logging import get_logger
 import logging
 import json
 import os
@@ -14,7 +15,7 @@ import httpx
 from .base_handler import BaseActionHandler
 from agents.intent_types import IntentResult, ActionResult
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class QueryDetailsHandler(BaseActionHandler):

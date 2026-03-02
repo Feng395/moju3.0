@@ -26,6 +26,7 @@ PricingAgent - 价格计算Agent
 - MCP 服务只负责单一工具执行
 - 支持部分失败的优雅降级
 """
+from shared.unified_logging import get_logger
 from typing import Dict, Any, List, Optional
 import logging
 from datetime import datetime
@@ -34,7 +35,7 @@ import os
 
 from .base_agent import BaseAgent, OpResult
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # 从环境变量读取批次大小配置
 PRICING_BATCH_SIZE = int(os.getenv('PRICING_BATCH_SIZE', '50'))

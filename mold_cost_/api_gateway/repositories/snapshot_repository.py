@@ -10,12 +10,13 @@
 Snapshot Repository
 负责快照相关的数据库操作
 """
+from shared.unified_logging import get_logger
 import logging
 from typing import Dict, Any, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class SnapshotRepository:

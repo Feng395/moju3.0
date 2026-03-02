@@ -14,12 +14,13 @@
 1. 简化聊天消息的保存
 2. 提供统一的日志接口
 """
+from shared.unified_logging import get_logger
 from typing import Dict, Any, Optional
 import logging
 
 from api_gateway.repositories.chat_history_repository import ChatHistoryRepository
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # 全局实例
 chat_history_repo = ChatHistoryRepository()

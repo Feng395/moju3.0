@@ -9,13 +9,14 @@ Step 3: 将 wire 工艺数据与价格数据进行匹配
 注：查询时忽略 subgraph_id 字段，只根据 job_id 查询
 注：sub_category 作为 conditions 字段使用
 """
+from shared.unified_logging import get_logger
 from typing import List, Dict, Any
 import logging
 import asyncio
 
 from api_gateway.database import db
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # MCP 工具元数据
 MCP_TOOL_META = {
@@ -126,7 +127,8 @@ if __name__ == "__main__":
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     sys.path.insert(0, project_root)
     
-    logging.basicConfig(level=logging.INFO)
+    # 日志已统一配置，无需重复初始化
+# logging.basicConfig(...)
     
     if len(sys.argv) < 2:
         print("Usage: python wire_base_search.py <job_id> [subgraph_ids...]")

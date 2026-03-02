@@ -11,12 +11,13 @@
   2. 创建工艺规则快照
   3. 快照版本管理
 """
+from shared.unified_logging import get_logger
 import logging
 from typing import Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class SnapshotManager:

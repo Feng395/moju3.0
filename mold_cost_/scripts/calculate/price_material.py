@@ -16,6 +16,7 @@
 - TOOLOX33 -> T00L0X33
 - TOOLOX44 -> T00L0X44
 """
+from shared.unified_logging import get_logger
 from typing import List, Dict, Any
 from decimal import Decimal, ROUND_HALF_UP
 import logging
@@ -25,7 +26,7 @@ import json
 from api_gateway.database import db
 from ._batch_update_helper import batch_upsert_with_steps
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # 材质别名映射（用于材质适配）
 # 价格表中存储的是 T00L0X33 和 T00L0X44，需要将别名转换为价格表中的标准名称
@@ -429,7 +430,8 @@ if __name__ == "__main__":
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     sys.path.insert(0, project_root)
     
-    logging.basicConfig(level=logging.INFO)
+    # 日志已统一配置，无需重复初始化
+# logging.basicConfig(...)
     
     if len(sys.argv) < 3:
         print("Usage: python price_material.py <job_id> <subgraph_id1> [subgraph_id2 ...]")

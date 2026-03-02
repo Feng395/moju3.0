@@ -3,6 +3,7 @@
 负责人：架构组
 功能：消费 RabbitMQ job_processing 队列，调用编排器处理任务
 """
+from shared.unified_logging import init_logging, get_logger
 import asyncio
 import logging
 import sys
@@ -20,12 +21,9 @@ from shared.message_queue import MessageQueue, QUEUE_JOB_PROCESSING
 from shared.progress_publisher import ProgressPublisher
 from agents.orchestrator_agent import OrchestratorAgent
 
-# 配置日志
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+# 初始化统一日志系统
+init_logging()
+logger = get_logger(__name__)
 
 
 class OrchestratorWorker:

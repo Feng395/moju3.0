@@ -10,6 +10,7 @@
   1. 单个子图重算
   2. 批量子图重算（通过消息队列异步处理）
 """
+from shared.unified_logging import get_logger
 from fastapi import APIRouter
 from pydantic import BaseModel
 from typing import List, Dict, Any
@@ -56,7 +57,7 @@ async def batch_recalculate(
         from datetime import datetime
         import logging
         
-        logger = logging.getLogger(__name__)
+        logger = get_logger(__name__)
         
         logger.info(
             f"收到批量重算请求: job_id={job_id}, "
@@ -90,7 +91,7 @@ async def batch_recalculate(
         
     except Exception as e:
         import logging
-        logger = logging.getLogger(__name__)
+        logger = get_logger(__name__)
         logger.error(f"提交批量重算任务失败: {e}", exc_info=True)
         
         return {

@@ -17,6 +17,7 @@ SSE 流式聊天路由 (Chat Router)
 
 学习主流方案：ChatGPT、豆包、Kimi
 """
+from shared.unified_logging import get_logger
 import logging
 import json
 import asyncio
@@ -35,7 +36,7 @@ from api_gateway.utils.chat_logger import (
 )
 from api_gateway.repositories.chat_history_repository import ChatHistoryRepository
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # 全局实例
 chat_history_repo = ChatHistoryRepository()

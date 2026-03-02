@@ -10,6 +10,7 @@
 交互数据访问层
 负责人：ZZH
 """
+from shared.unified_logging import get_logger
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from datetime import datetime
@@ -17,7 +18,7 @@ import uuid
 import json
 import logging
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 class InteractionRepository:
     """交互数据访问层"""

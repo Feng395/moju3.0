@@ -7,10 +7,11 @@
 2. 验证数据一致性
 3. 验证外键关系
 """
+from shared.unified_logging import get_logger
 from typing import Dict, Any, List, Optional
 import logging
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class BusinessValidator:

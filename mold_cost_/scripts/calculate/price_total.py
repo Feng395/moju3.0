@@ -16,6 +16,7 @@
 阶段 7: 数据清理和校验 (judgment.py) ← 先执行
 阶段 8: 最终总价计算 (本脚本) ← 后执行
 """
+from shared.unified_logging import get_logger
 from typing import List, Dict, Any
 from decimal import Decimal, InvalidOperation
 import logging
@@ -23,7 +24,7 @@ import asyncio
 
 from api_gateway.database import db
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # MCP 工具元数据
 MCP_TOOL_META = {
@@ -536,7 +537,8 @@ if __name__ == "__main__":
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     sys.path.insert(0, project_root)
     
-    logging.basicConfig(level=logging.INFO)
+    # 日志已统一配置，无需重复初始化
+# logging.basicConfig(...)
     
     print("price_total.py - 最终总价计算脚本（阶段 7）")
     print("需要配合 search.py (subgraphs_cost_search) 使用")

@@ -18,6 +18,7 @@
 
 阶段2.1实现
 """
+from shared.unified_logging import get_logger
 import logging
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -34,7 +35,7 @@ from api_gateway.utils.chat_logger import (
     log_assistant_message
 )
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/v1/review", tags=["review"])
 

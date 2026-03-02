@@ -5,6 +5,7 @@
 提供密码加密、Token生成、Token验证等安全相关功能
 基于JWT_GUIDE.md标准实现
 """
+from shared.unified_logging import get_logger
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 from passlib.context import CryptContext
@@ -20,7 +21,7 @@ except ImportError:
     JWT_AVAILABLE = False
     logging.warning("PyJWT库未安装，JWT功能不可用")
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # 密码加密上下文
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

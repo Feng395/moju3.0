@@ -12,6 +12,7 @@
   3. 支持 MinIO 存储
   4. 查询报表生成状态
 """
+from shared.unified_logging import get_logger
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from fastapi.responses import StreamingResponse, JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,7 +31,7 @@ from shared.database import get_db
 from shared.models import Job, Subgraph, Feature
 from api_gateway.utils.minio_client import upload_file_to_minio, get_file_url
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 router = APIRouter(prefix="/api/v1/reports", tags=["reports"])
 
 # 报表生成状态缓存

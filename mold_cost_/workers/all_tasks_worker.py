@@ -12,6 +12,7 @@
 或者:
     python workers/all_tasks_worker.py
 """
+from shared.unified_logging import init_logging, get_logger
 import asyncio
 import logging
 import sys
@@ -25,12 +26,9 @@ sys.path.insert(0, str(project_root))
 from shared.message_queue import MessageQueue, QUEUE_JOB_PROCESSING, QUEUE_PRICING_RECALCULATE
 from agents import get_orchestrator_agent, get_pricing_agent
 
-# 配置日志
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+# 初始化统一日志系统
+init_logging()
+logger = get_logger(__name__)
 
 # 从环境变量读取并发配置
 JOB_PROCESSING_CONCURRENCY = int(os.getenv("JOB_PROCESSING_CONCURRENCY", "1"))

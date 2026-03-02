@@ -9,6 +9,7 @@
 - 在数据库中处理 JSONB 合并，减少数据库往返次数
 - 性能提升约 50%
 """
+from shared.unified_logging import get_logger
 import json
 import logging
 import asyncio
@@ -16,7 +17,7 @@ from typing import List, Dict, Any
 
 from api_gateway.database import db
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 # PostgreSQL 原生 UPSERT SQL 模板

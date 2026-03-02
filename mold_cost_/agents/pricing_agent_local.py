@@ -14,12 +14,13 @@ PricingAgent Local - 价格计算Agent (本地脚本模式)
 - 降级备用方案
 """
 
+from shared.unified_logging import get_logger
 from typing import Dict, Any, List
 import logging
 import asyncio
 import os
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # 从环境变量读取批次大小配置
 PRICING_BATCH_SIZE = int(os.getenv('PRICING_BATCH_SIZE', '50'))

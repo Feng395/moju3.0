@@ -3,6 +3,7 @@
 CAD 服务统一接口
 整合拆图服务和特征识别服务的接口定义
 """
+from shared.unified_logging import get_logger
 import os
 import sys
 from pathlib import Path
@@ -19,11 +20,10 @@ import logging
 load_dotenv()
 
 # 配置日志
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+# 日志已统一配置，无需重复初始化
+# logging.basicConfig(...)s - %(name)s - %(levelname)s - %(message)s'
 )
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # 导入处理函数
 try:

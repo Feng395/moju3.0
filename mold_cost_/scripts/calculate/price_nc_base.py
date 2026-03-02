@@ -22,6 +22,7 @@ NC基本费用计算脚本
 9. 计算公式：nc_base_xxx_cost = nc_base时间 × 工时单价 × 数量（仅对有数据的工序计算）
 10. 更新 processing_cost_calculation_details 表的 nc_base_roughing_cost、nc_base_milling_cost、nc_base_drilling_cost 字段和步骤字段
 """
+from shared.unified_logging import get_logger
 from typing import List, Dict, Any, Tuple
 import logging
 import asyncio
@@ -29,7 +30,7 @@ import asyncio
 from api_gateway.database import db
 from ._batch_update_helper import batch_upsert_with_steps
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # MCP 工具元数据
 MCP_TOOL_META = {
@@ -582,7 +583,8 @@ if __name__ == "__main__":
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     sys.path.insert(0, project_root)
     
-    logging.basicConfig(level=logging.INFO)
+    # 日志已统一配置，无需重复初始化
+# logging.basicConfig(...)
     
     if len(sys.argv) < 3:
         print("Usage: python price_nc_base.py <job_id> <subgraph_id1> [subgraph_id2 ...]")

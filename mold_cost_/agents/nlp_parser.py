@@ -13,6 +13,7 @@ NLP Parser - 自然语言解析器
 - LLM 解析：使用本地 Qwen，智能但较慢
 - Fallback 机制：LLM 失败时降级到规则解析
 """
+from shared.unified_logging import get_logger
 import os
 import re
 import json
@@ -21,7 +22,7 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 import httpx
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class NLPParser:

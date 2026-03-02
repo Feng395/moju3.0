@@ -12,6 +12,7 @@ MinIO客户端工具类
   3. 支持外部访问地址配置
   4. 提供便捷函数供其他模块使用
 """
+from shared.unified_logging import get_logger
 import uuid
 from datetime import datetime, timedelta
 from typing import BinaryIO, Dict, Optional
@@ -23,7 +24,7 @@ import logging
 
 from ..config import settings
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class MinIOClient:

@@ -15,6 +15,7 @@ ReviewRepository - 审核数据访问层
 2. 更新审核数据
 3. 支持事务操作
 """
+from shared.unified_logging import get_logger
 from typing import List, Dict, Any, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
@@ -27,7 +28,7 @@ from shared.timezone_utils import now_shanghai
 # 导入模型
 from shared.models import Feature, JobPriceSnapshot, JobProcessSnapshot, Subgraph, ProcessingCostCalculationDetail
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ReviewRepository:

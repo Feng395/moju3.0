@@ -10,13 +10,14 @@
 WebSocket路由
 负责人：ZZH
 """
+from shared.unified_logging import get_logger
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from ..websocket import manager
 from datetime import datetime
 import logging
 import json
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 router = APIRouter()
 
 @router.websocket("/ws/{job_id}")

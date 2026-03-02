@@ -1,4 +1,5 @@
 """价格项路由"""
+from shared.unified_logging import get_logger
 from fastapi import APIRouter, Request, HTTPException
 from api_gateway.models.account.price_item_models import (
     CreatePriceItemRequest,
@@ -9,7 +10,7 @@ from api_gateway.models.account.price_item_models import (
 from api_gateway.services.account.price_item_service import price_item_service
 import logging
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 router = APIRouter()
 
 

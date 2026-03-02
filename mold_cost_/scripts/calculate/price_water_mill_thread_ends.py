@@ -9,6 +9,7 @@
 4. 计算线头费：thread_ends * price
 5. 更新 processing_cost_calculation_details 表的 thread_ends_cost
 """
+from shared.unified_logging import get_logger
 from typing import List, Dict, Any
 import logging
 import asyncio
@@ -18,7 +19,7 @@ from api_gateway.database import db
 from ._batch_update_helper import batch_upsert_with_steps
 from ._water_mill_helper import determine_mill_type, determine_part_type
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # MCP 工具元数据
 MCP_TOOL_META = {
@@ -351,7 +352,8 @@ if __name__ == "__main__":
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     sys.path.insert(0, project_root)
     
-    logging.basicConfig(level=logging.INFO)
+    # 日志已统一配置，无需重复初始化
+# logging.basicConfig(...)
     
     if len(sys.argv) < 3:
         print("Usage: python price_water_mill_thread_ends.py <job_id> <subgraph_id1> [subgraph_id2 ...]")

@@ -10,6 +10,7 @@
 Job Repository
 负责任务相关的数据库操作
 """
+from shared.unified_logging import get_logger
 import logging
 from datetime import datetime
 from typing import Optional, Dict, Any
@@ -17,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from shared.timezone_utils import now_shanghai
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class JobRepository:

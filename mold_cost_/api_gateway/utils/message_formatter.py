@@ -16,10 +16,11 @@ WebSocket 消息格式化器
 2. 构建 metadata 结构
 3. 支持多种消息类型的格式化
 """
+from shared.unified_logging import get_logger
 from typing import Dict, Any, Tuple, List, Optional
 import logging
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def format_websocket_message(ws_message: dict) -> Tuple[str, dict]:

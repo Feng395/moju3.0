@@ -11,6 +11,7 @@
   2. 文件大小验证
   3. 文件内容验证
 """
+from shared.unified_logging import get_logger
 import logging
 from pathlib import Path
 from typing import Optional
@@ -18,7 +19,7 @@ from fastapi import UploadFile, HTTPException
 
 from ..config import settings
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class FileValidator:

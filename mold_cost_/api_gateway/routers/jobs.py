@@ -28,6 +28,7 @@
   - GET /jobs/ - 获取任务列表 (mold_cost-main)
   - POST /jobs/{job_id}/continue - 继续执行任务 (mold_cost-main)
 """
+from shared.unified_logging import get_logger
 import logging
 from typing import Optional
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
@@ -40,7 +41,7 @@ from ..auth import get_current_user
 from ..services.job_service import JobService
 from ..services.file_service import FileService
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 

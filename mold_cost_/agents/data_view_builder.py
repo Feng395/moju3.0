@@ -12,10 +12,11 @@ DataViewBuilder - 数据视图构建器
 - 展示层：构建关联视图（用于前端展示和用户输入）
 - 映射层：双向转换
 """
+from shared.unified_logging import get_logger
 import logging
 from typing import Dict, List, Any, Optional
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class DataViewBuilder:

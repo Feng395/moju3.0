@@ -14,11 +14,12 @@ CADAgent Local - CAD拆图与特征识别Agent (本地脚本模式)
 - 降级备用方案
 """
 
+from shared.unified_logging import get_logger
 from typing import Dict, Any
 import logging
 import asyncio
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class CADAgentLocal:

@@ -4,13 +4,14 @@ ConfirmHandler - 确认处理器
 
 处理用户确认操作，根据 action_type 执行不同的操作
 """
+from shared.unified_logging import get_logger
 import logging
 import json
 from typing import Dict, Any, Optional
 from datetime import datetime
 import httpx
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ConfirmHandler:

@@ -18,6 +18,7 @@
 6. 根据线割类型分配到对应字段（slow_wire_cost/mid_wire_cost/fast_wire_cost）
 7. 批量更新 subgraphs 表
 """
+from shared.unified_logging import get_logger
 from typing import List, Dict, Any
 from decimal import Decimal, ROUND_HALF_UP
 import logging
@@ -27,7 +28,7 @@ import json
 from api_gateway.database import db
 from ._batch_update_helper import batch_upsert_with_steps
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # MCP 工具元数据
 MCP_TOOL_META = {
@@ -553,7 +554,8 @@ if __name__ == "__main__":
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     sys.path.insert(0, project_root)
     
-    logging.basicConfig(level=logging.INFO)
+    # 日志已统一配置，无需重复初始化
+# logging.basicConfig(...)
     
     print("price_wire_total.py - 总价计算脚本")
     print("需要配合 base_itemcode_search.py 和 wire_total_search.py 使用")

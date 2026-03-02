@@ -11,13 +11,14 @@
   3. 获取价格汇总信息
   4. 支持回退到直接执行模式
 """
+from shared.unified_logging import get_logger
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 import logging
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/pricing", tags=["pricing"])
 

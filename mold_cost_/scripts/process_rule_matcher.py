@@ -1,3 +1,4 @@
+from shared.unified_logging import get_logger
 import sys
 import os
 from pathlib import Path
@@ -13,7 +14,7 @@ import asyncio
 
 from api_gateway.database import db
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 async def match_and_update_process_rules(
@@ -138,9 +139,8 @@ async def _update_subgraph_process(
 if __name__ == "__main__":
     import asyncio
     
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    # 日志已统一配置，无需重复初始化
+# logging.basicConfig(...)s - %(name)s - %(levelname)s - %(message)s'
     )
     
     async def test():

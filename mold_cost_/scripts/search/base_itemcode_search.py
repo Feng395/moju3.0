@@ -7,13 +7,14 @@ Step 1: subgraphs表 -> 根据 job_id + subgraph_id 查询 part_name、part_code
 Step 2: features表 -> 根据 job_id + subgraph_id 查询 length_mm、width_mm、thickness_mm、metadata、water_mill、quantity、boring_num、material、has_auto_material、has_material_preparation、needs_heat_treatment、nc_time_cost
 Step 3: 合并零件基础信息和特征数据
 """
+from shared.unified_logging import get_logger
 from typing import List, Dict, Any
 import logging
 import asyncio
 
 from api_gateway.database import db
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # MCP 工具元数据
 MCP_TOOL_META = {
@@ -185,7 +186,8 @@ if __name__ == "__main__":
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     sys.path.insert(0, project_root)
     
-    logging.basicConfig(level=logging.INFO)
+    # 日志已统一配置，无需重复初始化
+# logging.basicConfig(...)
     
     if len(sys.argv) < 3:
         print("Usage: python base_itemcode_search.py <job_id> <subgraph_id1> [subgraph_id2 ...]")

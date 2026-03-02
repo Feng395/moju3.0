@@ -5,6 +5,7 @@
 2. dwg_file_name 作为会话名称
 3. 上传失败时会话也会回滚
 """
+from shared.unified_logging import get_logger
 import asyncio
 import sys
 import os
@@ -15,8 +16,9 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import text
 import logging
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# 日志已统一配置，无需重复初始化
+# logging.basicConfig(...)
+logger = get_logger(__name__)
 
 
 async def test_chat_session_creation():

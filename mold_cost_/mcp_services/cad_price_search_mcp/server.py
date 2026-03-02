@@ -8,6 +8,7 @@ CAD 和价格搜索 MCP 服务器 (SSE模式)
 2. 价格搜索：零件信息、价格信息检索
 3. 价格计算：材料费、加工费等计算
 """
+from shared.unified_logging import init_logging, get_logger
 from mcp.server import Server
 from mcp.server.sse import SseServerTransport
 from mcp.types import Tool, TextContent
@@ -41,12 +42,9 @@ sys.path.insert(0, str(project_root / "scripts" / "cad_chaitu"))
 sys.path.insert(0, str(project_root / "scripts" / "recognition"))
 sys.path.insert(0, str(project_root / "scripts"))
 
-# 配置日志（提前配置，以便在导入时使用）
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+# 初始化统一日志系统
+init_logging()
+logger = get_logger(__name__)
 
 # ============================================================================
 # 导入 CAD 处理模块（可选）

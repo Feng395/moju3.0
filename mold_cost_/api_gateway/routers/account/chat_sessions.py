@@ -1,4 +1,5 @@
 """聊天会话路由"""
+from shared.unified_logging import get_logger
 from fastapi import APIRouter, Request, Depends, Query
 from fastapi.responses import JSONResponse
 from typing import Optional
@@ -15,7 +16,7 @@ from api_gateway.models.account.chat_session_models import (
 from api_gateway.services.account.chat_session_service import chat_session_service
 from api_gateway.dependencies import get_current_user
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 router = APIRouter()
 
 

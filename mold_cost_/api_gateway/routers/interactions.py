@@ -10,6 +10,7 @@
 交互路由
 负责人：ZZH
 """
+from shared.unified_logging import get_logger
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..models.interaction_models import UserResponse
@@ -19,7 +20,7 @@ from ..auth import get_current_user
 from shared.database import get_db
 import logging
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 router = APIRouter(prefix="/api/v1/jobs", tags=["interactions"])
 
 @router.post("/{job_id}/submit")

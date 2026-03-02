@@ -8,11 +8,12 @@
 - 合并策略：保留原文件（mold_cost-main 无此文件）
 - 说明：预留接口，第一期不实现
 """
+from shared.unified_logging import get_logger
 import logging
 from typing import BinaryIO, Optional
 from fastapi import UploadFile
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class EncryptionService:

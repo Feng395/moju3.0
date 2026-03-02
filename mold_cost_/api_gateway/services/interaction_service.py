@@ -10,6 +10,7 @@
 交互业务逻辑层
 负责人：ZZH
 """
+from shared.unified_logging import get_logger
 from typing import List, Dict, Any
 from ..models.interaction_models import InteractionCard, InputField, UserResponse
 from ..repositories.interaction_repository import InteractionRepository
@@ -19,7 +20,7 @@ import uuid
 from datetime import datetime
 import logging
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 class InteractionService:
     """交互业务逻辑层"""

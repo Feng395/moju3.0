@@ -11,12 +11,13 @@ Agent 模块
   2. MCP 客户端统一获取
   3. 各 Agent 实例获取接口
 """
+from shared.unified_logging import get_logger
 import logging
 from typing import Optional
 from shared.mcp_client import MCPClient
 from shared.progress_publisher import ProgressPublisher
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # 全局单例
 _cad_mcp_client: Optional[MCPClient] = None

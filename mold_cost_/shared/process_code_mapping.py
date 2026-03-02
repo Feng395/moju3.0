@@ -14,10 +14,11 @@
 - 用户说"45#价格改成6块"
   → 系统需要将"45#"映射到 category="material", sub_category="45#"
 """
+from shared.unified_logging import get_logger
 import logging
 from typing import Optional, Dict, Any
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # 工艺类别映射（中文 → 英文代码）
 CATEGORY_MAPPING = {

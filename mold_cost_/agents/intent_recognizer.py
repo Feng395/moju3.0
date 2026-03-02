@@ -7,6 +7,7 @@ IntentRecognizer - 意图识别器
 2. 提取意图相关的参数
 3. 支持 LLM 识别和规则识别（Fallback）
 """
+from shared.unified_logging import get_logger
 import os
 import re
 import json
@@ -16,7 +17,7 @@ import httpx
 
 from .intent_types import IntentResult, IntentType, INTENT_KEYWORDS
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class IntentRecognizer:

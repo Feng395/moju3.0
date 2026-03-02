@@ -19,6 +19,7 @@ NC总费用计算脚本
   - final_nc_milling_cost = 0（无精铣数据，不使用基本费）
   - final_nc_drilling_cost = max(30, 80) = 80（使用基本费）
 """
+from shared.unified_logging import get_logger
 from typing import List, Dict, Any, Tuple
 from decimal import Decimal
 import logging
@@ -26,7 +27,7 @@ import asyncio
 
 from api_gateway.database import db
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # MCP 工具元数据
 MCP_TOOL_META = {
@@ -370,7 +371,8 @@ if __name__ == "__main__":
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     sys.path.insert(0, project_root)
     
-    logging.basicConfig(level=logging.INFO)
+    # 日志已统一配置，无需重复初始化
+# logging.basicConfig(...)
     
     if len(sys.argv) < 3:
         print("Usage: python price_nc_total.py <job_id> <subgraph_id1> [subgraph_id2 ...]")

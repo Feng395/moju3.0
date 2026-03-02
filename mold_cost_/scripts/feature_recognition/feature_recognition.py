@@ -58,8 +58,8 @@ from .slider_calculator import SliderCalculator
 LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
 LOG_FILE = os.getenv('LOG_FILE', 'feature_recognition.log')
 
-logging.basicConfig(
-    level=getattr(logging, LOG_LEVEL.upper()),
+# 日志已统一配置，无需重复初始化
+# logging.basicConfig(...)),
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler(LOG_FILE, encoding='utf-8'),

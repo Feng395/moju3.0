@@ -15,6 +15,7 @@
 2. 保存和查询聊天消息
 3. 获取会话历史
 """
+from shared.unified_logging import get_logger
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 import logging
@@ -22,7 +23,7 @@ import json
 from sqlalchemy import text
 from shared.timezone_utils import now_shanghai
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def json_serializer(obj):

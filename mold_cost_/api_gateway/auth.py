@@ -14,6 +14,7 @@
 
 基于JWT_GUIDE.md标准实现
 """
+from shared.unified_logging import get_logger
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from datetime import datetime, timedelta
@@ -30,7 +31,7 @@ except ImportError:
 
 from .config import settings
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 security = HTTPBearer()
 

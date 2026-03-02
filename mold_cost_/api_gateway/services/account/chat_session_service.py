@@ -1,4 +1,5 @@
 """聊天会话服务"""
+from shared.unified_logging import get_logger
 import logging
 import time
 from datetime import datetime
@@ -6,7 +7,7 @@ from typing import Tuple, Optional, List, Dict, Any
 import asyncpg
 from api_gateway.config import settings
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class DatabaseConnection:

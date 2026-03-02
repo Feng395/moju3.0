@@ -28,6 +28,7 @@ CAD Agent → MCP Client → MCP Service (cad-price-search-mcp) → 底层工具
 - 自适应：从环境变量 FEATURE_RECOGNITION_ADAPTIVE_CONCURRENCY 控制
 """
 
+from shared.unified_logging import get_logger
 from typing import Dict, Any, List, Optional
 import logging
 import asyncio
@@ -38,7 +39,7 @@ from datetime import datetime
 # 导入工艺规则匹配器
 from scripts.process_rule_matcher import match_and_update_process_rules
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -877,9 +878,8 @@ async def main():
 
 if __name__ == "__main__":
     # 配置日志
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    # 日志已统一配置，无需重复初始化
+# logging.basicConfig(...)s - %(name)s - %(levelname)s - %(message)s'
     )
     
     # 运行示例

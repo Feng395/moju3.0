@@ -12,13 +12,14 @@
   3. 支持批量处理指定子图
   4. 通过 WebSocket 推送进度
 """
+from shared.unified_logging import get_logger
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
 import logging
 import asyncio
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/features", tags=["features"])
 

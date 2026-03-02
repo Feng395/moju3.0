@@ -7,6 +7,7 @@
 2. 验证修改的字段是否存在
 3. 验证修改的值是否合法
 """
+from shared.unified_logging import get_logger
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 import logging
@@ -14,7 +15,7 @@ import logging
 from .field_validator import FieldValidator
 from .business_validator import BusinessValidator
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass

@@ -1,4 +1,5 @@
 """工艺规则路由"""
+from shared.unified_logging import get_logger
 from fastapi import APIRouter, Request, HTTPException
 from api_gateway.models.account.process_rule_models import (
     CreateProcessRuleRequest,
@@ -10,7 +11,7 @@ from api_gateway.models.account.process_rule_models import (
 from api_gateway.services.account.process_rule_service import process_rule_service
 import logging
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 router = APIRouter()
 
 

@@ -7,6 +7,7 @@
 2. 判断哪些消息需要持久化
 3. 调用格式化器和数据库接口
 """
+from shared.unified_logging import get_logger
 from typing import Optional
 import logging
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api_gateway.utils.message_formatter import format_websocket_message
 from api_gateway.utils.chat_logger import log_system_message
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class MessagePersistenceManager:

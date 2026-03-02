@@ -571,9 +571,8 @@ def format_frame_texts(frame_texts: Dict[str, List[Dict]]) -> str:
 if __name__ == '__main__':
     import sys
     
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s'
+    # 日志已统一配置，无需重复初始化
+# logging.basicConfig(...)s - %(levelname)s - %(message)s'
     )
     
     if len(sys.argv) < 2:
