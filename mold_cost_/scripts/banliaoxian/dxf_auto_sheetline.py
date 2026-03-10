@@ -3747,8 +3747,8 @@ def process_single_part(dxf_file_path: str, output_dir: str, fail_dir: str, log_
         
         # 记录处理信息
         if part_info:
-            msg = f"处理零件: L={lwt_info['L']}, W={lwt_info['W']}, T={lwt_info['T']}, 置信度={part_info['confidence']:.2f}"
-            if part_info['count'] > 1:
+            msg = f"处理零件: L={lwt_info['L']}, W={lwt_info['W']}, T={lwt_info['T']}, 置信度={part_info.get('confidence', 0.0):.2f}"
+            if part_info.get('count', 1) > 1:
                 msg += f", 数量={part_info['count']}"
         else:
             msg = f"处理主板料: L={lwt_info['L']}, W={lwt_info['W']}, T={lwt_info['T']}"
