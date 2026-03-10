@@ -1,0 +1,22 @@
+# 路径配置文件（包含个人路径，不应提交）
+path_config.py
+
+# 输出文件
+output/
+logs/
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 测试文件
+*.dxf
+*.dwg
+
+# 临时文件
+*.tmp
+*.bak
+*.swp
+*~
