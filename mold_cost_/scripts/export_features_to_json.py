@@ -3,10 +3,12 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from datetime import datetime
 import os
-from dotenv import load_dotenv
 
-# 加载环境变量
-load_dotenv()
+# 使用统一的配置加载模块
+from scripts.config_loader import load_config
+
+# 加载配置
+load_config()
 
 def export_features_to_json(job_id, output_file='features_export.json'):
     """
@@ -103,7 +105,7 @@ def export_features_to_json(job_id, output_file='features_export.json'):
 if __name__ == "__main__":
     # 使用示例
     # 760f6b64-349a-48ff-80cf-10ec0c63e28a    34
-    job_id = "e3e849d5-b949-49ad-ba90-7e326d923c4a"
+    job_id = "91bd5d9e-9b18-444e-9874-1aaedea90d0f"
     output_file = 'features_export.json'
     
     export_features_to_json(job_id, output_file)

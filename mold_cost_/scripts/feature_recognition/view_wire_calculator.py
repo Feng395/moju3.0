@@ -3,7 +3,6 @@
 视图线割计算协调器
 协调视图识别、线割实线计算和线割过滤等模块，完成整体业务逻辑
 """
-from shared.unified_logging import get_logger
 import logging
 import math
 import re
@@ -14,8 +13,7 @@ from .wire_cut_filter import WireCutFilter
 from .text_extractor import clean_text_content
 from .spatial_wire_cut_analyzer import SpatialWireCutAnalyzer
 
-# 日志已统一配置，无需重复初始化
-# logging.basicConfig(...)
+logging.basicConfig(level=logging.INFO)
 
 
 class ViewWireCalculator:
@@ -488,7 +486,10 @@ class ViewWireCalculator:
                             instruction=additional_code,
                             unmatched_red_lines=top_view_data['lines'],
                             view_bounds=top_view_bounds,
-                            view_name='top_view'
+                            view_name='top_view',
+                            length=length,
+                            width=width,
+                            thickness=thickness
                         )
                         
                         if spatial_detail:

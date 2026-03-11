@@ -9,33 +9,42 @@ from minio.error import S3Error
 from loguru import logger
 import os
 from pathlib import Path
-from dotenv import load_dotenv
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Dict, Tuple
 import time
 
-# 加载环境变量
-load_dotenv()
+# 使用统一的配置加载模块
+from scripts.config_loader import load_config, get_minio_config
+
+# 加载配置
+load_config()
+minio_config = get_minio_config()
 
 
 class MinIOClient:
     """MinIO 客户端封装类"""
-    
+
     def __init__(self):
         """初始化 MinIO 客户端"""
-        self.endpoint = os.getenv('MINIO_ENDPOINT', 'localhost:9000')
-        self.access_key = os.getenv('MINIO_ACCESS_KEY', 'minioadmin')
-        self.secret_key = os.getenv('MINIO_SECRET_KEY', 'minioadmin')
-        self.region = os.getenv('MINIO_REGION', 'us-east-1')
-        # 支持两种环境变量名：MINIO_SECURE（新）和 MINIO_USE_HTTPS（旧）
-        use_https_str = os.getenv('MINIO_SECURE', os.getenv('MINIO_USE_HTTPS', 'false'))
-        self.use_https = use_https_str.lower() == 'true'
-        self.bucket_files = os.getenv('MINIO_BUCKET_FILES', os.getenv('MINIO_BUCKET', 'mold-cost'))
-        
+        # 从配置中获取 MinIO 配置
+        self.endpoint = minio_config['endpoint']
+        self.access_key = minio_config['access_key']
+        self.secret_key = minio_config['secret_key']
+        self.region = minio_config['region']
+
+        # 安全处理 use_https
+        use_https_value = minio_config['use_https']
+        if isinstance(use_https_value, str):
+            self.use_https = use_https_value.lower() == 'true'
+        else:
+            self.use_https = False
+
+        self.bucket_files = minio_config['bucket_files']
+
         # 上传性能配置
-        self.upload_part_size = int(os.getenv('MINIO_UPLOAD_PART_SIZE', str(10 * 1024 * 1024)))  # 默认 10MB
-        self.upload_workers = int(os.getenv('MINIO_UPLOAD_WORKERS', '5'))  # 默认 5 个并发上传
-        
+        self.upload_part_size = minio_config['upload_part_size']
+        self.upload_workers = minio_config['upload_workers']
+
         try:
             self.client = Minio(
                 self.endpoint,

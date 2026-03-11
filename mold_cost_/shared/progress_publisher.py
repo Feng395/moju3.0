@@ -51,7 +51,12 @@ class ProgressPublisher:
     def _connect(self):
         """连接到Redis（支持降级模式）"""
         # 检查是否启用降级模式（跳过 Redis）
-        skip_redis = os.getenv("SKIP_REDIS", "false").lower() in ("true", "1", "yes")
+        skip_redis_value = os.getenv("SKIP_REDIS", "false")
+        # 确保 skip_redis_value 是字符串
+        if isinstance(skip_redis_value, str):
+            skip_redis = skip_redis_value.lower() in ("true", "1", "yes")
+        else:
+            skip_redis = False
         
         if skip_redis:
             logger.warning("⚠️ Redis 已禁用（SKIP_REDIS=true），进度将不会发布")

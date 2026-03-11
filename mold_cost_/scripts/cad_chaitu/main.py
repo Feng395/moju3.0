@@ -14,28 +14,39 @@ from typing import Optional, Dict
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from loguru import logger
-from dotenv import load_dotenv
+
+# 导入板料线集成器
+try:
+    from .material_line_integrator import MaterialLineIntegrator
+    MATERIAL_LINE_AVAILABLE = True
+except ImportError:
+    try:
+        from material_line_integrator import MaterialLineIntegrator
+        MATERIAL_LINE_AVAILABLE = True
+    except ImportError:
+        MATERIAL_LINE_AVAILABLE = False
+        logger.warning("⚠️ 板料线集成模块未找到，板料线功能将被禁用")
 
 # 禁用 ezdxf 的日志输出
 logging.getLogger('ezdxf').setLevel(logging.WARNING)
 
-# 加载项目根目录的 .env 文件
-_project_root = Path(__file__).parent.parent.parent
-_env_path = _project_root / '.env'
-if _env_path.exists():
-    load_dotenv(_env_path)
-    logger.info(f"✅ 加载配置文件: {_env_path}")
-else:
-    logger.error(f"❌ 配置文件不存在: {_env_path}")
-    raise FileNotFoundError(f"配置文件不存在: {_env_path}")
+# 使用统一的配置加载模块
+from scripts.config_loader import load_config, get_db_config, get_oda_config
 
-# 直接从环境变量读取配置（不使用默认值）
-ODA_FILE_CONVERTER_PATH = os.getenv('ODA_FILE_CONVERTER_PATH')
-DB_HOST = os.getenv('DB_HOST')
-DB_PORT = int(os.getenv('DB_PORT')) if os.getenv('DB_PORT') else None
-DB_NAME = os.getenv('DB_NAME')
-DB_USER = os.getenv('DB_USER')
-DB_PASSWORD = os.getenv('DB_PASSWORD')
+# 加载配置
+load_config()
+db_config = get_db_config()
+oda_config = get_oda_config()
+
+# 从配置中获取数据库配置
+DB_HOST = db_config['host']
+DB_PORT = db_config['port']
+DB_NAME = db_config['database']
+DB_USER = db_config['user']
+DB_PASSWORD = db_config['password']
+
+# 从配置中获取 ODA 配置
+ODA_FILE_CONVERTER_PATH = oda_config['oda_file_converter_path']
 
 # 验证必需的配置项
 _required_configs = {
@@ -210,6 +221,7 @@ async def chaitu_process(dwg_url: Optional[str], job_id: str, minio_client=None)
         analysis_system = CADAnalysisSystem()
         analysis_time = 0
         export_time = 0
+        material_line_time = 0
         upload_time = 0
         db_time = 0
         
@@ -351,6 +363,78 @@ async def chaitu_process(dwg_url: Optional[str], job_id: str, minio_client=None)
             if not export_files:
                 return {"status": "error", "message": "所有子图导出失败"}
             
+            # 步骤3.5: 为每个子图添加板料线（新增功能，不影响原有流程）
+            logger.info("步骤3.5: 开始为子图添加板料线...")
+            material_line_start = datetime.now()
+
+            # 检查是否启用板料线功能（从环境变量读取）
+            enable_material_lines_value = os.getenv('ENABLE_MATERIAL_LINES', 'true')
+            # 确保 enable_material_lines_value 是字符串
+            if isinstance(enable_material_lines_value, str):
+                enable_material_lines = enable_material_lines_value.lower() == 'true'
+            else:
+                enable_material_lines = False
+
+            if enable_material_lines and MATERIAL_LINE_AVAILABLE:
+                try:
+                    integrator = MaterialLineIntegrator(enable=True)
+                    
+                    for file_info in export_files:
+                        try:
+                            # 构建L/W/T字典
+                            lwt = {
+                                'L': 0.0,
+                                'W': 0.0,
+                                'T': 0.0
+                            }
+                            
+                            # 从region_info_list中查找对应的L/W/T
+                            for info in region_info_list:
+                                if info['sub_code'] == file_info['sub_code']:
+                                    # 尝试从视图中提取尺寸
+                                    region = info.get('region', {})
+                                    bounds = region.get('bounds', {})
+                                    
+                                    if bounds:
+                                        # 使用边界框尺寸作为估算
+                                        lwt['L'] = bounds.get('max_x', 0) - bounds.get('min_x', 0)
+                                        lwt['W'] = bounds.get('max_y', 0) - bounds.get('min_y', 0)
+                                        lwt['T'] = 10.0  # 默认厚度
+                                    
+                                    break
+                            
+                            # 只有当L/W/T都有效时才添加板料线
+                            if lwt['L'] > 0 and lwt['W'] > 0:
+                                integrator.add_material_lines_to_subgraph(
+                                    dxf_path=file_info['local_path'],
+                                    lwt=lwt,
+                                    sub_code=file_info['sub_code'],
+                                    part_info=None
+                                )
+                            else:
+                                logger.debug(f"  ⚠️ {file_info['sub_code']}: L/W/T无效，跳过板料线添加")
+                                
+                        except Exception as e:
+                            logger.warning(f"  ⚠️ {file_info['sub_code']}: 板料线添加异常 - {e}")
+                            # 不中断流程，继续处理其他子图
+                    
+                    # 打印统计信息
+                    integrator.print_stats()
+                    
+                    material_line_time = (datetime.now() - material_line_start).total_seconds()
+                    logger.info(f"✅ 板料线添加完成 (耗时: {material_line_time:.2f}s)")
+                    
+                except Exception as e:
+                    logger.warning(f"⚠️ 板料线添加模块异常: {e}")
+                    logger.warning("继续执行后续流程...")
+            else:
+                if not enable_material_lines:
+                    logger.info("ℹ️ 板料线功能已禁用（ENABLE_MATERIAL_LINES=false）")
+                elif not MATERIAL_LINE_AVAILABLE:
+                    logger.warning("⚠️ 板料线模块不可用，跳过板料线添加")
+                
+                material_line_time = 0
+            
             # 步骤4: 并发上传所有子图到MinIO
             logger.info("步骤4: 开始并发上传所有子图到MinIO...")
             upload_start = datetime.now()
@@ -433,6 +517,7 @@ async def chaitu_process(dwg_url: Optional[str], job_id: str, minio_client=None)
         logger.info(f"   步骤1 - 识别图框: {len(all_regions)} 个")
         logger.info(f"   步骤2 - 识别编号品名: {len(region_info_list)} 个 (失败 {failed_recognition_count} 个)")
         logger.info(f"   步骤3 - 导出子图: {len(export_files)} 个 (失败 {failed_export_count} 个)")
+        logger.info(f"   步骤3.5 - 添加板料线: {len(export_files)} 个 (耗时 {material_line_time:.2f}s)")
         logger.info(f"   步骤4 - 上传MinIO: {len(export_files) - failed_upload_count} 个 (失败 {failed_upload_count} 个)")
         logger.info(f"   步骤5 - 保存数据库: {db_success_count} 个 (失败 {failed_db_count} 个)")
         logger.info(f"   最终结果: {len(result_files)} 个子图成功")
@@ -441,6 +526,7 @@ async def chaitu_process(dwg_url: Optional[str], job_id: str, minio_client=None)
             f"📊 性能统计: "
             f"识别={analysis_time:.2f}s, "
             f"导出={export_time:.2f}s, "
+            f"板料线={material_line_time:.2f}s, "
             f"上传={upload_time:.2f}s, "
             f"数据库={db_time:.2f}s, "
             f"总耗时={total_time:.2f}s, "

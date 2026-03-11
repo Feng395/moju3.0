@@ -8,8 +8,7 @@ import re
 import logging
 from typing import Dict, List, Tuple, Optional, Any
 
-# 日志已统一配置，无需重复初始化
-# logging.basicConfig(...)
+logging.basicConfig(level=logging.INFO)
 
 
 def get_text_content(entity) -> Optional[str]:
@@ -303,8 +302,10 @@ def extract_all_texts_from_file(dxf_file_path: str) -> Dict[str, Any]:
 if __name__ == '__main__':
     import sys
     
-    # 日志已统一配置，无需重复初始化
-    # logging.basicConfig(...)
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s'
+    )
     
     if len(sys.argv) < 2:
         print("用法: python text_extractor.py <dxf_file_path>")

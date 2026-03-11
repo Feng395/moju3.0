@@ -7,8 +7,7 @@ import logging
 import re
 from typing import Tuple, Optional
 
-# 日志已统一配置，无需重复初始化
-# logging.basicConfig(...)
+logging.basicConfig(level=logging.INFO)
 
 
 def extract_dimensions_from_text(doc) -> Tuple[Optional[float], Optional[float], Optional[float]]:

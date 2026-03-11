@@ -13,12 +13,14 @@ import tempfile
 import shutil
 import ezdxf
 from pathlib import Path
-from dotenv import load_dotenv
 from typing import List, Dict, Any, Optional
 import sys
 
-# 加载环境变量
-load_dotenv()
+# 使用统一的配置加载模块
+from scripts.config_loader import load_config
+
+# 加载配置
+load_config()
 
 # 导入 minio_client（从上级目录）
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -58,8 +60,14 @@ from .slider_calculator import SliderCalculator
 LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
 LOG_FILE = os.getenv('LOG_FILE', 'feature_recognition.log')
 
-# 日志已统一配置，无需重复初始化
-# logging.basicConfig(...)
+logging.basicConfig(
+    level=getattr(logging, LOG_LEVEL.upper()),
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(LOG_FILE, encoding='utf-8'),
+        logging.StreamHandler()
+    ]
+)
 
 # 数据库配置 (PostgreSQL)
 DB_CONFIG = {
@@ -70,10 +78,17 @@ DB_CONFIG = {
     'database': os.getenv('DB_NAME')
 }
 
-# API服务配置
-API_HOST = os.getenv('API_HOST', '0.0.0.0')
-API_PORT = int(os.getenv('API_PORT', 8080))
-API_DEBUG = os.getenv('API_DEBUG', 'False').lower() == 'true'
+# API服务配置（从统一配置获取）
+from scripts.config_loader import get_server_config
+server_config = get_server_config()
+API_HOST = server_config['host']
+API_PORT = server_config['port']
+# 安全处理 API_DEBUG 环境变量
+api_debug_value = os.getenv('API_DEBUG', 'False')
+if isinstance(api_debug_value, str):
+    API_DEBUG = api_debug_value.lower() == 'true'
+else:
+    API_DEBUG = False
 
 
 def get_db_connection():
@@ -478,6 +493,17 @@ def analyze_dxf_features(dxf_file_path: str) -> Optional[Dict[str, Any]]:
         
         # 识别研磨面数（传入尺寸信息用于视图识别）
         grinding_faces = detect_grinding_faces(doc, length_mm, width_mm, thickness_mm)
+        
+        # 备用方案：处理尺寸缺失的情况
+        if grinding_faces == 0 and not all([length_mm, width_mm, thickness_mm]):
+            logging.info("🔄 尝试研磨面识别备用方案（尺寸缺失）")
+            fallback_result = fallback_grinding_detection(processing_instructions, doc)
+            if fallback_result > 0:
+                grinding_faces = fallback_result
+                logging.info(f"✅ 备用方案成功: {grinding_faces}面研磨")
+            else:
+                logging.warning("⚠️ 备用方案也无法识别研磨面")
+        
         logging.info(f"✅ 研磨识别完成: {grinding_faces}面研磨")
         
         logging.info("")
@@ -972,3 +998,196 @@ def batch_feature_recognition_process(job_id: str, subgraph_id: Optional[str] = 
                 pass
 
 
+
+# ==================== 研磨面识别备用方案 ====================
+
+def fallback_grinding_detection(processing_instructions, doc):
+    """
+    尺寸缺失时的研磨面识别备用方案
+    
+    Args:
+        processing_instructions: 加工说明字典
+        doc: DXF文档对象
+    
+    Returns:
+        int: 推断的研磨面数
+    """
+    try:
+        # 收集所有文本
+        all_texts = []
+        for frame_texts in processing_instructions.values():
+            all_texts.extend(frame_texts)
+        
+        logging.info(f"🔍 备用方案分析: 共收集到 {len(all_texts)} 条加工说明文本")
+        
+        # 方法1：直接文本匹配
+        text_result = extract_grinding_from_text_patterns(all_texts)
+        if text_result > 0:
+            logging.info(f"✅ 方法1成功: 直接文本匹配识别到 {text_result} 面研磨")
+            return text_result
+        
+        # 方法2：标准描述推断
+        standard_result = infer_grinding_from_standard_descriptions(all_texts)
+        if standard_result > 0:
+            logging.info(f"✅ 方法2成功: 标准描述推断为 {standard_result} 面研磨")
+            return standard_result
+        
+        # 方法3：符号计数（简化版）
+        try:
+            msp = doc.modelspace()
+            symbol_count = count_grinding_symbols_simple(msp)
+            logging.info(f"🔍 检测到 {symbol_count} 个可能的研磨符号")
+            
+            if symbol_count >= 2:
+                estimated_result = estimate_by_symbol_count(symbol_count, all_texts)
+                if estimated_result > 0:
+                    logging.info(f"✅ 方法3成功: 符号计数推断为 {estimated_result} 面研磨")
+                    return estimated_result
+        except Exception as e:
+            logging.debug(f"符号计数失败: {e}")
+        
+        logging.info("ℹ️ 所有备用方案都无法确定研磨面数")
+        return 0
+        
+    except Exception as e:
+        logging.error(f"备用研磨识别失败: {e}")
+        import traceback
+        logging.debug(traceback.format_exc())
+        return 0
+
+
+def extract_grinding_from_text_patterns(texts):
+    """从文本中直接提取研磨面数"""
+    import re
+    
+    patterns = [
+        r'(\d+)\s*面\s*研磨',
+        r'研磨\s*(\d+)\s*面',
+        r'磨\s*(\d+)\s*面',
+        r'(\d+)\s*面.*磨',
+    ]
+    
+    for text in texts:
+        for pattern in patterns:
+            match = re.search(pattern, text)
+            if match:
+                faces = int(match.group(1))
+                logging.info(f"🎯 文本匹配: '{text}' → {faces}面研磨")
+                return faces
+    
+    return 0
+
+
+def infer_grinding_from_standard_descriptions(texts):
+    """基于标准描述推断研磨面数"""
+    import re
+    
+    # 标准研磨描述模式 (描述, 推断面数)
+    standard_patterns = [
+        (r'D\s*:\s*\d+\s*-\s*研磨基准边[，,]\s*深度准[，,]\s*侧壁准', 4),
+        (r'研磨基准边.*深度准.*侧壁准', 4),
+        (r'全周.*研磨', 6),
+        (r'两面.*研磨', 2),
+        (r'四面.*研磨', 4),
+        (r'六面.*研磨', 6),
+        (r'研磨.*基准.*边', 4),  # 简化的基准边描述
+    ]
+    
+    for text in texts:
+        for pattern, faces in standard_patterns:
+            if re.search(pattern, text):
+                logging.info(f"🎯 标准描述匹配: '{text}' → {faces}面研磨")
+                return faces
+    
+    return 0
+
+
+def count_grinding_symbols_simple(msp):
+    """简化的研磨符号计数"""
+    try:
+        grinding_count = 0
+        
+        # 方法1：统计特定块名
+        target_blocks = ['XYMFH-A', 'XYMFH', 'XYMFH-A0', '研磨标记', '磨削标记']
+        for entity in msp.query('INSERT'):
+            try:
+                if entity.dxf.name in target_blocks:
+                    grinding_count += 1
+                    logging.debug(f"发现研磨块: {entity.dxf.name}")
+            except:
+                continue
+        
+        # 方法2：统计可能的研磨多段线（简化检测）
+        polylines = list(msp.query('POLYLINE')) + list(msp.query('LWPOLYLINE'))
+        for polyline in polylines:
+            try:
+                points = list(polyline.get_points('xy'))
+                # 研磨符号通常有6-20个点（3个三角形）
+                if 6 <= len(points) <= 20:
+                    # 简单检查是否可能是锯齿状
+                    if is_likely_grinding_symbol(points):
+                        grinding_count += 1
+                        logging.debug(f"发现可能的研磨多段线: {len(points)}个点")
+            except:
+                continue
+        
+        return grinding_count
+        
+    except Exception as e:
+        logging.debug(f"符号计数异常: {e}")
+        return 0
+
+
+def is_likely_grinding_symbol(points):
+    """简单判断点序列是否可能是研磨符号"""
+    try:
+        if len(points) < 6:
+            return False
+        
+        # 计算Y坐标的变化次数（锯齿状应该有多次上下变化）
+        y_changes = 0
+        for i in range(1, len(points)):
+            if i < len(points) - 1:
+                y1, y2, y3 = points[i-1][1], points[i][1], points[i+1][1]
+                # 检查是否有峰值或谷值
+                if (y2 > y1 and y2 > y3) or (y2 < y1 and y2 < y3):
+                    y_changes += 1
+        
+        # 研磨符号应该有至少3个峰值/谷值
+        return y_changes >= 3
+        
+    except:
+        return False
+
+
+def estimate_by_symbol_count(symbol_count, texts):
+    """基于符号数量和文本推断"""
+    
+    # 检查文本中的关键词
+    text_content = ' '.join(texts)
+    has_standard = '研磨基准边' in text_content
+    has_full_perimeter = '全周' in text_content
+    has_depth_side = '深度准' in text_content and '侧壁准' in text_content
+    
+    logging.info(f"🔍 文本特征: 基准边={has_standard}, 全周={has_full_perimeter}, 深度侧壁={has_depth_side}")
+    
+    # 基于文本特征和符号数量的推断规则
+    if has_standard or has_depth_side:
+        # 有标准研磨描述，通常是4面研磨
+        if 2 <= symbol_count <= 6:
+            return 4
+        elif symbol_count > 6:
+            return 6
+    
+    if has_full_perimeter and symbol_count >= 4:
+        return 6
+    
+    # 纯符号计数的保守推断
+    if symbol_count == 2:
+        return 2
+    elif symbol_count in [3, 4]:
+        return 4
+    elif symbol_count >= 5:
+        return 6
+    
+    return 0

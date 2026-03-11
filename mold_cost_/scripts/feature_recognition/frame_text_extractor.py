@@ -571,8 +571,10 @@ def format_frame_texts(frame_texts: Dict[str, List[Dict]]) -> str:
 if __name__ == '__main__':
     import sys
     
-    # 日志已统一配置，无需重复初始化
-    # logging.basicConfig(...)
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s'
+    )
     
     if len(sys.argv) < 2:
         print("用法: python frame_text_extractor.py <dxf_file_path>")

@@ -3,11 +3,9 @@
 CAD 服务统一接口
 整合拆图服务和特征识别服务的接口定义
 """
-from shared.unified_logging import get_logger
 import os
 import sys
 from pathlib import Path
-from dotenv import load_dotenv
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,13 +14,19 @@ from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 import logging
 
-# 加载环境变量
-load_dotenv()
+# 使用统一的配置加载模块
+from scripts.config_loader import load_config, get_server_config
+
+# 加载配置
+load_config()
+server_config = get_server_config()
 
 # 配置日志
-# 日志已统一配置，无需重复初始化
-# logging.basicConfig(...)
-logger = get_logger(__name__)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # 导入处理函数
 try:
@@ -212,12 +216,18 @@ async def health():
 # ==================== 启动配置 ====================
 
 if __name__ == "__main__":
-    # 从环境变量读取配置
-    host = os.getenv("API_HOST", "0.0.0.0")
-    port = int(os.getenv("API_PORT", "8000"))
-    reload = os.getenv("API_RELOAD", "false").lower() == "true"
-    workers = int(os.getenv("API_WORKERS", "1"))
-    
+    # 从统一配置读取服务器配置
+    host = server_config['host']
+    port = server_config['port']
+    reload = server_config['reload']
+    workers = server_config['workers']
+
+    # 安全处理 reload
+    if isinstance(reload, str):
+        reload = reload.lower() == 'true'
+    else:
+        reload = False
+
     print("=" * 80)
     print("CAD 服务统一接口")
     print("=" * 80)

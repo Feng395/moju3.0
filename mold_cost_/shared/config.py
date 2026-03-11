@@ -88,7 +88,11 @@ class Settings(BaseSettings):
         """支持 MINIO_SECURE 和 MINIO_USE_HTTPS 两种环境变量名"""
         minio_secure = os.getenv('MINIO_SECURE')
         if minio_secure is not None:
-            return minio_secure.lower() in ('true', '1', 'yes')
+            # 确保 minio_secure 是字符串
+            if isinstance(minio_secure, str):
+                return minio_secure.lower() in ('true', '1', 'yes')
+            # 如果不是字符串，返回 False
+            return False
         if isinstance(v, str):
             return v.lower() in ('true', '1', 'yes')
         return v

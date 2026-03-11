@@ -418,8 +418,10 @@ def _extract_number_from_code(code: str) -> int:
 
 # 测试代码
 if __name__ == '__main__':
-    # 日志已统一配置，无需重复初始化
-    # logging.basicConfig(...)
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s'
+    )
     
     print("\n" + "=" * 80)
     print("测试牙孔识别")
