@@ -14,6 +14,7 @@ from typing import Optional, Dict
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from loguru import logger
+import sys
 
 # 导入板料线集成器
 try:
@@ -29,6 +30,32 @@ except ImportError:
 
 # 禁用 ezdxf 的日志输出
 logging.getLogger('ezdxf').setLevel(logging.WARNING)
+
+# ========== 配置 loguru 日志输出 ==========
+# 移除默认的 stderr 输出
+logger.remove()
+
+# 添加控制台输出（保留）
+logger.add(sys.stderr, level="INFO", format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> - <level>{level:8}</level> - <cyan>{name}</cyan> - {message}")
+
+# 添加文件输出到统一日志目录
+log_dir = Path(__file__).parent.parent.parent / "logs"
+log_dir.mkdir(parents=True, exist_ok=True)
+
+logger.add(
+    str(log_dir / "cad_chaitu.log"),
+    rotation="10 MB",
+    retention="7 days",
+    level="DEBUG",
+    format="{time:YYYY-MM-DD HH:mm:ss} - {level:8} - {name} - {message}",
+    encoding="utf-8"
+)
+
+logger.info("=" * 80)
+logger.info("🔧 CAD 拆图模块启动")
+logger.info(f"📁 日志文件: {log_dir / 'cad_chaitu.log'}")
+logger.info(f"📦 模块路径: {__file__}")
+logger.info("=" * 80)
 
 # 使用统一的配置加载模块
 from scripts.config_loader import load_config, get_db_config, get_oda_config

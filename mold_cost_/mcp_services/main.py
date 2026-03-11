@@ -18,13 +18,19 @@ import argparse
 from pathlib import Path
 
 import uvicorn
-from loguru import logger
 
 # 添加项目根目录到 Python 路径
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 # 添加 cad_price_search_mcp 目录（server.py 内部需要）
 sys.path.insert(0, str(Path(__file__).parent / "cad_price_search_mcp"))
+
+# 使用统一日志系统
+from shared.unified_logging import init_logging, get_logger
+
+# 初始化日志系统（统一到项目根目录的 logs 文件夹）
+init_logging(log_dir=str(project_root / "logs"))
+logger = get_logger("mcp_services.main")
 
 
 def parse_args():

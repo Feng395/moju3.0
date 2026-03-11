@@ -1404,17 +1404,65 @@ docker-compose -f docker-compose.prod.yml up -d
 
 #### 1. 日志管理
 
-```bash
-# 查看应用日志
-sudo journalctl -u mold-cost-api -f
+系统采用统一的日志配置，所有日志输出到 `mold_cost_/logs/` 目录。
 
-# 查看Nginx日志
-sudo tail -f /var/log/nginx/mold-cost-access.log
-sudo tail -f /var/log/nginx/mold-cost-error.log
-
-# 查看应用日志文件
-tail -f logs/app.log
+##### 日志文件结构
 ```
+mold_cost_/logs/
+├── app.log              # 所有日志（总日志）
+├── error.log            # 错误日志（ERROR及以上）
+├── api_gateway.log      # API Gateway 日志
+├── workers.log          # Workers 日志
+├── agents.log           # Agents 日志
+├── mcp_services.log     # MCP 服务日志
+├── scripts.log          # Scripts 日志
+└── shared.log           # Shared 模块日志
+```
+
+##### 查看日志
+```bash
+# 查看所有日志
+tail -f logs/app.log
+
+# 查看错误日志
+tail -f logs/error.log
+
+# 查看 API Gateway 日志
+tail -f logs/api_gateway.log
+
+# 查看 MCP 服务日志
+tail -f logs/mcp_services.log
+
+# 查看 Workers 日志
+tail -f logs/workers.log
+```
+
+##### 日志配置
+通过环境变量配置日志级别：
+```bash
+# .env 文件
+LOG_LEVEL=INFO  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+LOG_DIR=logs    # 日志目录（可选）
+```
+
+##### 清理旧日志
+如果发现多个日志目录，运行清理脚本：
+```bash
+# Windows
+cleanup_old_logs.bat
+
+# Linux/Mac
+./cleanup_old_logs.sh
+```
+
+##### 测试日志系统
+```bash
+python test_logging.py
+```
+
+详细说明请参考：
+- [日志目录统一说明](LOG_DIRECTORY_UNIFIED.md)
+- [验证日志统一](VERIFY_LOG_UNIFIED.md)
 
 #### 2. 健康检查
 

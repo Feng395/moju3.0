@@ -42,8 +42,8 @@ sys.path.insert(0, str(project_root / "scripts" / "cad_chaitu"))
 sys.path.insert(0, str(project_root / "scripts" / "recognition"))
 sys.path.insert(0, str(project_root / "scripts"))
 
-# 初始化统一日志系统
-init_logging()
+# 初始化统一日志系统（统一到项目根目录的 logs 文件夹）
+init_logging(log_dir=str(project_root / "logs"))
 
 # 使用固定的模块名称，而不是 __name__
 # 这样即使作为主程序运行，也能正确分类到 mcp_services.log
@@ -132,7 +132,7 @@ mcp_server = Server("cad-price-search-mcp")
 
 @mcp_server.list_tools()
 async def list_tools() -> list[Tool]:
-    """列出所有可用工具 - CAD工具 + 价格工具"""
+    """列出所有可用工具 - CAD工具 + 价格工具 Wind"""
     tools = []
     
     # ========== CAD 处理工具 ==========
