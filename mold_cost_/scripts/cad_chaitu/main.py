@@ -10,11 +10,12 @@ import shutil
 import logging
 from pathlib import Path
 from datetime import datetime
-from typing import Optional, Dict
+from typing import Optional, Dict, Tuple
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from loguru import logger
 import sys
+import ezdxf
 
 # 导入板料线集成器
 try:
@@ -27,6 +28,18 @@ except ImportError:
     except ImportError:
         MATERIAL_LINE_AVAILABLE = False
         logger.warning("⚠️ 板料线集成模块未找到，板料线功能将被禁用")
+
+try:
+    from scripts.feature_recognition.dimension_extractor import extract_dimensions as extract_subgraph_dimensions
+except ImportError:
+    try:
+        from ..feature_recognition.dimension_extractor import extract_dimensions as extract_subgraph_dimensions
+    except ImportError:
+        try:
+            from feature_recognition.dimension_extractor import extract_dimensions as extract_subgraph_dimensions
+        except ImportError:
+            extract_subgraph_dimensions = None
+            logger.warning("⚠️ 子图尺寸提取模块未找到，板料线将回退到估算尺寸")
 
 # 禁用 ezdxf 的日志输出
 logging.getLogger('ezdxf').setLevel(logging.WARNING)
@@ -137,6 +150,60 @@ def init_managers(minio_client=None):
         storage_manager = FileStorageManager(minio_client=minio_client)
     
     logger.info("✅ 管理器初始化完成")
+
+
+def _extract_subgraph_lwt_from_dxf(dxf_path: str) -> Optional[Dict[str, float]]:
+    """优先从导出的子图DXF自身提取L/W/T"""
+    if extract_subgraph_dimensions is None:
+        return None
+
+    try:
+        doc = ezdxf.readfile(dxf_path)
+        length, width, thickness = extract_subgraph_dimensions(doc)
+        if length > 0 and width > 0 and thickness > 0:
+            return {
+                "L": float(length),
+                "W": float(width),
+                "T": float(thickness),
+            }
+    except Exception as e:
+        logger.debug(f"子图尺寸提取失败: {dxf_path} - {e}")
+
+    return None
+
+
+def _estimate_subgraph_lwt_from_region(region: Optional[Dict]) -> Optional[Dict[str, float]]:
+    """兼容兜底：无法从子图文本提取时，用拆图区域估算一个L/W/T"""
+    if not region:
+        return None
+
+    bounds = region.get("bounds", {})
+    if not bounds:
+        return None
+
+    span_x = float(bounds.get("max_x", 0) - bounds.get("min_x", 0))
+    span_y = float(bounds.get("max_y", 0) - bounds.get("min_y", 0))
+    if span_x <= 0 or span_y <= 0:
+        return None
+
+    return {
+        "L": max(span_x, span_y),
+        "W": min(span_x, span_y),
+        "T": 10.0,
+    }
+
+
+def _resolve_subgraph_lwt(dxf_path: str, region: Optional[Dict]) -> Tuple[Optional[Dict[str, float]], str]:
+    """解析单个子图用于板料线识别的L/W/T，并返回来源说明"""
+    extracted_lwt = _extract_subgraph_lwt_from_dxf(dxf_path)
+    if extracted_lwt:
+        return extracted_lwt, "subgraph_dxf_text"
+
+    estimated_lwt = _estimate_subgraph_lwt_from_region(region)
+    if estimated_lwt:
+        return estimated_lwt, "region_bounds_fallback"
+
+    return None, "unavailable"
 
 
 async def chaitu_process(dwg_url: Optional[str], job_id: str, minio_client=None) -> Dict:
@@ -332,6 +399,8 @@ async def chaitu_process(dwg_url: Optional[str], job_id: str, minio_client=None)
             
             if not region_info_list:
                 return {"status": "error", "message": "所有子图的编号和品名识别失败"}
+
+            region_info_map = {info['sub_code']: info for info in region_info_list}
             
             # 步骤3: 智能选择导出策略
             logger.info("步骤3: 开始导出所有子图...")
@@ -408,38 +477,27 @@ async def chaitu_process(dwg_url: Optional[str], job_id: str, minio_client=None)
                     
                     for file_info in export_files:
                         try:
-                            # 构建L/W/T字典
-                            lwt = {
-                                'L': 0.0,
-                                'W': 0.0,
-                                'T': 0.0
-                            }
-                            
-                            # 从region_info_list中查找对应的L/W/T
-                            for info in region_info_list:
-                                if info['sub_code'] == file_info['sub_code']:
-                                    # 尝试从视图中提取尺寸
-                                    region = info.get('region', {})
-                                    bounds = region.get('bounds', {})
-                                    
-                                    if bounds:
-                                        # 使用边界框尺寸作为估算
-                                        lwt['L'] = bounds.get('max_x', 0) - bounds.get('min_x', 0)
-                                        lwt['W'] = bounds.get('max_y', 0) - bounds.get('min_y', 0)
-                                        lwt['T'] = 10.0  # 默认厚度
-                                    
-                                    break
-                            
-                            # 只有当L/W/T都有效时才添加板料线
-                            if lwt['L'] > 0 and lwt['W'] > 0:
+                            region_info = region_info_map.get(file_info['sub_code'], {})
+                            region = region_info.get('region')
+                            lwt, lwt_source = _resolve_subgraph_lwt(file_info['local_path'], region)
+
+                            if lwt:
+                                logger.info(
+                                    f"  🔧 {file_info['sub_code']}: 使用 {lwt_source} "
+                                    f"获取L/W/T = {lwt['L']:.2f}/{lwt['W']:.2f}/{lwt['T']:.2f}"
+                                )
                                 integrator.add_material_lines_to_subgraph(
                                     dxf_path=file_info['local_path'],
                                     lwt=lwt,
                                     sub_code=file_info['sub_code'],
-                                    part_info=None
+                                    part_info={
+                                        'part_name': file_info.get('part_name'),
+                                        'part_code': file_info.get('part_code'),
+                                        'lwt_source': lwt_source,
+                                    }
                                 )
                             else:
-                                logger.debug(f"  ⚠️ {file_info['sub_code']}: L/W/T无效，跳过板料线添加")
+                                logger.debug(f"  ⚠️ {file_info['sub_code']}: 无法解析有效L/W/T，跳过板料线添加")
                                 
                         except Exception as e:
                             logger.warning(f"  ⚠️ {file_info['sub_code']}: 板料线添加异常 - {e}")

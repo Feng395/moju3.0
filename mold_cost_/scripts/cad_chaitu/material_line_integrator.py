@@ -20,6 +20,19 @@ def _lazy_import_logger():
     return logger
 
 
+def _lazy_import_view_identifier():
+    """寤惰繜瀵煎叆视图识别器，复用特征识别中的兜底逻辑"""
+    try:
+        from scripts.feature_recognition.view_identifier import ViewIdentifier
+        return ViewIdentifier
+    except ImportError:
+        try:
+            from feature_recognition.view_identifier import ViewIdentifier
+            return ViewIdentifier
+        except ImportError:
+            return None
+
+
 class MaterialLineIntegrator:
     """板料线集成器 - 为子图添加板料线"""
     
@@ -71,20 +84,14 @@ class MaterialLineIntegrator:
             # 1. 读取DXF
             doc = ezdxf.readfile(dxf_path)
             msp = doc.modelspace()
-            
-            # 2. 检查是否已存在板料线（避免重复添加）
-            if self._has_material_lines(msp):
-                self.logger.info(f"  ℹ️ {sub_code}: 已存在板料线，跳过添加")
-                self.stats['skipped'] += 1
-                return True
-            
-            # 3. 查找视图并添加板料线
+
+            # 2. 查找视图并添加板料线
             lines_added = self._find_views_and_add_lines(
                 msp, doc, lwt, sub_code, part_info
             )
             
             if lines_added > 0:
-                # 4. 保存DXF（覆盖原文件）
+                # 3. 保存DXF（覆盖原文件）
                 doc.saveas(dxf_path)
                 self.logger.info(f"  ✅ {sub_code}: 添加 {lines_added} 个板料线")
                 self.stats['success'] += 1
@@ -99,13 +106,99 @@ class MaterialLineIntegrator:
             self.stats['failed'] += 1
             return False
     
-    def _has_material_lines(self, msp) -> bool:
-        """检查是否已存在板料线"""
+    def _collect_existing_material_line_bboxes(self, msp) -> List[Tuple[float, float, float, float]]:
+        """收集已有板料线的边界框，用于局部去重而不是整图跳过"""
+        existing_boxes = []
         for entity in msp.query('LINE LWPOLYLINE POLYLINE'):
             layer = entity.dxf.layer
-            if 'MATERIAL_LINE' in layer.upper():
+            if 'MATERIAL_LINE' not in layer.upper():
+                continue
+
+            bbox = self._get_entity_bbox(entity)
+            if bbox:
+                existing_boxes.append(bbox)
+        return existing_boxes
+
+    def _get_entity_bbox(self, entity) -> Optional[Tuple[float, float, float, float]]:
+        """获取LINE/LWPOLYLINE/POLYLINE实体边界框"""
+        try:
+            if entity.dxftype() == 'LINE':
+                return (
+                    min(entity.dxf.start[0], entity.dxf.end[0]),
+                    min(entity.dxf.start[1], entity.dxf.end[1]),
+                    max(entity.dxf.start[0], entity.dxf.end[0]),
+                    max(entity.dxf.start[1], entity.dxf.end[1]),
+                )
+
+            if entity.dxftype() in ['LWPOLYLINE', 'POLYLINE']:
+                points = list(entity.get_points(format='xy'))
+                if not points:
+                    return None
+                xs = [p[0] for p in points]
+                ys = [p[1] for p in points]
+                return (min(xs), min(ys), max(xs), max(ys))
+        except Exception:
+            return None
+
+        return None
+
+    def _bbox_overlap_ratio(
+        self,
+        bbox1: Tuple[float, float, float, float],
+        bbox2: Tuple[float, float, float, float]
+    ) -> float:
+        """计算两个边界框的重叠比例，便于判断是否已经加过板料线"""
+        x1 = max(bbox1[0], bbox2[0])
+        y1 = max(bbox1[1], bbox2[1])
+        x2 = min(bbox1[2], bbox2[2])
+        y2 = min(bbox1[3], bbox2[3])
+
+        if x2 <= x1 or y2 <= y1:
+            return 0.0
+
+        intersection = (x2 - x1) * (y2 - y1)
+        area1 = max((bbox1[2] - bbox1[0]) * (bbox1[3] - bbox1[1]), 1.0)
+        area2 = max((bbox2[2] - bbox2[0]) * (bbox2[3] - bbox2[1]), 1.0)
+        return intersection / min(area1, area2)
+
+    def _has_material_line_for_bbox(
+        self,
+        existing_boxes: List[Tuple[float, float, float, float]],
+        bbox: Tuple[float, float, float, float],
+        threshold: float = 0.85
+    ) -> bool:
+        """判断当前视图矩形附近是否已经有对应板料线"""
+        for existing_bbox in existing_boxes:
+            if self._bbox_overlap_ratio(existing_bbox, bbox) >= threshold:
                 return True
         return False
+
+    def _calculate_match_score(
+        self,
+        width: float,
+        height: float,
+        l: float,
+        w: float,
+        t: float
+    ) -> float:
+        """计算视图和目标L/W/T的匹配分数，越大越优先"""
+        candidate_pairs = [
+            ((l, w), 'top'),
+            ((w, l), 'top'),
+            ((t, w), 'side'),
+            ((w, t), 'side'),
+            ((l, t), 'front'),
+            ((t, l), 'front'),
+        ]
+
+        best_score = float('-inf')
+        for (target_w, target_h), _ in candidate_pairs:
+            normalized_error = (
+                abs(width - target_w) / max(target_w, 1.0) +
+                abs(height - target_h) / max(target_h, 1.0)
+            )
+            best_score = max(best_score, 1000.0 - normalized_error * 500.0)
+        return best_score
     
     def _find_views_and_add_lines(
         self, 
@@ -132,24 +225,26 @@ class MaterialLineIntegrator:
         self.logger.debug(f"    尺寸: L={l:.1f}, W={w:.1f}, T={t:.1f}")
         self.logger.debug(f"    容差: L±{tolerance_l:.1f}, W±{tolerance_w:.1f}, T±{tolerance_t:.1f}")
         
-        # 1. 查找闭合多段线视图
-        polyline_views = self._find_polyline_views(
-            msp, l, w, t, tolerance_l, tolerance_w, tolerance_t
-        )
-        
-        # 2. 查找LINE组成的矩形视图
-        line_views = self._find_line_rectangle_views(
-            msp, l, w, t, tolerance_l, tolerance_w, tolerance_t
-        )
-        
-        # 合并所有视图
-        all_views = polyline_views + line_views
-        
+        all_views = self._find_views_with_identifier(msp, l, w, t)
+        if not all_views:
+            polyline_views = self._find_polyline_views(
+                msp, l, w, t, tolerance_l, tolerance_w, tolerance_t
+            )
+            line_views = self._find_line_rectangle_views(
+                msp, l, w, t, tolerance_l, tolerance_w, tolerance_t
+            )
+            all_views = sorted(
+                polyline_views + line_views,
+                key=lambda view: view.get('match_score', 0.0),
+                reverse=True
+            )
+
         if not all_views:
             return 0
         
         # 3. 视图去重（每种类型只添加一次）
         view_types_added = set()
+        existing_boxes = self._collect_existing_material_line_bboxes(msp)
         
         for view in all_views:
             view_type = view['view_type']
@@ -157,6 +252,11 @@ class MaterialLineIntegrator:
             
             # 去重
             if view_type in view_types_added:
+                continue
+
+            if self._has_material_line_for_bbox(existing_boxes, bbox):
+                self.logger.info(f"    ℹ️ {sub_code}: {view_type} 已有板料线，跳过补加")
+                view_types_added.add(view_type)
                 continue
             
             # 添加板料线
@@ -166,6 +266,7 @@ class MaterialLineIntegrator:
             )
             
             view_types_added.add(view_type)
+            existing_boxes.append(bbox)
             lines_added += 1
             
             self.logger.debug(
@@ -174,6 +275,114 @@ class MaterialLineIntegrator:
             )
         
         return lines_added
+
+    def _find_views_with_identifier(
+        self,
+        msp,
+        l: float,
+        w: float,
+        t: float
+    ) -> List[Dict]:
+        """复用 feature_recognition 的视图识别能力，支持平行线对兜底"""
+        ViewIdentifier = _lazy_import_view_identifier()
+        if ViewIdentifier is None:
+            return []
+
+        try:
+            identifier = ViewIdentifier(tolerance=10.0)
+            views, anomalies = identifier.identify_views(msp, l, w, t)
+            if anomalies:
+                self.logger.debug(f"    视图识别异常数: {len(anomalies)}")
+
+            normalized = []
+            for view_name, view_info in views.items():
+                bounds = view_info.get('bounds')
+                if not bounds:
+                    continue
+
+                bbox = (
+                    float(bounds['min_x']),
+                    float(bounds['min_y']),
+                    float(bounds['max_x']),
+                    float(bounds['max_y']),
+                )
+                width = bbox[2] - bbox[0]
+                height = bbox[3] - bbox[1]
+                normalized.append({
+                    'bbox': bbox,
+                    'width': width,
+                    'height': height,
+                    'view_type': view_name,
+                    'match_score': self._calculate_match_score(width, height, l, w, t),
+                    'source': 'view_identifier',
+                })
+
+            if normalized:
+                normalized = self._relabel_views_by_layout(normalized)
+                self.logger.debug(f"    视图识别器命中 {len(normalized)} 个视图")
+                return sorted(
+                    normalized,
+                    key=lambda view: view.get('match_score', 0.0),
+                    reverse=True
+                )
+        except Exception as e:
+            self.logger.debug(f"    视图识别器调用失败，回退旧逻辑: {e}")
+
+        return []
+
+    def _relabel_views_by_layout(self, views: List[Dict]) -> List[Dict]:
+        """按版式位置统一视图命名，避免 front/side 在不同模块中定义不一致"""
+        if len(views) < 3:
+            return views
+
+        tolerance = 5.0
+        avg_x = sum((view['bbox'][0] + view['bbox'][2]) / 2.0 for view in views) / len(views)
+        avg_y = sum((view['bbox'][1] + view['bbox'][3]) / 2.0 for view in views) / len(views)
+
+        left_top = []
+        left_bottom = []
+        right_top = []
+        right_bottom = []
+
+        for view in views:
+            bbox = view['bbox']
+            cx = (bbox[0] + bbox[2]) / 2.0
+            cy = (bbox[1] + bbox[3]) / 2.0
+            is_left = (cx < avg_x - tolerance) or (abs(cx - avg_x) <= tolerance)
+            is_top = (cy > avg_y + tolerance) or (abs(cy - avg_y) <= tolerance)
+
+            if is_left:
+                if is_top:
+                    left_top.append(view)
+                else:
+                    left_bottom.append(view)
+            else:
+                if is_top:
+                    right_top.append(view)
+                else:
+                    right_bottom.append(view)
+
+        relabeled = []
+
+        if left_top:
+            top_view = max(left_top, key=lambda item: item['width'] * item['height']).copy()
+            top_view['view_type'] = 'top_view'
+            relabeled.append(top_view)
+
+        if left_bottom:
+            front_view = max(left_bottom, key=lambda item: item['width'] * item['height']).copy()
+            front_view['view_type'] = 'front_view'
+            relabeled.append(front_view)
+
+        if right_top:
+            side_view = max(right_top, key=lambda item: item['width'] * item['height']).copy()
+            side_view['view_type'] = 'side_view'
+            relabeled.append(side_view)
+
+        if len(relabeled) >= 3:
+            return relabeled
+
+        return views
     
     def _find_polyline_views(
         self, 
@@ -215,6 +424,7 @@ class MaterialLineIntegrator:
                             'width': width,
                             'height': height,
                             'view_type': view_type,
+                            'match_score': self._calculate_match_score(width, height, l, w, t),
                             'source': 'polyline'
                         })
                         
@@ -284,6 +494,7 @@ class MaterialLineIntegrator:
                             'width': width,
                             'height': height,
                             'view_type': view_type,
+                            'match_score': self._calculate_match_score(width, height, l, w, t),
                             'source': 'line_rectangle',
                             'layer': layer
                         })
