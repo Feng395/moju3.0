@@ -206,6 +206,32 @@ def _resolve_subgraph_lwt(dxf_path: str, region: Optional[Dict]) -> Tuple[Option
     return None, "unavailable"
 
 
+def _save_material_line_debug_files(job_id: str, export_files: list) -> Optional[str]:
+    """临时保存加完板料线的子图，便于人工核查。"""
+    if not export_files:
+        return None
+
+    debug_root = Path(__file__).parent.parent.parent / "temp" / "material_line_debug" / job_id
+    debug_root.mkdir(parents=True, exist_ok=True)
+
+    saved_count = 0
+    for file_info in export_files:
+        local_path = file_info.get("local_path")
+        sub_code = file_info.get("sub_code")
+        if not local_path or not os.path.exists(local_path) or not sub_code:
+            continue
+
+        target_path = debug_root / f"{sub_code}.dxf"
+        shutil.copy2(local_path, target_path)
+        saved_count += 1
+
+    if saved_count == 0:
+        return None
+
+    logger.info(f"📁 已临时保存 {saved_count} 个板料线子图: {debug_root}")
+    return str(debug_root)
+
+
 async def chaitu_process(dwg_url: Optional[str], job_id: str, minio_client=None) -> Dict:
     """
     拆图处理函数
@@ -316,6 +342,7 @@ async def chaitu_process(dwg_url: Optional[str], job_id: str, minio_client=None)
         analysis_time = 0
         export_time = 0
         material_line_time = 0
+        debug_output_dir = None
         upload_time = 0
         db_time = 0
         
@@ -519,7 +546,19 @@ async def chaitu_process(dwg_url: Optional[str], job_id: str, minio_client=None)
                     logger.warning("⚠️ 板料线模块不可用，跳过板料线添加")
                 
                 material_line_time = 0
-            
+
+            save_debug_files_value = os.getenv('SAVE_MATERIAL_LINE_DEBUG_FILES', 'true')
+            if isinstance(save_debug_files_value, str):
+                save_debug_files = save_debug_files_value.lower() == 'true'
+            else:
+                save_debug_files = False
+
+            if save_debug_files:
+                try:
+                    debug_output_dir = _save_material_line_debug_files(job_id, export_files)
+                except Exception as e:
+                    logger.warning(f"⚠️ 临时保存板料线子图失败: {e}")
+             
             # 步骤4: 并发上传所有子图到MinIO
             logger.info("步骤4: 开始并发上传所有子图到MinIO...")
             upload_start = datetime.now()
