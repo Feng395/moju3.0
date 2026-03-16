@@ -80,8 +80,47 @@ class DatabaseManager:
                     pass
             if conn:
                 self.db_pool.putconn(conn)
+
+    def get_prt_file_path(self, job_id: str) -> Optional[str]:
+        """从数据库中根据 job_id 查询 prt_file_path"""
+        if not self.db_pool:
+            logger.warning("数据库连接池未初始化")
+            return None
+
+        conn = None
+        cursor = None
+        try:
+            try:
+                job_uuid = uuid.UUID(job_id)
+            except (ValueError, AttributeError):
+                logger.error(f"❌ job_id 格式错误: {job_id}")
+                return None
+
+            conn = self.db_pool.getconn()
+            cursor = conn.cursor()
+            cursor.execute("SELECT prt_file_path FROM jobs WHERE job_id = %s", (str(job_uuid),))
+            result = cursor.fetchone()
+
+            if result and result[0]:
+                logger.info(f"✅ 从数据库查询到 prt_file_path: {result[0]}")
+                return result[0]
+            else:
+                logger.warning(f"⚠️ 未找到 job_id={job_id} 对应的 prt_file_path")
+                return None
+
+        except Exception as e:
+            logger.error(f"❌ 从数据库查询 prt_file_path 失败: {e}")
+            return None
+        finally:
+            if cursor:
+                try:
+                    cursor.close()
+                except Exception:
+                    pass
+            if conn:
+                self.db_pool.putconn(conn)
     
-    def save_subgraph(self, sub_code: str, file_url: str, source_file: str, job_id: str, part_name: str = None, part_code: str = None) -> bool:
+    def save_subgraph(self, sub_code: str, file_url: str, source_file: str, job_id: str, part_name: str = None, part_code: str = None, xt_file_url: str = None) -> bool:
         """保存子图信息到数据库"""
         if not self.db_pool:
             logger.warning("数据库连接池未初始化，跳过数据库保存")
@@ -135,19 +174,21 @@ class DatabaseManager:
                     part_name,
                     part_code, 
                     subgraph_file_url,
+                    xt_file_url,
                     created_at,
                     updated_at
                 )
-                VALUES (%s, %s, %s, %s, %s, NOW(), NOW())
+                VALUES (%s, %s, %s, %s, %s, %s, NOW(), NOW())
                 ON CONFLICT (subgraph_id) 
                 DO UPDATE SET 
                     part_name = EXCLUDED.part_name,
                     part_code = EXCLUDED.part_code,
                     subgraph_file_url = EXCLUDED.subgraph_file_url,
+                    xt_file_url = EXCLUDED.xt_file_url,
                     updated_at = NOW()
             """
             
-            cursor.execute(insert_sql, (subgraph_id, str(job_uuid), part_name, part_code, file_url))
+            cursor.execute(insert_sql, (subgraph_id, str(job_uuid), part_name, part_code, file_url, xt_file_url))
             conn.commit()
             cursor.close()
             

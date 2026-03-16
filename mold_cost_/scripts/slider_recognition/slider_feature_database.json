@@ -1,0 +1,189 @@
+{
+  "version": "1.0",
+  "description": "基于特征面的滑块识别数据库",
+  "sliders": {
+    "DIE-06": {
+      "component_name": "DIE-06",
+      "feature_face_count": 6,
+      "feature_faces": [
+        {
+          "color": 186,
+          "area": 806.556,
+          "perimeter": 132.068,
+          "type": -1,
+          "type_name": "未知",
+          "normal": null,
+          "original_face_id": "F15233"
+        },
+        {
+          "color": 186,
+          "area": 694.546,
+          "perimeter": 120.618,
+          "type": -1,
+          "type_name": "未知",
+          "normal": null,
+          "original_face_id": "F15231"
+        },
+        {
+          "color": 186,
+          "area": 694.545,
+          "perimeter": 120.618,
+          "type": -1,
+          "type_name": "未知",
+          "normal": null,
+          "original_face_id": "F15235"
+        },
+        {
+          "color": 186,
+          "area": 694.545,
+          "perimeter": 120.618,
+          "type": -1,
+          "type_name": "未知",
+          "normal": null,
+          "original_face_id": "F15224"
+        },
+        {
+          "color": 186,
+          "area": 806.556,
+          "perimeter": 132.068,
+          "type": -1,
+          "type_name": "未知",
+          "normal": null,
+          "original_face_id": "F15226"
+        },
+        {
+          "color": 186,
+          "area": 694.545,
+          "perimeter": 120.618,
+          "type": -1,
+          "type_name": "未知",
+          "normal": null,
+          "original_face_id": "F15228"
+        }
+      ],
+      "source_file": "M250286-P3.prt"
+    },
+    "DIE-18": {
+      "component_name": "DIE-18",
+      "feature_face_count": 6,
+      "feature_faces": [
+        {
+          "color": 186,
+          "area": 455.062,
+          "perimeter": 129.766,
+          "type": -1,
+          "type_name": "未知",
+          "normal": null,
+          "original_face_id": "H1"
+        },
+        {
+          "color": 186,
+          "area": 674.829,
+          "perimeter": 139.448,
+          "type": -1,
+          "type_name": "未知",
+          "normal": null,
+          "original_face_id": "H2"
+        },
+        {
+          "color": 186,
+          "area": 674.829,
+          "perimeter": 139.448,
+          "type": -1,
+          "type_name": "未知",
+          "normal": null,
+          "original_face_id": "H3"
+        },
+        {
+          "color": 186,
+          "area": 224.0,
+          "perimeter": 120.0,
+          "type": -1,
+          "type_name": "未知",
+          "normal": null,
+          "original_face_id": "H4"
+        },
+        {
+          "color": 186,
+          "area": 671.135,
+          "perimeter": 137.945,
+          "type": -1,
+          "type_name": "未知",
+          "normal": null,
+          "original_face_id": "H5"
+        },
+        {
+          "color": 186,
+          "area": 671.135,
+          "perimeter": 137.945,
+          "type": -1,
+          "type_name": "未知",
+          "normal": null,
+          "original_face_id": "H6"
+        }
+      ],
+      "source_file": "DIE-18-M250286-P4.prt"
+    },
+    "DIE-21": {
+      "component_name": "DIE-21",
+      "feature_face_count": 6,
+      "feature_faces": [
+        {
+          "color": 186,
+          "area": 455.062,
+          "perimeter": 129.766,
+          "type": -1,
+          "type_name": "未知",
+          "normal": null,
+          "original_face_id": "F1"
+        },
+        {
+          "color": 186,
+          "area": 674.829,
+          "perimeter": 139.448,
+          "type": -1,
+          "type_name": "未知",
+          "normal": null,
+          "original_face_id": "F2"
+        },
+        {
+          "color": 186,
+          "area": 674.829,
+          "perimeter": 139.448,
+          "type": -1,
+          "type_name": "未知",
+          "normal": null,
+          "original_face_id": "F3"
+        },
+        {
+          "color": 186,
+          "area": 224.0,
+          "perimeter": 120.0,
+          "type": -1,
+          "type_name": "未知",
+          "normal": null,
+          "original_face_id": "F4"
+        },
+        {
+          "color": 186,
+          "area": 671.135,
+          "perimeter": 137.945,
+          "type": -1,
+          "type_name": "未知",
+          "normal": null,
+          "original_face_id": "F5"
+        },
+        {
+          "color": 186,
+          "area": 671.135,
+          "perimeter": 137.945,
+          "type": -1,
+          "type_name": "未知",
+          "normal": null,
+          "original_face_id": "F6"
+        }
+      ],
+      "source_file": "DIE-21-M250286-P4.prt"
+    }
+  }
+}

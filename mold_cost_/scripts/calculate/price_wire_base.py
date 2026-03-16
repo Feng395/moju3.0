@@ -257,14 +257,15 @@ def _get_dimension_by_view(view: str, length_mm: float, width_mm: float, thickne
     """
     MIN_DIMENSION = 15.0
     
+    # 处理 None 值：如果尺寸为 None，使用 MIN_DIMENSION
     if view == "top_view":
-        dimension = max(thickness_mm, MIN_DIMENSION)
+        dimension = max(thickness_mm or 0, MIN_DIMENSION)
         return dimension, "thickness_mm"
     elif view == "front_view":
-        dimension = max(width_mm, MIN_DIMENSION)
+        dimension = max(width_mm or 0, MIN_DIMENSION)
         return dimension, "width_mm"
     elif view == "side_view":
-        dimension = max(length_mm, MIN_DIMENSION)
+        dimension = max(length_mm or 0, MIN_DIMENSION)
         return dimension, "length_mm"
     else:
         return 0, "unknown"
@@ -566,7 +567,7 @@ async def _calculate_part_price(
         # 获取对应视图的尺寸
         dimension, dimension_name = _get_dimension_by_view(view, length_mm, width_mm, thickness_mm)
         dimension = float(dimension) if dimension else 0
-        
+
         # 获取原始尺寸用于记录
         original_dimension = 0
         if dimension_name == "thickness_mm":
@@ -575,9 +576,17 @@ async def _calculate_part_price(
             original_dimension = width_mm
         elif dimension_name == "length_mm":
             original_dimension = length_mm
-        
-        # 基础价格
-        base_price = total_length * dimension * unit_price
+
+        # 基础价格计算：如果 slider_angle 不为空，不乘尺寸
+        if slider_angle and slider_angle != 0:
+            base_price = total_length * unit_price
+            base_calculation_formula = f"{round(total_length, 4)} * {unit_price}"
+            calculation_note = "slider_angle不为空，不乘尺寸"
+        else:
+            base_price = total_length * dimension * unit_price
+            base_calculation_formula = f"{round(total_length, 4)} * {dimension} * {unit_price}"
+            calculation_note = "常规计算"
+
         
         # 构建视图与尺寸对应关系的说明
         view_dimension_mapping = {
@@ -592,6 +601,7 @@ async def _calculate_part_price(
             "view": view,
             "instruction": instruction,
             "cone": cone,
+            "slider_angle": slider_angle,  # 添加 slider_angle 记录
             "original_total_length": original_total_length,
             "area_num": area_num,
             "added_length": round(added_length, 4) if added_length > 0 else 0,
@@ -604,14 +614,16 @@ async def _calculate_part_price(
             "dimension_note": f"原始{original_dimension}mm，按{dimension}mm计算" if original_dimension < 15 else f"{dimension}mm",
             "view_dimension_note": view_dimension_note,
             "unit_price": unit_price,
-            "base_calculation": f"{round(total_length, 4)} * {dimension} * {unit_price} = {round(base_price, 4)}",
+            "calculation_note": calculation_note,  # 添加计算说明
+            "base_calculation": f"{base_calculation_formula} = {round(base_price, 4)}",
             "base_price": round(base_price, 4),
             "multipliers": [],
-            "calculation_formula": f"{round(total_length, 4)} * {dimension} * {unit_price}"
+            "calculation_formula": base_calculation_formula
         }
-        
+
         final_price = base_price
-        formula_parts = [f"{round(total_length, 4)} * {dimension} * {unit_price}"]
+        formula_parts = [base_calculation_formula]
+
         
         # 应用 extra_thick 规则
         extra_thick_mult, extra_thick_desc = _apply_extra_thick_rule(dimension, rule_map)

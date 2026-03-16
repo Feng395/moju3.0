@@ -13,6 +13,7 @@ import tempfile
 import shutil
 import ezdxf
 from pathlib import Path
+from dotenv import load_dotenv
 from typing import List, Dict, Any, Optional
 import sys
 
@@ -52,6 +53,8 @@ from .bevel_detector import detect_bevel
 from .grinding_detector import detect_grinding_faces
 from .tooth_hole_detector import detect_tooth_hole
 from .slider_calculator import SliderCalculator
+from .slider_red_face_updater import update_slider_red_face_data
+from .slider_red_face_lookup import apply_red_face_lookup
 
 # Flask app 实例已移至 unified_api.py
 # app = Flask(__name__)
@@ -128,7 +131,7 @@ def get_subgraphs_from_db(job_id: str, subgraph_id: Optional[str] = None) -> Lis
             # 查询特定子图
             cursor.execute(
                 """
-                SELECT subgraph_id, part_code, subgraph_file_url
+                SELECT subgraph_id, part_code, subgraph_file_url, xt_file_url
                 FROM subgraphs
                 WHERE job_id = %s AND subgraph_id = %s
                 """,
@@ -138,7 +141,7 @@ def get_subgraphs_from_db(job_id: str, subgraph_id: Optional[str] = None) -> Lis
             # 查询所有子图
             cursor.execute(
                 """
-                SELECT subgraph_id, part_code, subgraph_file_url
+                SELECT subgraph_id, part_code, subgraph_file_url, xt_file_url
                 FROM subgraphs
                 WHERE job_id = %s
                 ORDER BY part_code
@@ -153,7 +156,8 @@ def get_subgraphs_from_db(job_id: str, subgraph_id: Optional[str] = None) -> Lis
             subgraphs.append({
                 'subgraph_id': row[0],
                 'part_code': row[1],
-                'subgraph_file_url': row[2]
+                'subgraph_file_url': row[2],
+                'xt_file_url': row[3]  # MinIO 中 .x_t 文件路径，由拆图流程写入
             })
         
         logging.info(f"从数据库查询到 {len(subgraphs)} 个子图")
@@ -649,6 +653,19 @@ def save_features_to_db(subgraph_id: str, job_id: str, features: Dict[str, Any])
         
         # 添加每个工艺编号的详细信息到 metadata
         wire_cut_details = features.get('wire_cut_details', [])
+
+        # ── 滑块红色面查表补充 ──────────────────────────────────────────
+        # 用 part_code 查 MinIO 上的 feature_database.json，将红色面数据补充到
+        # instruction 含"滑"的条目，无需启动 NX
+        _part_code = features.get('part_code', '')
+        if _part_code and wire_cut_details:
+            wire_cut_details = apply_red_face_lookup(
+                _part_code,
+                wire_cut_details,
+                minio_client=minio_client,
+            )
+        # ────────────────────────────────────────────────────────────────
+
         if wire_cut_details:
             metadata['wire_cut_details'] = wire_cut_details
             logging.info(f"保存 {len(wire_cut_details)} 个工艺编号的详细信息到 metadata")
@@ -938,7 +955,10 @@ def batch_feature_recognition_process(job_id: str, subgraph_id: Optional[str] = 
                     continue
                 
                 # 保存到数据库
-                save_success = save_features_to_db(sg_id, job_id, features)
+                save_success = save_features_to_db(sg_id, job_id, {
+                    **features,
+                    'part_code': subgraph_map[sg_id]['part_code'],
+                })
                 
                 if save_success:
                     results.append({
@@ -949,6 +969,31 @@ def batch_feature_recognition_process(job_id: str, subgraph_id: Optional[str] = 
                     })
                     success_count += 1
                     logging.info(f"✅ {sg_id} 处理成功")
+                    # ── 滑块红色面写入 ──────────────────────────────────
+                    # 如果识别到滑块工艺，尝试从对应的 .x_t 文件提取红色面数据
+                    _wire_cut_details = features.get('wire_cut_details', [])
+                    _has_slider = any('滑' in d.get('instruction', '') for d in _wire_cut_details)
+                    if _has_slider:
+                        _subgraph_info = next(
+                            (s for s in subgraphs if s['subgraph_id'] == sg_id), {}
+                        )
+                        # 直接从数据库字段取 .x_t 路径（由拆图流程上传 MinIO 后写入）
+                        _xt_url = _subgraph_info.get('xt_file_url') or ''
+                        if _xt_url:
+                            logging.info(f"检测到滑块工艺，尝试提取红色面: {_xt_url}")
+                            try:
+                                update_slider_red_face_data(
+                                    subgraph_id=sg_id,
+                                    job_id=job_id,
+                                    xt_file_url=_xt_url,
+                                    db_config=DB_CONFIG,
+                                    minio_client=minio_client
+                                )
+                            except Exception as _e:
+                                logging.warning(f"滑块红色面写入失败（不影响主流程）: {_e}")
+                        else:
+                            logging.info(f"subgraph {sg_id} 无 xt_file_url，跳过红色面提取")
+                    # ────────────────────────────────────────────────────
                 else:
                     results.append({
                         'subgraph_id': sg_id,

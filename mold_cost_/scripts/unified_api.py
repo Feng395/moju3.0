@@ -6,6 +6,7 @@ CAD 服务统一接口
 import os
 import sys
 from pathlib import Path
+from dotenv import load_dotenv
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -66,6 +67,7 @@ app.add_middleware(
 class ChaiTuRequest(BaseModel):
     """拆图请求模型"""
     dwg_url: Optional[str] = None
+    prt_url: Optional[str] = None  # PRT 文件路径（可选，有则导出 .x_t 上传 MinIO）
     job_id: str
 
 class ChaiTuResponse(BaseModel):
@@ -84,6 +86,11 @@ class FeatureRecognitionResponse(BaseModel):
     success: bool
     message: Optional[str] = None
     data: Optional[Dict[str, Any]] = None
+
+class UploadFeatureDbRequest(BaseModel):
+    """上传滑块特征库请求模型"""
+    csv_folder: str  # 拆分文件夹路径，含 特征面识别报告_增强版.csv
+    minio_path: Optional[str] = None  # MinIO 目标路径，默认 slider/feature_database.json
 
 # ==================== 拆图服务接口 ====================
 
@@ -106,7 +113,7 @@ async def chaitu_api(request: ChaiTuRequest):
         raise HTTPException(status_code=503, detail="拆图服务不可用")
     
     try:
-        result = await chaitu_process(request.dwg_url, request.job_id)
+        result = await chaitu_process(request.dwg_url, request.job_id, prt_url=request.prt_url)
         
         # 根据返回的 status 判断是否成功
         if result.get("status") == "error":
@@ -171,6 +178,102 @@ async def feature_recognition_health():
         "service": "特征识别服务",
         "status": "healthy" if FEATURE_AVAILABLE else "unavailable",
         "available": FEATURE_AVAILABLE
+    }
+
+@app.post("/api/feature-recognition/upload-feature-db", tags=["特征识别服务"])
+async def upload_feature_db_api(request: UploadFeatureDbRequest):
+    """
+    上传滑块特征库到 MinIO
+
+    前置条件：已在 NX 环境中跑过 recognize_by_features_enhanced.py，
+    生成了 特征面识别报告_增强版.csv。
+
+    本接口完成后两步：
+      1. 读取 CSV → 生成 feature_database.json
+      2. 上传 feature_database.json 到 MinIO
+
+    Args:
+        csv_folder:  包含 特征面识别报告_增强版.csv 的拆分文件夹路径
+        minio_path:  MinIO 目标路径（可选，默认 slider/feature_database.json）
+    """
+    import glob, csv as _csv, json as _json, tempfile
+
+    folder = os.path.abspath(request.csv_folder)
+    if not os.path.isdir(folder):
+        raise HTTPException(status_code=400, detail=f"文件夹不存在: {folder}")
+
+    # 找最新的 CSV
+    pattern = os.path.join(folder, "特征面识别报告_增强版*.csv")
+    csv_files = sorted(glob.glob(pattern), key=os.path.getmtime)
+    if not csv_files:
+        raise HTTPException(status_code=404, detail=f"未找到识别报告 CSV: {folder}")
+    csv_path = csv_files[-1]
+    logger.info(f"读取 CSV: {csv_path}")
+
+    # CSV → dict
+    database = {}
+    with open(csv_path, 'r', encoding='utf-8-sig') as f:
+        reader = _csv.DictReader(f)
+        for row in reader:
+            part_name = row.get('零件名', '').strip()
+            if not part_name:
+                continue
+            if any('\u4e00' <= c <= '\u9fff' for c in part_name):
+                continue
+            red_count_str = row.get('红色面数量', '0').strip()
+            area_str = row.get('总表面积(mm2)', '0').strip()
+            red_count = int(red_count_str) if red_count_str.isdigit() else 0
+            if red_count == 0:
+                continue
+            try:
+                total_area = float(area_str)
+            except ValueError:
+                total_area = 0.0
+            slider_result = row.get('识别结果', '').strip()
+            code = '滑块' if slider_result not in ('', '未识别') else 'none'
+            database[part_name] = {
+                "wire_cut_details": [{
+                    "code": code, "cone": "f", "view": "front_view",
+                    "area_num": red_count,
+                    "instruction": f"{red_count} -红色面",
+                    "slider_angle": 0,
+                    "total_length": round(total_area, 3),
+                    "is_additional": False,
+                    "matched_count": red_count,
+                    "single_length": round(total_area / red_count, 3) if red_count else 0.0,
+                    "expected_count": red_count,
+                    "matched_line_ids": [],
+                    "overlapping_length": 0.0,
+                }]
+            }
+
+    if not database:
+        raise HTTPException(status_code=400, detail="CSV 中没有有效的红色面数据")
+
+    # 写临时 JSON
+    tmp = tempfile.NamedTemporaryFile(suffix='.json', delete=False, mode='w', encoding='utf-8')
+    _json.dump(database, tmp, ensure_ascii=False, indent=2)
+    tmp.close()
+
+    # 上传 MinIO
+    from minio_client import minio_client as _mc
+    from feature_recognition.slider_red_face_lookup import invalidate_cache
+    minio_path = request.minio_path or os.getenv('SLIDER_FEATURE_DB_MINIO_PATH', 'slider/feature_database.json')
+    ok = _mc.upload_file(tmp.name, minio_path)
+    os.unlink(tmp.name)
+
+    if not ok:
+        raise HTTPException(status_code=500, detail="上传 MinIO 失败")
+
+    # 清除内存缓存，下次查表时重新拉取
+    invalidate_cache(minio_path)
+
+    logger.info(f"✅ 特征库上传成功: {minio_path}，共 {len(database)} 条")
+    return {
+        "success": True,
+        "message": f"上传成功，共 {len(database)} 条记录",
+        "minio_path": minio_path,
+        "csv_source": csv_path,
     }
 
 # ==================== 通用接口 ====================

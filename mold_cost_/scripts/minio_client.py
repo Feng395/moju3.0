@@ -9,6 +9,7 @@ from minio.error import S3Error
 from loguru import logger
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Dict, Tuple
 import time
@@ -23,7 +24,7 @@ minio_config = get_minio_config()
 
 class MinIOClient:
     """MinIO 客户端封装类"""
-
+    
     def __init__(self):
         """初始化 MinIO 客户端"""
         # 从配置中获取 MinIO 配置
