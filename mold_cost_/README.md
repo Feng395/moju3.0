@@ -846,9 +846,8 @@ mold_cost_/
 ├── workers/                        # 后台Worker
 │   ├── orchestrator_worker.py      # 编排Worker
 │   ├── pricing_recalculate_worker.py    # 价格重算Worker
+│   ├── review_worker.py            # 审核Worker
 │   └── all_tasks_worker.py         # 全任务Worker
-├── consumers/                      # 消息消费者
-│   └── review_consumer.py          # 审核消费者
 ├── mcp_services/                   # MCP服务（可选）
 │   ├── cad_parser_mcp/             # CAD解析服务
 │   ├── pricing_server_mcp/         # 价格计算服务
@@ -1690,4 +1689,3 @@ app.add_middleware(
 
 **最后更新**: 2026-02-10  
 **文档版本**: v2.0.0
-

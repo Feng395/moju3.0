@@ -1,4 +1,6 @@
 """
-Workers 模块
-负责消费 RabbitMQ 消息并调用编排器
+Worker package for RabbitMQ-backed background processing.
+
+Import concrete worker modules directly, for example:
+`from workers.review_worker import ReviewWorker`.
 """
