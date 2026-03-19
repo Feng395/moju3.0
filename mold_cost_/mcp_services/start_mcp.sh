@@ -12,6 +12,8 @@ echo ""
 
 cd "$(dirname "$0")"
 cd cad_price_search_mcp
+export SCRIPTS_ENV_OVERRIDE=false
+export SCRIPTS_ENV_ALLOW_INFRA_OVERRIDE=false
 
 echo "[INFO] 正在启动 CAD Price Search MCP 服务..."
 echo "[INFO] 端口: 8200"

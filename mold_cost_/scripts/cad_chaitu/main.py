@@ -57,10 +57,11 @@ log_dir.mkdir(parents=True, exist_ok=True)
 
 logger.add(
     str(log_dir / "cad_chaitu.log"),
-    rotation="10 MB",
-    retention="7 days",
-    level="DEBUG",
-    format="{time:YYYY-MM-DD HH:mm:ss} - {level:8} - {name} - {message}",
+    rotation="00:00",
+    retention="30 days",
+    compression="zip",
+    level="INFO",
+    format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
     encoding="utf-8"
 )
 

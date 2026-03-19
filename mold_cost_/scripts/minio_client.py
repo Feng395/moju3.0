@@ -81,7 +81,9 @@ class MinIOClient:
             save_dir.mkdir(parents=True, exist_ok=True)
             
             # 从 MinIO 下载文件
-            logger.info(f"从 MinIO 下载文件: bucket={self.bucket_files}, path={file_path}")
+            logger.info(
+                f"从 MinIO 下载文件: endpoint={self.endpoint}, bucket={self.bucket_files}, path={file_path}"
+            )
             self.client.fget_object(
                 bucket_name=self.bucket_files,
                 object_name=file_path,

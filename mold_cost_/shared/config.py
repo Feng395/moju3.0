@@ -233,7 +233,7 @@ class Settings(BaseSettings):
     
     # ========== API Gateway配置 ==========
     API_GATEWAY_HOST: str = "0.0.0.0"
-    API_GATEWAY_PORT: int = 8300
+    API_GATEWAY_PORT: int = 8000
     API_HOST: Optional[str] = None  # 兼容旧变量名
     API_PORT: Optional[int] = None  # 兼容旧变量名
     API_RELOAD: Optional[bool] = None  # 兼容旧变量名

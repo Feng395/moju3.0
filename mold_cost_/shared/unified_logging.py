@@ -27,6 +27,7 @@ import logging
 import logging.handlers
 import sys
 import os
+import zipfile
 from pathlib import Path
 from typing import Optional
 from datetime import datetime
@@ -39,15 +40,58 @@ DEFAULT_LOG_DIR = "logs"
 
 # 日志格式
 CONSOLE_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-FILE_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+FILE_FORMAT = "%(asctime)s | %(levelname)-8s | %(name)s:%(funcName)s:%(lineno)d - %(message)s"
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 # 日志文件配置
-MAX_BYTES = 10 * 1024 * 1024  # 10MB
-BACKUP_COUNT = 7  # 保留7个备份文件
+MAX_BYTES = 10 * 1024 * 1024  # reserved for compatibility
+BACKUP_COUNT = 30  # 保留30天备份
 
 # 是否已初始化
 _initialized = False
+
+
+class DailyZipTimedRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
+    """Rotate at midnight, retain daily archives, and compress to zip."""
+
+    def __init__(self, filename: Path, backup_count: int, encoding: str = "utf-8"):
+        super().__init__(
+            filename=str(filename),
+            when="midnight",
+            interval=1,
+            backupCount=backup_count,
+            encoding=encoding,
+        )
+        self.namer = lambda default_name: f"{default_name}.zip"
+        self.rotator = self._zip_rotator
+
+    @staticmethod
+    def _zip_rotator(source: str, dest: str):
+        with zipfile.ZipFile(dest, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+            zf.write(source, arcname=os.path.basename(source))
+        os.remove(source)
+
+    def getFilesToDelete(self):
+        """Include .zip archives in retention cleanup."""
+        dir_name, base_name = os.path.split(self.baseFilename)
+        file_names = os.listdir(dir_name)
+        result = []
+        prefix = base_name + "."
+        plen = len(prefix)
+
+        for file_name in file_names:
+            if not file_name.startswith(prefix):
+                continue
+            suffix = file_name[plen:]
+            if suffix.endswith(".zip"):
+                suffix = suffix[:-4]
+            if self.extMatch.match(suffix):
+                result.append(os.path.join(dir_name, file_name))
+
+        result.sort()
+        if len(result) < self.backupCount:
+            return []
+        return result[: len(result) - self.backupCount]
 
 
 # ========== 彩色控制台格式化器 ==========
@@ -185,22 +229,20 @@ def init_logging(
         )
         
         # 2.1 总日志文件（所有级别）
-        file_handler = logging.handlers.RotatingFileHandler(
+        file_handler = DailyZipTimedRotatingFileHandler(
             filename=log_path / "app.log",
-            maxBytes=MAX_BYTES,
-            backupCount=BACKUP_COUNT,
-            encoding="utf-8"
+            backup_count=BACKUP_COUNT,
+            encoding="utf-8",
         )
         file_handler.setLevel(log_level)
         file_handler.setFormatter(file_formatter)
         root_logger.addHandler(file_handler)
         
         # 2.2 错误日志文件（仅ERROR及以上）
-        error_handler = logging.handlers.RotatingFileHandler(
+        error_handler = DailyZipTimedRotatingFileHandler(
             filename=log_path / "error.log",
-            maxBytes=MAX_BYTES,
-            backupCount=BACKUP_COUNT,
-            encoding="utf-8"
+            backup_count=BACKUP_COUNT,
+            encoding="utf-8",
         )
         error_handler.setLevel(logging.ERROR)
         error_handler.setFormatter(file_formatter)
@@ -218,11 +260,10 @@ def init_logging(
             ]
             
             for module_prefix, filename in module_configs:
-                module_handler = logging.handlers.RotatingFileHandler(
+                module_handler = DailyZipTimedRotatingFileHandler(
                     filename=log_path / filename,
-                    maxBytes=MAX_BYTES,
-                    backupCount=BACKUP_COUNT,
-                    encoding="utf-8"
+                    backup_count=BACKUP_COUNT,
+                    encoding="utf-8",
                 )
                 module_handler.setLevel(log_level)
                 module_handler.setFormatter(file_formatter)

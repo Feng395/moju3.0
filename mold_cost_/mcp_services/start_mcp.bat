@@ -12,6 +12,8 @@ echo ========================================
 echo.
 
 cd /d "%~dp0"
+set "SCRIPTS_ENV_OVERRIDE=false"
+set "SCRIPTS_ENV_ALLOW_INFRA_OVERRIDE=false"
 
 echo [INFO] 正在启动 MCP 服务...
 echo [INFO] 端口: 8200

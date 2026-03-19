@@ -25,6 +25,7 @@ import logging.handlers
 import sys
 import os
 import json
+import zipfile
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, Any
@@ -41,6 +42,49 @@ LOG_LEVELS = {
     "ERROR": logging.ERROR,
     "CRITICAL": logging.CRITICAL
 }
+
+
+class DailyZipTimedRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
+    """Rotate at midnight, retain daily archives, and compress to zip."""
+
+    def __init__(self, filename: Path, backup_count: int, encoding: str = "utf-8"):
+        super().__init__(
+            filename=str(filename),
+            when="midnight",
+            interval=1,
+            backupCount=backup_count,
+            encoding=encoding,
+        )
+        self.namer = lambda default_name: f"{default_name}.zip"
+        self.rotator = self._zip_rotator
+
+    @staticmethod
+    def _zip_rotator(source: str, dest: str):
+        with zipfile.ZipFile(dest, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+            zf.write(source, arcname=os.path.basename(source))
+        os.remove(source)
+
+    def getFilesToDelete(self):
+        """Include .zip archives in retention cleanup."""
+        dir_name, base_name = os.path.split(self.baseFilename)
+        file_names = os.listdir(dir_name)
+        result = []
+        prefix = base_name + "."
+        plen = len(prefix)
+
+        for file_name in file_names:
+            if not file_name.startswith(prefix):
+                continue
+            suffix = file_name[plen:]
+            if suffix.endswith(".zip"):
+                suffix = suffix[:-4]
+            if self.extMatch.match(suffix):
+                result.append(os.path.join(dir_name, file_name))
+
+        result.sort()
+        if len(result) < self.backupCount:
+            return []
+        return result[: len(result) - self.backupCount]
 
 
 # ========== 自定义 JSON Formatter ==========
@@ -177,7 +221,7 @@ def setup_logging(
     enable_json: bool = False,
     enable_module_logs: bool = True,  # 新增：是否启用模块分类日志
     max_bytes: int = 10 * 1024 * 1024,  # 10MB
-    backup_count: int = 5
+    backup_count: int = 30
 ):
     """
     配置日志系统
@@ -235,27 +279,25 @@ def setup_logging(
         
         # 标准格式化器
         file_formatter = logging.Formatter(
-            fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            fmt="%(asctime)s | %(levelname)-8s | %(name)s:%(funcName)s:%(lineno)d - %(message)s",
             datefmt="%Y-%m-%d %H:%M:%S"
         )
         
         # 1. 总日志文件（所有日志）
-        file_handler = logging.handlers.RotatingFileHandler(
+        file_handler = DailyZipTimedRotatingFileHandler(
             filename=log_path / "app.log",
-            maxBytes=max_bytes,
-            backupCount=backup_count,
-            encoding="utf-8"
+            backup_count=backup_count,
+            encoding="utf-8",
         )
         file_handler.setLevel(log_level)
         file_handler.setFormatter(file_formatter)
         root_logger.addHandler(file_handler)
         
         # 2. 错误日志文件（ERROR及以上）
-        error_handler = logging.handlers.RotatingFileHandler(
+        error_handler = DailyZipTimedRotatingFileHandler(
             filename=log_path / "error.log",
-            maxBytes=max_bytes,
-            backupCount=backup_count,
-            encoding="utf-8"
+            backup_count=backup_count,
+            encoding="utf-8",
         )
         error_handler.setLevel(logging.ERROR)
         error_handler.setFormatter(file_formatter)
@@ -305,11 +347,10 @@ def setup_logging(
             
             # 为每个模块创建专用日志文件
             for config in module_configs:
-                module_handler = logging.handlers.RotatingFileHandler(
+                module_handler = DailyZipTimedRotatingFileHandler(
                     filename=log_path / config["filename"],
-                    maxBytes=max_bytes,
-                    backupCount=backup_count,
-                    encoding="utf-8"
+                    backup_count=backup_count,
+                    encoding="utf-8",
                 )
                 module_handler.setLevel(log_level)
                 module_handler.setFormatter(file_formatter)
@@ -325,11 +366,10 @@ def setup_logging(
         log_path = Path(log_dir)
         log_path.mkdir(parents=True, exist_ok=True)
         
-        json_handler = logging.handlers.RotatingFileHandler(
+        json_handler = DailyZipTimedRotatingFileHandler(
             filename=log_path / "app.json",
-            maxBytes=max_bytes,
-            backupCount=backup_count,
-            encoding="utf-8"
+            backup_count=backup_count,
+            encoding="utf-8",
         )
         json_handler.setLevel(log_level)
         json_handler.setFormatter(JSONFormatter())

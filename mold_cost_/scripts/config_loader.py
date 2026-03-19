@@ -21,7 +21,7 @@
 
 import os
 from pathlib import Path
-from dotenv import load_dotenv
+from dotenv import load_dotenv, dotenv_values
 from typing import Dict, Any, Optional
 
 
@@ -30,6 +30,21 @@ class ConfigLoader:
 
     _instance = None
     _config: Dict[str, Any] = {}
+    _protected_infra_keys = (
+        'DB_HOST',
+        'DB_PORT',
+        'DB_NAME',
+        'DB_USER',
+        'DB_PASSWORD',
+        'MINIO_ENDPOINT',
+        'MINIO_ACCESS_KEY',
+        'MINIO_SECRET_KEY',
+        'MINIO_USE_HTTPS',
+        'MINIO_BUCKET',
+        'MINIO_BUCKET_FILES',
+        'MINIO_REGION',
+        'MINIO_EXTERNAL_ENDPOINT',
+    )
 
     def __new__(cls):
         if cls._instance is None:
@@ -58,7 +73,11 @@ class ConfigLoader:
 
         # 1. 加载主配置（优先）
         main_env_path = project_root / '.env'
+        main_env_values: Dict[str, str] = {}
         if main_env_path.exists():
+            main_env_values = {
+                k: str(v) for k, v in dotenv_values(main_env_path).items() if v is not None
+            }
             load_dotenv(main_env_path)
             print(f"✅ 加载主配置: {main_env_path}")
         else:
@@ -67,8 +86,17 @@ class ConfigLoader:
         # 2. 加载 scripts 专用配置（补充）
         scripts_env_path = scripts_dir / '.env'
         if scripts_env_path.exists():
-            load_dotenv(scripts_env_path, override=True)  # override=True 允许覆盖同名配置
-            print(f"✅ 加载 scripts 专用配置: {scripts_env_path}")
+            # 默认不覆盖主 .env，避免 scripts/.env 在服务运行时意外覆盖生产配置。
+            # 如需覆盖（本地调试场景），可显式设置 SCRIPTS_ENV_OVERRIDE=true。
+            scripts_override = os.getenv('SCRIPTS_ENV_OVERRIDE', 'false').lower() == 'true'
+            load_dotenv(scripts_env_path, override=scripts_override)
+            allow_infra_override = os.getenv('SCRIPTS_ENV_ALLOW_INFRA_OVERRIDE', 'false').lower() == 'true'
+            if not allow_infra_override and main_env_values:
+                self._restore_protected_infra_env(main_env_values)
+            print(
+                f"✅ 加载 scripts 专用配置: {scripts_env_path} "
+                f"(override={scripts_override}, allow_infra_override={allow_infra_override})"
+            )
         else:
             print(f"⚠️ scripts 专用配置文件不存在: {scripts_env_path}")
 
@@ -76,6 +104,20 @@ class ConfigLoader:
         self._collect_env_config()
 
         return self._config
+
+    def _restore_protected_infra_env(self, main_env_values: Dict[str, str]) -> None:
+        """Restore critical infra keys from main .env to avoid accidental overrides."""
+        restored_keys = []
+        for key in self._protected_infra_keys:
+            value = main_env_values.get(key)
+            if value is None:
+                continue
+            if os.getenv(key) != value:
+                os.environ[key] = value
+                restored_keys.append(key)
+
+        if restored_keys:
+            print(f"[config_loader] Restored protected infra keys: {', '.join(restored_keys)}")
 
     def _collect_env_config(self):
         """收集环境变量配置"""
