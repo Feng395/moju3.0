@@ -104,7 +104,8 @@ class ReviewWorker:
 
         async for db in get_db():
             result = await review_graph.start_review(job_id=job_id, db_session=db)
-            return result.status == "ok"
+            # 中文注释：pending_completion 说明审核流程已进入等待用户补全，不应被 worker 当作失败重试。
+            return result.status in {"ok", "pending_completion"}
         return False
 
     async def _retry_message(self, data: dict, retry_count: int):

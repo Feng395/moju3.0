@@ -20,6 +20,7 @@ def test_refactor_entrypoints_can_import():
     from mold_cost.application.use_cases.handle_review_message import ReviewChatUseCase
     from mold_cost.application.use_cases.start_review import StartReviewUseCase
     from mold_cost.application.workflows.job_graph import job_graph
+    from mold_cost.application.workflows.review_graph import review_graph
     from mold_cost.domain.jobs import JobSummary
     from mold_cost.domain.pricing.calculators import price_total
     from mold_cost.domain.pricing.search import total_search
@@ -27,14 +28,13 @@ def test_refactor_entrypoints_can_import():
     from mold_cost.interfaces.api import get_legacy_cad_app
     from mold_cost.interfaces.api.routers.jobs import get_jobs_router, get_legacy_jobs_router
     from mold_cost.interfaces.mcp import get_server_module
-    from mold_cost.application.workflows.review_graph import review_graph
-    from tools.diagnostics import check_services as tools_check_services
-    from tools.diagnostics import verify_integration as tools_verify_integration
     from scripts import check_services as legacy_check_services
     from scripts import unified_api as legacy_unified_api
     from scripts import verify_integration as legacy_verify_integration
+    from tools.diagnostics import check_services as tools_check_services
+    from tools.diagnostics import verify_integration as tools_verify_integration
 
-    # 中文注释：这里按文件直接加载 cad_chaitu 下的兼容壳，避免触发旧包的重型初始化链。
+    # 中文注释：这里按文件直接加载 cad_chaitu 兼容壳，避免触发旧包的重型初始化链。
     cad_unified_api_path = Path(__file__).resolve().parents[2] / "scripts" / "cad_chaitu" / "unified_api.py"
     spec = importlib.util.spec_from_file_location("cad_legacy_unified_api_test", cad_unified_api_path)
     cad_legacy_unified_api = importlib.util.module_from_spec(spec)
@@ -91,7 +91,7 @@ def test_job_graph_can_delegate_to_stubbed_orchestrator(monkeypatch):
 
 
 def test_review_graph_can_run_with_stubbed_review_services():
-    """验证审核工作流可以在脱离 Redis / WebSocket 的情况下走通新服务边界。"""
+    """验证 review LangGraph 可在 stub 服务下完成 interrupt / resume 主链。"""
     from agents.base_agent import OpResult
     from mold_cost.application.workflows.review_graph import ReviewGraph
     from mold_cost.application.workflows.review_state import ReviewState
@@ -122,7 +122,7 @@ def test_review_graph_can_run_with_stubbed_review_services():
             return ReviewState(job_id=job_id, **kwargs)
 
         def calculate_data_version(self, raw_data: dict):
-            return {"features:sub-1": "v1"}
+            return {"features:sub-1": f"v{len(raw_data.get('features', []))}"}
 
         def serialize(self, state: ReviewState) -> dict:
             return state.to_payload()
@@ -169,17 +169,38 @@ def test_review_graph_can_run_with_stubbed_review_services():
             yield {"job_id": job_id, "chunk": message}
 
     class StubChangeApplier:
-        async def handle_modification(self, job_id: str, modification_text: str, user_id: str, db_session):
-            return {
-                "action": "modify",
-                "job_id": job_id,
-                "modification_text": modification_text,
-                "user_id": user_id,
-                "db": db_session,
-            }
+        async def handle_modification(
+            self,
+            *,
+            state: ReviewState,
+            modification_text: str,
+            user_id: str,
+            db_session,
+        ):
+            state.modifications.append({"text": modification_text, "user_id": user_id})
+            state.status = "awaiting_confirmation"
+            return state, OpResult(
+                status="ok",
+                message="修改已暂存，请确认",
+                data={
+                    "action": "modify",
+                    "job_id": state.job_id,
+                    "modification_text": modification_text,
+                    "user_id": user_id,
+                    "db": db_session,
+                    "requires_confirmation": True,
+                },
+            )
 
-        async def confirm_changes(self, job_id: str, user_id: str, db_session):
-            return {"action": "confirm", "job_id": job_id, "user_id": user_id, "db": db_session}
+        async def confirm_changes(self, *, state: ReviewState, user_id: str, db_session):
+            state.modifications = []
+            state.confirm_count += 1
+            state.status = "reviewing"
+            return state, OpResult(
+                status="ok",
+                message="操作已执行，可以继续修改",
+                data={"action": "confirm", "job_id": state.job_id, "user_id": user_id, "db": db_session},
+            )
 
     class StubNotifier:
         async def push_display_view(self, job_id: str, display_view: list[dict], db_session=None) -> None:
@@ -204,9 +225,25 @@ def test_review_graph_can_run_with_stubbed_review_services():
     assert isinstance(start_result, OpResult)
     assert start_result.status == "ok"
     assert start_result.data["job_id"] == "job-review"
+    start_snapshot = graph.get_graph_state("job-review")
+    assert start_snapshot is not None
+    assert start_snapshot.interrupts
+    assert asyncio.run(graph.get_review_state("job-review"))["waiting_for"] == "user_message"
 
-    assert asyncio.run(graph.handle_modification("job-review", "修改材料", "u1", "db"))["action"] == "modify"
-    assert asyncio.run(graph.confirm_changes("job-review", "u1", "db"))["action"] == "confirm"
+    modify_result = asyncio.run(graph.handle_modification("job-review", "修改材质", "u1", "db"))
+    assert isinstance(modify_result, OpResult)
+    assert modify_result.data["action"] == "modify"
+    modify_snapshot = graph.get_graph_state("job-review")
+    assert modify_snapshot is not None
+    assert modify_snapshot.interrupts
+    assert asyncio.run(graph.get_review_state("job-review"))["waiting_for"] == "confirmation"
+
+    confirm_result = asyncio.run(graph.confirm_changes("job-review", "u1", "db"))
+    assert isinstance(confirm_result, OpResult)
+    assert confirm_result.data["action"] == "confirm"
+    confirm_snapshot = graph.get_graph_state("job-review")
+    assert confirm_snapshot is not None
+    assert not confirm_snapshot.interrupts
 
     refresh_result = asyncio.run(graph.refresh_data("job-review", "db"))
     assert isinstance(refresh_result, OpResult)
@@ -217,6 +254,7 @@ def test_review_graph_can_run_with_stubbed_review_services():
     persisted_state = asyncio.run(graph.get_review_state("job-review"))
     assert persisted_state["job_id"] == "job-review"
     assert persisted_state["status"] == "reviewing"
+    assert persisted_state["waiting_for"] == "user_message"
     assert asyncio.run(graph.check_lock("job-review")) is True
     assert asyncio.run(graph.chat("job-review", "你好", [], {"x": 1}))["message"] == "你好"
 

@@ -26,6 +26,10 @@ class ReviewState:
     reloaded_at: str | None = None
     refresh_count: int = 0
     confirm_count: int = 0
+    current_node: str | None = None
+    waiting_for: str | None = None
+    resume_from: str | None = None
+    checkpoint_id: str | None = None
     extra: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
@@ -48,6 +52,10 @@ class ReviewState:
             "reloaded_at",
             "refresh_count",
             "confirm_count",
+            "current_node",
+            "waiting_for",
+            "resume_from",
+            "checkpoint_id",
         }
         extra = {key: value for key, value in payload.items() if key not in known_fields and key != "job_id"}
         return cls(
@@ -68,6 +76,10 @@ class ReviewState:
             reloaded_at=payload.get("reloaded_at"),
             refresh_count=payload.get("refresh_count", 0),
             confirm_count=payload.get("confirm_count", 0),
+            current_node=payload.get("current_node"),
+            waiting_for=payload.get("waiting_for"),
+            resume_from=payload.get("resume_from"),
+            checkpoint_id=payload.get("checkpoint_id"),
             extra=extra,
         )
 
@@ -91,6 +103,10 @@ class ReviewState:
             "reloaded_at": self.reloaded_at,
             "refresh_count": self.refresh_count,
             "confirm_count": self.confirm_count,
+            "current_node": self.current_node,
+            "waiting_for": self.waiting_for,
+            "resume_from": self.resume_from,
+            "checkpoint_id": self.checkpoint_id,
         }
         payload.update(self.extra)
         return payload
