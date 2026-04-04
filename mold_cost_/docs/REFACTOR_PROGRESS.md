@@ -230,3 +230,25 @@
 - `scripts/cad_chaitu/main.py` 与 `scripts/feature_recognition/feature_recognition.py` 仍是核心 legacy 算法落点
 - `scripts/search/*` 与 `scripts/calculate/*` 目前主要完成了目录级承接，尚未完成逐文件迁移到 `domain/pricing/search` 和 `domain/pricing/calculators`
 - `job_graph` / `review_graph` 目前仍是 workflow 外壳，尚未完全拆成真实 LangGraph 节点图
+
+## 阶段 11：收口 pricing 直接脚本依赖
+目标：
+- 将 `scripts.search` 和 `scripts.calculate` 的外部调用入口统一收口到 `domain.pricing`
+- 缩小 `mcp` 服务与本地 `pricing agent` 对 legacy 脚本路径的直接依赖面
+- 为后续按模块迁移 pricing 算法实现打下桥接层基础
+
+任务与完成情况：
+- 已完成：重写 [pricing/search/__init__.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/domain/pricing/search/__init__.py)，统一桥接 legacy 搜索模块
+- 已完成：重写 [pricing/calculators/__init__.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/domain/pricing/calculators/__init__.py)，统一桥接 legacy 计算模块
+- 已完成：改造 [server.py](/d:/workspace/project/python/mold3.0/mold_cost_/mcp_services/cad_price_search_mcp/server.py)，MCP 侧改走 `domain.pricing.search` 与 `domain.pricing.calculators`
+- 已完成：改造 [pricing_agent_local.py](/d:/workspace/project/python/mold3.0/mold_cost_/agents/pricing_agent_local.py)，本地 pricing agent 不再直接 import `scripts.search` / `scripts.calculate`
+- 已完成：扩展 [test_refactor_smoke.py](/d:/workspace/project/python/mold3.0/mold_cost_/tests/unit/test_refactor_smoke.py)，验证新的 pricing bridge 可导入
+- 已完成：运行 `py_compile` 与 `pytest tests/unit/test_refactor_smoke.py tests/unit/test_feature_refactor.py -q` 验证迁移结果
+
+阶段结果：
+- pricing 相关外层入口已开始统一经由 `domain.pricing` 访问 legacy 实现
+- legacy 搜索/计算脚本依赖面明显缩小，后续可以按模块逐步内迁，而不是继续新增散点引用
+
+当前仍保留的遗留项：
+- `scripts/search/*` 与 `scripts/calculate/*` 的算法本体仍位于 legacy 目录
+- `price_weight.py` 等少量 legacy 文件内部仍可能存在反向脚本引用，后续需要逐文件清理

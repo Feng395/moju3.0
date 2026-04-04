@@ -77,7 +77,7 @@ from shared.progress_stages import ProgressStage, ProgressPercent
 # ============================================================================
 # 导入价格搜索和计算模块
 # ============================================================================
-from scripts.search import (
+from mold_cost.domain.pricing.search import (
     base_itemcode_search,
     material_search,
     heat_search,
@@ -93,7 +93,7 @@ from scripts.search import (
     density_search  # 新增：密度检索
 )
 
-from scripts.calculate import (
+from mold_cost.domain.pricing.calculators import (
     price_material,
     price_heat,
     price_weight,

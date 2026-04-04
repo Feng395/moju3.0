@@ -21,6 +21,8 @@ def test_refactor_entrypoints_can_import():
     from mold_cost.application.use_cases.start_review import StartReviewUseCase
     from mold_cost.application.workflows.job_graph import job_graph
     from mold_cost.domain.jobs import JobSummary
+    from mold_cost.domain.pricing.calculators import price_total
+    from mold_cost.domain.pricing.search import total_search
     from mold_cost.infrastructure.mcp import tool_gateway
     from mold_cost.interfaces.api import get_legacy_cad_app
     from mold_cost.interfaces.api.routers.jobs import get_jobs_router, get_legacy_jobs_router
@@ -52,6 +54,8 @@ def test_refactor_entrypoints_can_import():
     assert job_graph is not None
     assert review_graph is not None
     assert JobSummary(job_id="job-1", status="pending").job_id == "job-1"
+    assert price_total is not None
+    assert total_search is not None
     assert tool_gateway is not None
     assert get_legacy_cad_app() is not None
     assert callable(get_jobs_router)

@@ -138,7 +138,7 @@ class PricingAgentLocal:
                     message="正在汇总搜索数据...",
                     details={"source": "local_script", "phase": "total_search"}
                 )
-            from scripts.search import total_search
+            from mold_cost.domain.pricing.search import total_search
             await total_search.search_by_job_id(job_id, subgraph_ids)
             
             # ========== 阶段4-6: 并发执行（与 MCP 模式一致） ==========
@@ -149,8 +149,8 @@ class PricingAgentLocal:
                     message="正在计算线割/水磨总价...",
                     details={"source": "local_script", "phase": "wire_watermill"}
                 )
-            from scripts.calculate import price_wire_total, price_water_mill_total
-            from scripts.search import (
+            from mold_cost.domain.pricing.calculators import price_wire_total, price_water_mill_total
+            from mold_cost.domain.pricing.search import (
                 base_itemcode_search, total_search as ts, water_mill_search,
                 search as subgraphs_cost_search
             )
@@ -189,7 +189,7 @@ class PricingAgentLocal:
                     message="正在清理和校验数据...",
                     details={"source": "local_script", "phase": "judgment"}
                 )
-            from scripts.calculate import judgment
+            from mold_cost.domain.pricing.calculators import judgment
             base_data_fresh = await base_itemcode_search.search_by_job_id(job_id, subgraph_ids)
             try:
                 await judgment.calculate({"base_itemcode": base_data_fresh}, job_id, subgraph_ids)
@@ -205,7 +205,7 @@ class PricingAgentLocal:
                     message="正在计算最终总价...",
                     details={"source": "local_script", "phase": "total_price"}
                 )
-            from scripts.calculate import price_total
+            from mold_cost.domain.pricing.calculators import price_total
             subgraphs_cost_data = await subgraphs_cost_search.search_by_job_id(job_id, subgraph_ids)
             final_result = await price_total.calculate(
                 {"subgraphs_cost": subgraphs_cost_data}, job_id, subgraph_ids
@@ -430,7 +430,7 @@ class PricingAgentLocal:
 
     async def _concurrent_search(self, job_id: str, subgraph_ids: List[str]) -> Dict[str, Any]:
         """阶段1: 并发调用所有搜索脚本"""
-        from scripts.search import (
+        from mold_cost.domain.pricing.search import (
             base_itemcode_search, material_search, density_search,
             heat_search, tooth_hole_search, water_mill_search,
             wire_base_search, wire_special_search, wire_standard_search,
@@ -475,7 +475,7 @@ class PricingAgentLocal:
         self, search_data: Dict[str, Any], job_id: str, subgraph_ids: List[str]
     ) -> List:
         """阶段2: 并发调用所有计算脚本"""
-        from scripts.calculate import (
+        from mold_cost.domain.pricing.calculators import (
             price_material, price_heat, price_weight, price_tooth_hole,
             price_wire_base, price_wire_special, price_wire_standard,
             price_add_auto_material,
@@ -486,7 +486,7 @@ class PricingAgentLocal:
             price_water_mill_oil_tank, price_water_mill_plate,
             price_water_mill_thread_ends
         )
-        from scripts.search import (
+        from mold_cost.domain.pricing.search import (
             base_itemcode_search, material_search, density_search,
             heat_search, tooth_hole_search, water_mill_search,
             wire_base_search, wire_special_search, wire_standard_search,
@@ -612,8 +612,8 @@ class PricingAgentLocal:
 
     async def _calculate_nc_total(self, base_data, job_id, subgraph_ids):
         """NC总费用计算（需要先获取 total_search 数据）"""
-        from scripts.search import total_search
-        from scripts.calculate import price_nc_total
+        from mold_cost.domain.pricing.search import total_search
+        from mold_cost.domain.pricing.calculators import price_nc_total
         total_data = await total_search.search_by_job_id(job_id, subgraph_ids)
         return await price_nc_total.calculate(
             {"base_itemcode": base_data, "total": total_data},
