@@ -119,6 +119,7 @@ def test_pricing_workflow_samples_have_valid_contracts():
     inventory = _load_inventory()
 
     for sample_entry in inventory["golden_samples"]:
+        # 中文注释：样本入口只在 inventory 中登记一次，测试侧统一从这里发现。
         bundle = load_sample_bundle(sample_entry)
         manifest = bundle["manifest"]
 

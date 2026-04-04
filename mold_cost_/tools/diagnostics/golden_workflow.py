@@ -1,4 +1,4 @@
-"""Reusable helpers for workflow golden regression samples."""
+"""Workflow golden 回归样本的复用辅助函数。"""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def load_json(path: Path) -> dict[str, Any]:
+    """统一读取 utf-8 JSON，避免测试侧重复写样板代码。"""
     return json.loads(path.read_text(encoding="utf-8"))
 
 
@@ -20,11 +21,13 @@ def resolve_repo_path(relative_path: str) -> Path:
 
 
 def load_inventory(inventory_path: Path | None = None) -> dict[str, Any]:
+    """读取 pricing bridge inventory，同时兼容显式路径覆盖。"""
     inventory_path = inventory_path or REPO_ROOT / "tests" / "golden" / "pricing_bridge_inventory.json"
     return load_json(inventory_path)
 
 
 def load_sample_bundle(sample_entry: dict[str, Any]) -> dict[str, Any]:
+    """将样本三件套一次性装载为测试可消费的数据结构。"""
     return {
         "manifest": load_json(resolve_repo_path(sample_entry["manifest_path"])),
         "expected_summary": load_json(resolve_repo_path(sample_entry["expected_summary_path"])),
@@ -33,10 +36,12 @@ def load_sample_bundle(sample_entry: dict[str, Any]) -> dict[str, Any]:
 
 
 def build_stage_index(manifest: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """把 stage 列表转成按名称索引，方便规则执行阶段随机访问。"""
     return {stage["name"]: stage for stage in manifest["stages"]}
 
 
 def assert_manifest_contract(manifest: dict[str, Any]) -> None:
+    """校验 manifest 的最小合同，保证样本目录结构可复用。"""
     assert manifest["schema_version"] == "golden.sample.v1"
     assert manifest["sample_id"]
     assert manifest["stages"]
@@ -51,6 +56,7 @@ def assert_manifest_contract(manifest: dict[str, Any]) -> None:
 
 
 def iter_repo_artifacts(manifest: dict[str, Any]):
+    """遍历声明了 repo_path 的产物，用于存在性和内容断言。"""
     for stage in manifest["stages"]:
         for artifact in stage.get("artifacts", []):
             repo_path = artifact.get("repo_path")
@@ -59,6 +65,7 @@ def iter_repo_artifacts(manifest: dict[str, Any]):
 
 
 def read_csv_records(path: Path) -> list[dict[str, str]]:
+    """按多编码顺序读取 CSV，并标准化表头/字段空白字符。"""
     last_error: Exception | None = None
 
     for encoding in ("utf-8-sig", "utf-8", "gb18030"):
@@ -71,6 +78,7 @@ def read_csv_records(path: Path) -> list[dict[str, str]]:
 
         normalized_rows = []
         for row in rows:
+            # 中文注释：CSV 来自历史脚本，字段可能带 BOM 或尾部空格，这里先做一次统一清洗。
             normalized_rows.append({(key or "").strip(): (value or "").strip() for key, value in row.items()})
         return normalized_rows
 
@@ -83,6 +91,7 @@ def evaluate_assertion_rules(
     assertion_rules: dict[str, Any],
     inventory: dict[str, Any],
 ) -> None:
+    """执行 assertion_rules 中声明的程序化规则。"""
     stage_index = build_stage_index(manifest)
 
     for rule in assertion_rules["rules"]:
@@ -111,6 +120,7 @@ def evaluate_assertion_rules(
             assert len(rows) == rule["expected_rows"]
 
             first_row = rows[0]
+            # 中文注释：第一版规则先覆盖最稳定的首行摘要字段，避免把高噪声细节写死。
             for key, expected_value in rule.get("expected_fields", {}).items():
                 assert first_row[key] == str(expected_value)
             continue
@@ -145,6 +155,7 @@ def evaluate_assertion_rules(
 
 
 def load_pause_resume_template(template_path: Path) -> dict[str, Any]:
+    """读取 workflow 暂停/恢复夹具模板。"""
     return load_json(template_path)
 
 
@@ -156,6 +167,7 @@ def hydrate_pause_resume_fixture(
     job_graph,
     review_graph,
 ) -> dict[str, Any]:
+    """把 golden 样本和 fixture 模板组装成可序列化的 workflow 恢复快照。"""
     stage_names = [stage["name"] for stage in manifest["stages"]]
     stage_index = build_stage_index(manifest)
     resume_stage = template["resume_from_stage"]
@@ -166,6 +178,7 @@ def hydrate_pause_resume_fixture(
     review_stage = stage_index["review"]
     pricing_stage = stage_index["pricing"]
 
+    # 中文注释：这里不依赖真实外部基础设施，只构造 workflow 恢复所需的最小状态。
     job_state = job_graph.to_state(
         job_id=template["job_id"],
         user_id=template["user_id"],
@@ -193,6 +206,7 @@ def hydrate_pause_resume_fixture(
         messages=list(template["review_state"].get("messages", [])),
     )
 
+    # 中文注释：返回序列化结果，便于测试直接断言，也为后续 checkpoint 落库预留接口。
     return {
         "fixture_version": template["fixture_version"],
         "job_state": job_graph.serialize_state(job_state),
