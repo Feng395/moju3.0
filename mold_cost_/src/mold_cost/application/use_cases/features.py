@@ -20,24 +20,25 @@ class ReprocessFeaturesUseCase:
     async def submit(
         self,
         job_id: str,
-        subgraph_ids: list[str],
+        subgraph_ids: list[str] | None = None,
         force_reprocess: bool = True,
     ) -> dict[str, Any]:
         """提交后台任务并立即返回。"""
         # 中文说明：应用层只负责任务投递，实际识别实现统一走 domain service。
+        requested_ids = subgraph_ids or []
         asyncio.create_task(
             self._execute(
                 job_id=job_id,
-                subgraph_ids=subgraph_ids,
+                subgraph_ids=requested_ids,
                 force_reprocess=force_reprocess,
             )
         )
-        logger.info("特征识别任务已提交到后台: job_id=%s, subgraph_count=%s", job_id, len(subgraph_ids))
+        logger.info("特征识别任务已提交到后台: job_id=%s, subgraph_count=%s", job_id, len(requested_ids))
         return {
             "status": "accepted",
             "message": "特征识别任务已提交，请通过 WebSocket 监听进度",
             "job_id": job_id,
-            "subgraph_count": len(subgraph_ids),
+            "subgraph_count": len(requested_ids),
         }
 
     async def _execute(
@@ -55,10 +56,11 @@ class ReprocessFeaturesUseCase:
             force_reprocess=force_reprocess,
         )
         logger.info(
-            "[后台任务] 特征识别完成: job_id=%s, status=%s, total=%s",
+            "[后台任务] 特征识别完成: job_id=%s, status=%s, summary_status=%s, total=%s",
             job_id,
             result.get("status"),
-            result.get("total"),
+            result.get("summary", {}).get("status"),
+            result.get("summary", {}).get("total_count", result.get("total")),
         )
         return result
 

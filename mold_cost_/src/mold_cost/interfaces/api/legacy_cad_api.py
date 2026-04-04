@@ -92,7 +92,9 @@ def create_app() -> FastAPI:
                 job_id=request.job_id,
             )
             if result.get("status") == "error":
-                raise HTTPException(status_code=500, detail=result.get("message", "拆图失败"))
+                error = result.get("error") or {}
+                status_code = 400 if error.get("code") == "MISSING_JOB_ID" else 500
+                raise HTTPException(status_code=status_code, detail=error.get("message", result.get("message", "拆图失败")))
             return ChaiTuResponse(**result)
         except HTTPException:
             raise
@@ -119,10 +121,13 @@ def create_app() -> FastAPI:
                 job_id=request.job_id,
                 subgraph_id=request.subgraph_id,
             )
-            if not result.get("success"):
-                detail = result.get("message", "特征识别失败")
-                if "未找到子图" in detail:
+            if result.get("status") == "error" or not result.get("success"):
+                error = result.get("error") or {}
+                detail = error.get("message", result.get("message", "特征识别失败"))
+                if error.get("code") == "SUBGRAPHS_NOT_FOUND" or "未找到子图" in detail:
                     raise HTTPException(status_code=404, detail=detail)
+                if error.get("code") == "MISSING_JOB_ID":
+                    raise HTTPException(status_code=400, detail=detail)
                 raise HTTPException(status_code=500, detail=detail)
             return FeatureRecognitionResponse(**result)
         except HTTPException:

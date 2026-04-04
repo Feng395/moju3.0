@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import uuid
 from functools import lru_cache
 from typing import Any
+
+from ...domain.cad.ports import CadSplitSubgraphRecord
 
 
 class LegacyCadSplitGateway:
@@ -23,6 +26,49 @@ class LegacyCadSplitGateway:
             job_id=job_id,
             minio_client=minio_client,
         )
+
+    async def list_subgraphs(self, job_id: str) -> list[CadSplitSubgraphRecord]:
+        """回查拆图结果，补足稳定 artifact 引用。"""
+        if not self._looks_like_uuid(job_id):
+            return []
+
+        try:
+            from shared.database import get_db
+            from shared.models import Subgraph
+            from sqlalchemy import select
+        except Exception:
+            return []
+
+        job_uuid = uuid.UUID(job_id)
+        async for db in get_db():
+            result = await db.execute(
+                select(
+                    Subgraph.subgraph_id,
+                    Subgraph.part_code,
+                    Subgraph.part_name,
+                    Subgraph.subgraph_file_url,
+                )
+                .where(Subgraph.job_id == job_uuid)
+                .order_by(Subgraph.part_code, Subgraph.subgraph_id)
+            )
+            return [
+                {
+                    "subgraph_id": row.subgraph_id,
+                    "part_code": row.part_code,
+                    "part_name": row.part_name,
+                    "subgraph_file_url": row.subgraph_file_url,
+                }
+                for row in result.fetchall()
+            ]
+        return []
+
+    @staticmethod
+    def _looks_like_uuid(value: str) -> bool:
+        try:
+            uuid.UUID(value)
+        except (TypeError, ValueError, AttributeError):
+            return False
+        return True
 
     @staticmethod
     @lru_cache(maxsize=1)
