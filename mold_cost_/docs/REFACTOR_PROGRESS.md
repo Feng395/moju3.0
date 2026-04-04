@@ -181,3 +181,27 @@
 当前仍保留的遗留项：
 - `scripts/cad_chaitu` 包本身仍包含较重的 legacy 初始化链，当前兼容壳通过按文件加载已可使用，但整个包尚未完全轻量化
 - `scripts/feature_recognition/feature_recognition.py` 与 `scripts/cad_chaitu/main.py` 仍承载核心 legacy 业务实现，后续如需继续清理，需要把算法本体逐步迁出 `scripts`
+
+## 阶段 9：诊断脚本迁移到 tools
+目标：
+- 将明显属于诊断/工具性质的脚本从 `scripts/` 根目录迁到 `tools/diagnostics`
+- 保留旧脚本路径的兼容调用方式，避免外部使用习惯被一次性打断
+- 进一步区分“业务脚本”与“工程工具”职责边界
+
+任务与完成情况：
+- 已完成：新增 [tools/diagnostics/check_services.py](/d:/workspace/project/python/mold3.0/mold_cost_/tools/diagnostics/check_services.py)
+- 已完成：新增 [tools/diagnostics/verify_integration.py](/d:/workspace/project/python/mold3.0/mold_cost_/tools/diagnostics/verify_integration.py)
+- 已完成：新增 [tools/__init__.py](/d:/workspace/project/python/mold3.0/mold_cost_/tools/__init__.py) 与 [tools/diagnostics/__init__.py](/d:/workspace/project/python/mold3.0/mold_cost_/tools/diagnostics/__init__.py)
+- 已完成：将 [scripts/check_services.py](/d:/workspace/project/python/mold3.0/mold_cost_/scripts/check_services.py) 改写为兼容壳
+- 已完成：将 [scripts/verify_integration.py](/d:/workspace/project/python/mold3.0/mold_cost_/scripts/verify_integration.py) 改写为兼容壳
+- 已完成：扩展 [test_refactor_smoke.py](/d:/workspace/project/python/mold3.0/mold_cost_/tests/unit/test_refactor_smoke.py)，验证 tools 模块与旧壳都可导入
+- 已完成：运行 `py_compile` 与 `pytest tests/unit/test_refactor_smoke.py tests/unit/test_feature_refactor.py -q` 验证迁移结果
+
+阶段结果：
+- `scripts/` 根目录又减少了一批非业务性质的历史实现
+- 工具脚本职责开始从业务运行链中分离出来
+- 旧命令仍可继续使用，但真实实现已经移到更合理的目录
+
+当前仍保留的遗留项：
+- `scripts/monitor_concurrency.py`、`scripts/monitor_locks.py`、`scripts/monitor_redis_websocket.py` 等监控类脚本仍在 `scripts/` 根目录
+- `scripts/feature_recognition/feature_recognition.py` 与 `scripts/cad_chaitu/main.py` 仍是 legacy 算法主实现，后续如继续清理，需要以算法迁移为主，而不是直接删除
