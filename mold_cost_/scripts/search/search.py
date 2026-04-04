@@ -25,7 +25,12 @@ if __name__ == "__main__":
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     sys.path.insert(0, project_root)
 
-from api_gateway.database import db
+from refactor_bootstrap import ensure_src_path
+
+# 中文注释：脚本直接依赖 infrastructure，避免再穿过 api_gateway 兼容层。
+ensure_src_path()
+
+from mold_cost.infrastructure.db.repositories.script_db import db
 
 logger = get_logger(__name__)
 

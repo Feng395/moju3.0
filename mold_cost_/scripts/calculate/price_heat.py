@@ -20,7 +20,12 @@ import logging
 import asyncio
 import json
 
-from api_gateway.database import db
+from refactor_bootstrap import ensure_src_path
+
+# 中文注释：脚本直接依赖 infrastructure，避免再穿过 api_gateway 兼容层。
+ensure_src_path()
+
+from mold_cost.infrastructure.db.repositories.script_db import db
 from ._batch_update_helper import batch_upsert_with_steps
 
 logger = get_logger(__name__)
