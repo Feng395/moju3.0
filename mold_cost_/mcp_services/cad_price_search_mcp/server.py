@@ -119,6 +119,7 @@ from mold_cost.domain.pricing.calculators import (
     price_total,
     judgment
 )
+from mold_cost.domain.pricing.services.pricing_service import pricing_service
 
 # 创建进度发布器实例
 try:
@@ -681,6 +682,12 @@ async def handle_price_tool(name: str, arguments: dict) -> list[TextContent]:
         logger.info(f"[MCP] judgment_cleanup completed")
     
     elif name == "update_job_total_cost_only":
+        # 中文注释：优先走 domain.pricing bridge 服务；下面保留 legacy SQL 块但由于提前返回不会再执行。
+        logger.info(f"[MCP] update_job_total_cost_only: job_id={job_id}")
+        total_cost = await pricing_service.update_job_total_cost(job_id)
+        result = {"status": "ok", "job_id": job_id, "total_cost": total_cost}
+        logger.info(f"[MCP] update_job_total_cost_only completed: {total_cost:.2f}")
+        return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, cls=DecimalEncoder))]
         # 只更新 jobs.total_cost，从所有子图汇总
         logger.info(f"[MCP] update_job_total_cost_only: job_id={job_id}")
         # 查询所有子图的 total_cost 并汇总

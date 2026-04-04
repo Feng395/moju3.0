@@ -1,4 +1,5 @@
 {
+  "pricing_driver": "bridge",
   "search_modules": [
     "base_itemcode_search",
     "density_search",
@@ -39,5 +40,134 @@
     "price_wire_special",
     "price_wire_standard",
     "price_wire_total"
+  ],
+  "legacy_targets": {
+    "search": {
+      "base_itemcode_search": "scripts.search.base_itemcode_search",
+      "density_search": "scripts.search.density_search",
+      "heat_search": "scripts.search.heat_search",
+      "material_search": "scripts.search.material_search",
+      "nc_search": "scripts.search.nc_search",
+      "search": "scripts.search.search",
+      "tooth_hole_search": "scripts.search.tooth_hole_search",
+      "total_search": "scripts.search.total_search",
+      "water_mill_search": "scripts.search.water_mill_search",
+      "wire_base_search": "scripts.search.wire_base_search",
+      "wire_special_search": "scripts.search.wire_special_search",
+      "wire_standard_search": "scripts.search.wire_standard_search",
+      "wire_total_search": "scripts.search.wire_total_search"
+    },
+    "calculators": {
+      "judgment": "scripts.calculate.judgment",
+      "price_add_auto_material": "scripts.calculate.price_add_auto_material",
+      "price_heat": "scripts.calculate.price_heat",
+      "price_material": "scripts.calculate.price_material",
+      "price_nc_base": "scripts.calculate.price_nc_base",
+      "price_nc_time": "scripts.calculate.price_nc_time",
+      "price_nc_total": "scripts.calculate.price_nc_total",
+      "price_tooth_hole": "scripts.calculate.price_tooth_hole",
+      "price_total": "scripts.calculate.price_total",
+      "price_water_mill_bevel_cost": "scripts.calculate.price_water_mill_bevel_cost",
+      "price_water_mill_chamfer_cost": "scripts.calculate.price_water_mill_chamfer_cost",
+      "price_water_mill_component": "scripts.calculate.price_water_mill_component",
+      "price_water_mill_hanging_table": "scripts.calculate.price_water_mill_hanging_table",
+      "price_water_mill_high_cost": "scripts.calculate.price_water_mill_high_cost",
+      "price_water_mill_long_strip": "scripts.calculate.price_water_mill_long_strip",
+      "price_water_mill_oil_tank": "scripts.calculate.price_water_mill_oil_tank",
+      "price_water_mill_plate": "scripts.calculate.price_water_mill_plate",
+      "price_water_mill_thread_ends": "scripts.calculate.price_water_mill_thread_ends",
+      "price_water_mill_total": "scripts.calculate.price_water_mill_total",
+      "price_weight": "scripts.calculate.price_weight",
+      "price_wire_base": "scripts.calculate.price_wire_base",
+      "price_wire_special": "scripts.calculate.price_wire_special",
+      "price_wire_standard": "scripts.calculate.price_wire_standard",
+      "price_wire_total": "scripts.calculate.price_wire_total"
+    }
+  },
+  "bridge_entrypoints": [
+    "agents/pricing_agent_local.py",
+    "mcp_services/cad_price_search_mcp/server.py"
+  ],
+  "legacy_api_gateway_dependencies": {
+    "search": [
+      "base_itemcode_search",
+      "density_search",
+      "heat_search",
+      "material_search",
+      "nc_search",
+      "search",
+      "tooth_hole_search",
+      "total_search",
+      "water_mill_search",
+      "wire_base_search",
+      "wire_special_search",
+      "wire_standard_search",
+      "wire_total_search"
+    ],
+    "calculators": [
+      "judgment",
+      "price_add_auto_material",
+      "price_heat",
+      "price_material",
+      "price_nc_base",
+      "price_nc_time",
+      "price_nc_total",
+      "price_tooth_hole",
+      "price_total",
+      "price_water_mill_bevel_cost",
+      "price_water_mill_chamfer_cost",
+      "price_water_mill_component",
+      "price_water_mill_hanging_table",
+      "price_water_mill_high_cost",
+      "price_water_mill_long_strip",
+      "price_water_mill_oil_tank",
+      "price_water_mill_plate",
+      "price_water_mill_thread_ends",
+      "price_water_mill_total",
+      "price_weight",
+      "price_wire_base",
+      "price_wire_special",
+      "price_wire_standard",
+      "price_wire_total"
+    ]
+  },
+  "next_extract_candidates": [
+    {
+      "module": "mold_cost.domain.pricing.search.density_search",
+      "legacy_module": "scripts.search.density_search",
+      "reason": "单表查询，subgraph_ids 仅为兼容参数，迁出时无需拆分跨模块逻辑。"
+    },
+    {
+      "module": "mold_cost.domain.pricing.search.heat_search",
+      "legacy_module": "scripts.search.heat_search",
+      "reason": "与 density_search 同型，只有 job_price_snapshots 读取路径，适合作为模板迁出。"
+    },
+    {
+      "module": "mold_cost.domain.pricing.search.material_search",
+      "legacy_module": "scripts.search.material_search",
+      "reason": "查询面单一，返回契约稳定，后续可和 heat/density 共用快照查询抽象。"
+    },
+    {
+      "module": "mold_cost.domain.pricing.search.nc_search",
+      "legacy_module": "scripts.search.nc_search",
+      "reason": "仍是单表快照读取，只多了 min_num 字段，复杂度低于任何 calculator。"
+    },
+    {
+      "module": "mold_cost.domain.pricing.search.wire_standard_search",
+      "legacy_module": "scripts.search.wire_standard_search",
+      "reason": "查询形态简单，和 material/heat 类似，迁出后能进一步统一 search bridge 模板。"
+    }
+  ],
+  "bridge_assertions": {
+    "search_module_count": 13,
+    "calculator_module_count": 24
+  },
+  "golden_samples": [
+    {
+      "sample_id": "workflow_pricing_m250286_p3",
+      "manifest_path": "tests/golden/samples/workflow_pricing_m250286_p3/manifest.json",
+      "expected_summary_path": "tests/golden/samples/workflow_pricing_m250286_p3/expected_summary.json",
+      "assertion_rules_path": "tests/golden/samples/workflow_pricing_m250286_p3/assertion_rules.json"
+    }
   ]
 }
