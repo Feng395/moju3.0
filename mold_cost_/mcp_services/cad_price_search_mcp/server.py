@@ -52,18 +52,17 @@ logger = get_logger("mcp_services.cad_price_search_mcp.server")
 # 瀵煎叆 CAD 澶勭悊妯″潡锛堝彲閫夛級
 # ============================================================================
 try:
-    from cad_chaitu import chaitu_process
+    from mold_cost.domain.cad.services import cad_split_service
     from mold_cost.domain.features.services import feature_recognition_service
-
-    batch_feature_recognition_process = feature_recognition_service.batch_recognize
+    # 中文说明：MCP 入口只持有领域服务，不再直接依赖 CAD/feature 脚本入口。
     CAD_AVAILABLE = True
     logger.info("[OK] CAD 澶勭悊妯″潡瀵煎叆鎴愬姛")
 except ImportError as e:
     CAD_AVAILABLE = False
     logger.warning(f"[WARN] CAD 澶勭悊妯″潡瀵煎叆澶辫触: {e}")
     logger.warning("       CAD 鍔熻兘灏嗕笉鍙敤锛屼絾浠锋牸璁＄畻鍔熻兘浠嶅彲姝ｅ父浣跨敤")
-    chaitu_process = None
-    batch_feature_recognition_process = None
+    cad_split_service = None
+    feature_recognition_service = None
 
 # 瀵煎叆杩涘害鍙戝竷鍣?from shared.progress_publisher import ProgressPublisher
 from shared.progress_stages import ProgressStage, ProgressPercent
@@ -330,7 +329,7 @@ async def handle_process_cad_and_features(arguments: dict) -> list[TextContent]:
     
     # 姝ラ1: CAD 鎷嗗浘
     logger.info(f"[姝ラ1] 寮€濮?CAD 鎷嗗浘...")
-    chaitu_result = await chaitu_process(dwg_url, job_id)
+    chaitu_result = await cad_split_service.split(dwg_url=dwg_url, job_id=job_id)
     
     if chaitu_result.get("status") != "ok":
         logger.error(f"[ERROR] CAD 鎷嗗浘澶辫触: {chaitu_result.get('message')}")
@@ -347,7 +346,12 @@ async def handle_process_cad_and_features(arguments: dict) -> list[TextContent]:
     
     # 姝ラ2: 鐗瑰緛璇嗗埆
     logger.info(f"[姝ラ2] 寮€濮嬬壒寰佽瘑鍒?..")
-    feature_result = batch_feature_recognition_process(job_id, None)
+    # 中文说明：特征识别仍复用 legacy 实现，但必须经由 domain service 收口。
+    feature_result = await asyncio.to_thread(
+        feature_recognition_service.batch_recognize,
+        job_id,
+        None,
+    )
     
     if not feature_result.get("success"):
         logger.error(f"[ERROR] 鐗瑰緛璇嗗埆澶辫触: {feature_result.get('message')}")
@@ -409,7 +413,7 @@ async def handle_cad_chaitu(arguments: dict) -> list[TextContent]:
         )
         logger.info(f"[SEND] 鍙戝竷杩涘害: 鎷嗗浘寮€濮?(job_id={job_id})")
     
-    result = await chaitu_process(dwg_url, job_id)
+    result = await cad_split_service.split(dwg_url=dwg_url, job_id=job_id)
     
     # 鍙戝竷杩涘害锛氭媶鍥惧畬鎴愭垨澶辫触
     if progress_publisher:
@@ -465,9 +469,14 @@ async def handle_feature_recognition(arguments: dict) -> list[TextContent]:
                 "message": "job_id 鍙傛暟蹇呭～"
             }, ensure_ascii=False)
         )]
-    
-    # 璋冪敤鑴氭湰澶勭悊锛堝彧璐熻矗涓氬姟閫昏緫锛?    result = batch_feature_recognition_process(job_id, subgraph_id)
-    
+
+    # 中文说明：MCP 的单独 feature 工具也统一经过领域服务，避免外层散落脚本调用。
+    result = await asyncio.to_thread(
+        feature_recognition_service.batch_recognize,
+        job_id,
+        subgraph_id,
+    )
+
     return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False))]
 
 # ============================================================================

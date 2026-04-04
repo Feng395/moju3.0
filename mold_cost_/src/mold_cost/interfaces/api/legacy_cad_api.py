@@ -2,11 +2,7 @@
 
 from __future__ import annotations
 
-import csv
-import glob
-import json
 import os
-import tempfile
 from typing import Any, Optional
 
 import uvicorn
@@ -85,7 +81,7 @@ def create_app() -> FastAPI:
     async def chaitu_api(request: ChaiTuRequest):
         """兼容旧拆图接口。"""
         try:
-            from mold_cost.domain.cad.services.split_service import cad_split_service
+            from mold_cost.domain.cad.services import cad_split_service
 
             # 中文注释：legacy 接口里虽然保留 prt_url 字段，但当前底层拆图服务未使用该字段。
             if request.prt_url:
@@ -147,29 +143,23 @@ def create_app() -> FastAPI:
     @app.post("/api/feature-recognition/upload-feature-db", tags=["特征识别服务"])
     async def upload_feature_db_api(request: UploadFeatureDbRequest):
         """兼容旧滑块特征库上传接口。"""
-        folder = os.path.abspath(request.csv_folder)
-        if not os.path.isdir(folder):
-            raise HTTPException(status_code=400, detail=f"文件夹不存在: {folder}")
+        try:
+            from mold_cost.domain.features.services import feature_recognition_service
 
-        csv_path = _find_latest_feature_csv(folder)
-        if csv_path is None:
-            raise HTTPException(status_code=404, detail=f"未找到识别报告 CSV: {folder}")
-
-        # 中文注释：这里保留旧接口能力，但内部实现收敛到兼容模块，避免继续散落在历史脚本中。
-        database = _build_feature_database(csv_path)
-        if not database:
-            raise HTTPException(status_code=400, detail="CSV 中没有有效的红色面数据")
-
-        minio_path = request.minio_path or os.getenv("SLIDER_FEATURE_DB_MINIO_PATH", "slider/feature_database.json")
-        _upload_feature_database(database, minio_path)
-
-        logger.info("特征库上传成功: %s, count=%s", minio_path, len(database))
-        return {
-            "success": True,
-            "message": f"上传成功，共 {len(database)} 条记录",
-            "minio_path": minio_path,
-            "csv_source": csv_path,
-        }
+            # 中文说明：legacy 上传入口继续保留，但真正逻辑统一收口到领域服务。
+            return feature_recognition_service.upload_feature_database(
+                csv_folder=request.csv_folder,
+                minio_path=request.minio_path,
+            )
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        except HTTPException:
+            raise
+        except Exception as exc:
+            logger.error("legacy feature upload 接口异常: %s", exc, exc_info=True)
+            raise HTTPException(status_code=500, detail=str(exc))
 
     @app.get("/", tags=["通用"])
     async def root():
@@ -211,82 +201,6 @@ def create_app() -> FastAPI:
         }
 
     return app
-
-
-def _find_latest_feature_csv(folder: str) -> str | None:
-    """查找最新的特征识别 CSV。"""
-    pattern = os.path.join(folder, "特征面识别报告_增强特*.csv")
-    csv_files = sorted(glob.glob(pattern), key=os.path.getmtime)
-    return csv_files[-1] if csv_files else None
-
-
-def _build_feature_database(csv_path: str) -> dict[str, Any]:
-    """从 CSV 构建特征数据库内容。"""
-    database: dict[str, Any] = {}
-    with open(csv_path, "r", encoding="utf-8-sig") as file_obj:
-        reader = csv.DictReader(file_obj)
-        for row in reader:
-            part_name = row.get("零件名", "").strip()
-            if not part_name:
-                continue
-            if any("\u4e00" <= char <= "\u9fff" for char in part_name):
-                continue
-
-            red_count_str = row.get("红色面数量", "0").strip()
-            area_str = row.get("总表面积(mm2)", "0").strip()
-            red_count = int(red_count_str) if red_count_str.isdigit() else 0
-            if red_count == 0:
-                continue
-
-            try:
-                total_area = float(area_str)
-            except ValueError:
-                total_area = 0.0
-
-            slider_result = row.get("识别结果", "").strip()
-            code = "滑块" if slider_result not in ("", "未识别") else "none"
-            database[part_name] = {
-                "wire_cut_details": [
-                    {
-                        "code": code,
-                        "cone": "f",
-                        "view": "front_view",
-                        "area_num": red_count,
-                        "instruction": f"{red_count} -红色面",
-                        "slider_angle": 0,
-                        "total_length": round(total_area, 3),
-                        "is_additional": False,
-                        "matched_count": red_count,
-                        "single_length": round(total_area / red_count, 3) if red_count else 0.0,
-                        "expected_count": red_count,
-                        "matched_line_ids": [],
-                        "overlapping_length": 0.0,
-                    }
-                ]
-            }
-    return database
-
-
-def _upload_feature_database(database: dict[str, Any], minio_path: str) -> None:
-    """上传特征数据库到 MinIO，并清理缓存。"""
-    from mold_cost.infrastructure.storage.minio_client import minio_client
-    from scripts.feature_recognition.slider_red_face_lookup import invalidate_cache
-
-    temp_file = tempfile.NamedTemporaryFile(suffix=".json", delete=False, mode="w", encoding="utf-8")
-    try:
-        json.dump(database, temp_file, ensure_ascii=False, indent=2)
-        temp_file.close()
-
-        if not minio_client.upload_file_from_path(minio_path, temp_file.name, content_type="application/json"):
-            raise RuntimeError("上传 MinIO 失败")
-
-        invalidate_cache(minio_path)
-    finally:
-        try:
-            os.unlink(temp_file.name)
-        except OSError:
-            pass
-
 
 def run(module_name: str = "unified_api:app") -> None:
     """运行兼容 API 服务。"""
