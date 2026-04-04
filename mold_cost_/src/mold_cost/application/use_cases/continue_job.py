@@ -6,6 +6,7 @@ import asyncio
 from typing import Any
 
 from ...core.logging import get_logger
+from ..workflows.job_graph import job_graph
 
 logger = get_logger(__name__)
 
@@ -15,10 +16,8 @@ class ContinueJobUseCase:
 
     async def submit(self, job_id: str) -> dict[str, Any]:
         """将继续执行动作投递到后台协程。"""
-        from agents import get_orchestrator_agent
-
-        orchestrator = get_orchestrator_agent()
-        asyncio.create_task(self._execute_continue_job(orchestrator, job_id))
+        # 中文注释：后台执行入口统一走 job_graph，避免调用方直接依赖旧 orchestrator。
+        asyncio.create_task(self._execute_continue_job(job_id))
         logger.info("继续执行任务已提交到后台: job_id=%s", job_id)
         return {
             "status": "accepted",
@@ -26,10 +25,10 @@ class ContinueJobUseCase:
             "job_id": job_id,
         }
 
-    async def _execute_continue_job(self, orchestrator, job_id: str) -> None:
+    async def _execute_continue_job(self, job_id: str) -> None:
         """后台真正执行 continue_job，并在失败时回推进度消息。"""
         try:
-            result = await orchestrator.continue_job(job_id)
+            result = await job_graph.continue_job(job_id)
             if result["status"] == "error":
                 logger.error("[后台任务] 继续执行失败: %s", result.get("message"))
             else:

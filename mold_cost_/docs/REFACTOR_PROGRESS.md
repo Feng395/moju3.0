@@ -52,3 +52,24 @@
 - 阶段 3：把 `continue_job`、审核中断恢复、编排状态推进迁到 `application/workflows/job_graph.py`
 - 阶段 4：把 `interaction_agent` 相关逻辑拆分为 review workflow + LangChain chat/tool 层
 - 阶段 5：逐步消除 `scripts/* -> api_gateway.*` 的反向依赖
+
+## 阶段 3：工作流外壳落地
+
+目标：
+- 将任务和审核主流程统一收口到 `application/workflows`
+- 让 worker 优先通过 workflow 执行，而不是直接依赖 legacy agent
+- 为后续 LangGraph 持久化、interrupt、human-in-the-loop 留稳定入口
+
+任务与完成情况：
+- 已完成：将 [job_graph.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/application/workflows/job_graph.py) 升级为任务工作流门面
+- 已完成：将 [review_graph.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/application/workflows/review_graph.py) 升级为审核工作流门面
+- 已完成：新增审核用例集合 [review.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/application/use_cases/review.py)
+- 已完成：`ContinueJobUseCase` 改为通过 `job_graph` 执行
+- 已完成：重写 [all_tasks_worker.py](/d:/workspace/project/python/mold3.0/mold_cost_/workers/all_tasks_worker.py)，任务主流程开始通过 `job_graph`
+- 已完成：重写 [review_worker.py](/d:/workspace/project/python/mold3.0/mold_cost_/workers/review_worker.py)，审核启动开始通过 `review_graph`
+- 已完成：新增新目录下的 worker 落点 [orchestrator_worker.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/interfaces/worker/orchestrator_worker.py)、[review_worker.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/interfaces/worker/review_worker.py)
+
+阶段结果：
+- 后台任务执行链已经统一走 workflow 外壳
+- LangGraph 目前以最小门面形式存在，真实节点拆分可在后续继续推进
+- 旧 agent 仍在内部复用，但对外依赖边界已经明显收敛
