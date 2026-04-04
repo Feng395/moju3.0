@@ -1,32 +1,27 @@
-"""
-任务管理路由 (Controller层)
-处理HTTP请求和响应
-负责人：ZZH
+﻿"""
+浠诲姟绠＄悊璺敱 (Controller灞?
+澶勭悊HTTP璇锋眰鍜屽搷搴?璐熻矗浜猴細ZZH
 
-合并信息：
-- 合并日期：2026-02-10
-- 源文件：mold_cost_/api_gateway/routers/jobs.py + mold_cost-main/api_gateway/routers/jobs.py
-- 合并策略：保留 mold_cost_ 为基础，补充 mold_cost-main 的重要路由
-- 主要功能：
-  1. 文件上传和任务创建 (mold_cost_)
-  2. 任务状态查询 (mold_cost_)
-  3. 价格快照查询 (mold_cost_)
-  4. 工艺快照查询 (mold_cost_)
-  5. 文件下载和预签名URL生成 (mold_cost_)
-  6. 获取任务详情（使用视图）(mold_cost-main)
-  7. 任务列表查询 (mold_cost-main)
-  8. 继续执行任务（异步后台）(mold_cost-main)
-- 路由端点：
-  - POST /jobs/upload - 上传文件创建任务 (mold_cost_)
-  - POST /jobs/ - 创建任务（标准REST风格）(mold_cost-main)
-  - GET /jobs/{job_id}/status - 查询任务状态 (mold_cost_)
-  - GET /jobs/{job_id}/snapshots/prices - 查询价格快照 (mold_cost_)
-  - GET /jobs/{job_id}/snapshots/processes - 查询工艺快照 (mold_cost_)
-  - GET /jobs/{job_id}/files/{file_type}/download - 下载文件 (mold_cost_)
-  - GET /jobs/{job_id}/files/{file_type}/url - 获取预签名URL (mold_cost_)
-  - GET /jobs/{job_id} - 获取任务详情（使用视图）(mold_cost-main)
-  - GET /jobs/ - 获取任务列表 (mold_cost-main)
-  - POST /jobs/{job_id}/continue - 继续执行任务 (mold_cost-main)
+鍚堝苟淇℃伅锛?- 鍚堝苟鏃ユ湡锛?026-02-10
+- 婧愭枃浠讹細mold_cost_/api_gateway/routers/jobs.py + mold_cost-main/api_gateway/routers/jobs.py
+- 鍚堝苟绛栫暐锛氫繚鐣?mold_cost_ 涓哄熀纭€锛岃ˉ鍏?mold_cost-main 鐨勯噸瑕佽矾鐢?- 涓昏鍔熻兘锛?  1. 鏂囦欢涓婁紶鍜屼换鍔″垱寤?(mold_cost_)
+  2. 浠诲姟鐘舵€佹煡璇?(mold_cost_)
+  3. 浠锋牸蹇収鏌ヨ (mold_cost_)
+  4. 宸ヨ壓蹇収鏌ヨ (mold_cost_)
+  5. 鏂囦欢涓嬭浇鍜岄绛惧悕URL鐢熸垚 (mold_cost_)
+  6. 鑾峰彇浠诲姟璇︽儏锛堜娇鐢ㄨ鍥撅級(mold_cost-main)
+  7. 浠诲姟鍒楄〃鏌ヨ (mold_cost-main)
+  8. 缁х画鎵ц浠诲姟锛堝紓姝ュ悗鍙帮級(mold_cost-main)
+- 璺敱绔偣锛?  - POST /jobs/upload - 涓婁紶鏂囦欢鍒涘缓浠诲姟 (mold_cost_)
+  - POST /jobs/ - 鍒涘缓浠诲姟锛堟爣鍑哛EST椋庢牸锛?mold_cost-main)
+  - GET /jobs/{job_id}/status - 鏌ヨ浠诲姟鐘舵€?(mold_cost_)
+  - GET /jobs/{job_id}/snapshots/prices - 鏌ヨ浠锋牸蹇収 (mold_cost_)
+  - GET /jobs/{job_id}/snapshots/processes - 鏌ヨ宸ヨ壓蹇収 (mold_cost_)
+  - GET /jobs/{job_id}/files/{file_type}/download - 涓嬭浇鏂囦欢 (mold_cost_)
+  - GET /jobs/{job_id}/files/{file_type}/url - 鑾峰彇棰勭鍚峌RL (mold_cost_)
+  - GET /jobs/{job_id} - 鑾峰彇浠诲姟璇︽儏锛堜娇鐢ㄨ鍥撅級(mold_cost-main)
+  - GET /jobs/ - 鑾峰彇浠诲姟鍒楄〃 (mold_cost-main)
+  - POST /jobs/{job_id}/continue - 缁х画鎵ц浠诲姟 (mold_cost-main)
 """
 from shared.unified_logging import get_logger
 import logging
@@ -40,12 +35,13 @@ from shared.database import get_db
 from ..auth import get_current_user
 from ..services.job_service import JobService
 from ..services.file_service import FileService
+from mold_cost.application.use_cases.continue_job import ContinueJobUseCase
 
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
-# 兼容旧版本路由（不带前缀，用于向后兼容）
+# 鍏煎鏃х増鏈矾鐢憋紙涓嶅甫鍓嶇紑锛岀敤浜庡悜鍚庡吋瀹癸級
 router_legacy = APIRouter(prefix="/api/jobs", tags=["jobs-legacy"])
 
 
@@ -58,20 +54,16 @@ async def upload_files(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    上传DWG/PRT文件并创建任务
-    
+    涓婁紶DWG/PRT鏂囦欢骞跺垱寤轰换鍔?    
     Args:
-        dwg_file: DWG文件（可选，但至少要有一个文件）
-        prt_file: PRT文件（可选）
-        encryption_key: 加密密钥（预留，第一期不使用）
-        current_user: 当前用户（从JWT获取）
-        db: 数据库会话
-    
+        dwg_file: DWG鏂囦欢锛堝彲閫夛紝浣嗚嚦灏戣鏈変竴涓枃浠讹級
+        prt_file: PRT鏂囦欢锛堝彲閫夛級
+        encryption_key: 鍔犲瘑瀵嗛挜锛堥鐣欙紝绗竴鏈熶笉浣跨敤锛?        current_user: 褰撳墠鐢ㄦ埛锛堜粠JWT鑾峰彇锛?        db: 鏁版嵁搴撲細璇?    
     Returns:
         {
             "job_id": "uuid",
             "status": "pending",
-            "message": "文件上传成功，任务已创建"
+            "message": "鏂囦欢涓婁紶鎴愬姛锛屼换鍔″凡鍒涘缓"
         }
     """
     try:
@@ -91,12 +83,12 @@ async def upload_files(
         raise
     
     except Exception as e:
-        logger.error(f"❌ 文件上传异常: {e}", exc_info=True)
+        logger.error(f"鉂?鏂囦欢涓婁紶寮傚父: {e}", exc_info=True)
         raise HTTPException(
             status_code=500,
             detail={
                 "error": "INTERNAL_SERVER_ERROR",
-                "message": f"服务器内部错误: {str(e)}"
+                "message": f"鏈嶅姟鍣ㄥ唴閮ㄩ敊璇? {str(e)}"
             }
         )
 
@@ -108,16 +100,13 @@ async def get_job_status(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    查询任务状态
-    
+    鏌ヨ浠诲姟鐘舵€?    
     Args:
-        job_id: 任务ID
-        current_user: 当前用户
-        db: 数据库会话
-    
+        job_id: 浠诲姟ID
+        current_user: 褰撳墠鐢ㄦ埛
+        db: 鏁版嵁搴撲細璇?    
     Returns:
-        任务状态信息
-    """
+        浠诲姟鐘舵€佷俊鎭?    """
     try:
         job_service = JobService()
         
@@ -133,12 +122,12 @@ async def get_job_status(
         raise
     
     except Exception as e:
-        logger.error(f"❌ 查询任务状态失败: {e}")
+        logger.error(f"鉂?鏌ヨ浠诲姟鐘舵€佸け璐? {e}")
         raise HTTPException(
             status_code=500,
             detail={
                 "error": "INTERNAL_SERVER_ERROR",
-                "message": f"查询失败: {str(e)}"
+                "message": f"鏌ヨ澶辫触: {str(e)}"
             }
         )
 
@@ -150,15 +139,13 @@ async def get_job_price_snapshots(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    查询任务的价格快照
-    
+    鏌ヨ浠诲姟鐨勪环鏍煎揩鐓?    
     Args:
-        job_id: 任务ID
-        current_user: 当前用户
-        db: 数据库会话
-    
+        job_id: 浠诲姟ID
+        current_user: 褰撳墠鐢ㄦ埛
+        db: 鏁版嵁搴撲細璇?    
     Returns:
-        价格快照列表
+        浠锋牸蹇収鍒楄〃
     """
     try:
         job_service = JobService()
@@ -175,7 +162,7 @@ async def get_job_price_snapshots(
         raise
     
     except Exception as e:
-        logger.error(f"❌ 查询价格快照失败: {e}")
+        logger.error(f"鉂?鏌ヨ浠锋牸蹇収澶辫触: {e}")
         raise HTTPException(
             status_code=500,
             detail={"error": "INTERNAL_SERVER_ERROR", "message": str(e)}
@@ -189,15 +176,13 @@ async def get_job_process_snapshots(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    查询任务的工艺规则快照
-    
+    鏌ヨ浠诲姟鐨勫伐鑹鸿鍒欏揩鐓?    
     Args:
-        job_id: 任务ID
-        current_user: 当前用户
-        db: 数据库会话
-    
+        job_id: 浠诲姟ID
+        current_user: 褰撳墠鐢ㄦ埛
+        db: 鏁版嵁搴撲細璇?    
     Returns:
-        工艺规则快照列表
+        宸ヨ壓瑙勫垯蹇収鍒楄〃
     """
     try:
         job_service = JobService()
@@ -214,7 +199,7 @@ async def get_job_process_snapshots(
         raise
     
     except Exception as e:
-        logger.error(f"❌ 查询工艺规则快照失败: {e}")
+        logger.error(f"鉂?鏌ヨ宸ヨ壓瑙勫垯蹇収澶辫触: {e}")
         raise HTTPException(
             status_code=500,
             detail={"error": "INTERNAL_SERVER_ERROR", "message": str(e)}
@@ -230,21 +215,19 @@ async def download_job_file(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    下载任务文件
+    涓嬭浇浠诲姟鏂囦欢
     
     Args:
-        job_id: 任务ID
-        file_type: 文件类型 ("dwg" 或 "prt")
-        current_user: 当前用户
-        db: 数据库会话
-    
+        job_id: 浠诲姟ID
+        file_type: 鏂囦欢绫诲瀷 ("dwg" 鎴?"prt")
+        current_user: 褰撳墠鐢ㄦ埛
+        db: 鏁版嵁搴撲細璇?    
     Returns:
-        文件流
-    """
+        鏂囦欢娴?    """
     try:
         file_service = FileService()
         
-        # 获取文件内容
+        # 鑾峰彇鏂囦欢鍐呭
         file_content = await file_service.get_job_file(
             db=db,
             job_id=job_id,
@@ -252,7 +235,7 @@ async def download_job_file(
             user_id=current_user["user_id"]
         )
         
-        # 确定文件扩展名和MIME类型
+        # 纭畾鏂囦欢鎵╁睍鍚嶅拰MIME绫诲瀷
         if file_type.lower() == "dwg":
             media_type = "application/acad"
             extension = "dwg"
@@ -275,7 +258,7 @@ async def download_job_file(
         raise
     
     except Exception as e:
-        logger.error(f"❌ 文件下载失败: {e}")
+        logger.error(f"鉂?鏂囦欢涓嬭浇澶辫触: {e}")
         raise HTTPException(
             status_code=500,
             detail={"error": "DOWNLOAD_FAILED", "message": str(e)}
@@ -291,18 +274,16 @@ async def get_job_file_url(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    获取任务文件的预签名下载URL
+    鑾峰彇浠诲姟鏂囦欢鐨勯绛惧悕涓嬭浇URL
     
     Args:
-        job_id: 任务ID
-        file_type: 文件类型 ("dwg" 或 "prt")
-        expires_hours: URL过期时间（小时，默认24小时）
-        current_user: 当前用户
-        db: 数据库会话
-    
+        job_id: 浠诲姟ID
+        file_type: 鏂囦欢绫诲瀷 ("dwg" 鎴?"prt")
+        expires_hours: URL杩囨湡鏃堕棿锛堝皬鏃讹紝榛樿24灏忔椂锛?        current_user: 褰撳墠鐢ㄦ埛
+        db: 鏁版嵁搴撲細璇?    
     Returns:
         {
-            "url": "预签名URL",
+            "url": "棰勭鍚峌RL",
             "expires_in": 86400,
             "file_type": "dwg"
         }
@@ -328,7 +309,7 @@ async def get_job_file_url(
         raise
     
     except Exception as e:
-        logger.error(f"❌ 获取文件URL失败: {e}")
+        logger.error(f"鉂?鑾峰彇鏂囦欢URL澶辫触: {e}")
         raise HTTPException(
             status_code=500,
             detail={"error": "URL_GENERATION_FAILED", "message": str(e)}
@@ -336,31 +317,26 @@ async def get_job_file_url(
 
 
 
-# 🆕 补充来自 mold_cost-main 的路由
-
-async def _execute_continue_job(orchestrator, job_id: str):
+# 馃啎 琛ュ厖鏉ヨ嚜 mold_cost-main 鐨勮矾鐢?
+async def _execute_continue_job(orchestrator, job_id: Optional[str] = None):
     """
-    后台执行任务继续流程
+    鍚庡彴鎵ц浠诲姟缁х画娴佺▼
     
     Args:
-        orchestrator: OrchestratorAgent 实例
-        job_id: 任务ID
+        orchestrator: 鍏煎鏃ц皟鐢ㄧ鍚嶇殑鍗犱綅鍙傛暟
+        job_id: 浠诲姟ID
     """
     try:
-        logger.info(f"[后台任务] 开始继续执行任务: job_id={job_id}")
-        
-        # 调用 continue_job 方法
-        result = await orchestrator.continue_job(job_id)
-        
-        if result["status"] == "error":
-            logger.error(f"[后台任务] 继续执行失败: {result.get('message')}")
-        else:
-            logger.info(f"[后台任务] 任务继续执行完成: job_id={job_id}")
+        if job_id is None:
+            job_id = orchestrator
+        logger.info(f"[鍚庡彴浠诲姟] 寮€濮嬬户缁墽琛屼换鍔? job_id={job_id}")
+
+        await ContinueJobUseCase()._execute_continue_job(job_id)
         
     except Exception as e:
-        logger.error(f"[后台任务] 继续执行异常: job_id={job_id}, error={e}", exc_info=True)
+        logger.error(f"[鍚庡彴浠诲姟] 缁х画鎵ц寮傚父: job_id={job_id}, error={e}", exc_info=True)
         
-        # 发布失败消息
+        # 鍙戝竷澶辫触娑堟伅
         try:
             from shared.progress_publisher import ProgressPublisher
             from shared.progress_stages import ProgressStage, ProgressPercent
@@ -370,11 +346,11 @@ async def _execute_continue_job(orchestrator, job_id: str):
                 job_id=job_id,
                 stage=ProgressStage.FAILED,
                 progress=0,
-                message=f"任务执行失败: {str(e)}",
+                message=f"浠诲姟鎵ц澶辫触: {str(e)}",
                 details={"source": "jobs_api", "error": str(e)}
             )
         except Exception as pub_error:
-            logger.error(f"[后台任务] 发布失败消息时出错: {pub_error}", exc_info=True)
+            logger.error(f"[鍚庡彴浠诲姟] 鍙戝竷澶辫触娑堟伅鏃跺嚭閿? {pub_error}", exc_info=True)
 
 
 @router.get("/{job_id}")
@@ -385,14 +361,14 @@ async def get_job(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    获取任务详情（使用视图确保数据一致性）
+    鑾峰彇浠诲姟璇︽儏锛堜娇鐢ㄨ鍥剧‘淇濇暟鎹竴鑷存€э級
     
-    来自 mold_cost-main，使用 v_job_cost_summary 视图
+    鏉ヨ嚜 mold_cost-main锛屼娇鐢?v_job_cost_summary 瑙嗗浘
     """
     try:
         from sqlalchemy import text
         
-        # 使用视图查询，确保 total_cost 始终准确
+        # 浣跨敤瑙嗗浘鏌ヨ锛岀‘淇?total_cost 濮嬬粓鍑嗙‘
         query = text("""
             SELECT 
                 job_id,
@@ -421,7 +397,7 @@ async def get_job(
         row = result.mappings().fetchone()
         
         if not row:
-            raise HTTPException(status_code=404, detail=f"任务不存在: {job_id}")
+            raise HTTPException(status_code=404, detail=f"浠诲姟涓嶅瓨鍦? {job_id}")
         
         return {
             "job_id": str(row['job_id']),
@@ -447,8 +423,8 @@ async def get_job(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"获取任务详情失败: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"获取任务详情失败: {str(e)}")
+        logger.error(f"鑾峰彇浠诲姟璇︽儏澶辫触: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"鑾峰彇浠诲姟璇︽儏澶辫触: {str(e)}")
 
 
 @router.get("/")
@@ -460,11 +436,11 @@ async def list_jobs(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    获取任务列表
+    鑾峰彇浠诲姟鍒楄〃
     
-    来自 mold_cost-main
+    鏉ヨ嚜 mold_cost-main
     """
-    # TODO: 实现任务列表查询
+    # TODO: 瀹炵幇浠诲姟鍒楄〃鏌ヨ
     return {"jobs": [], "total": 0}
 
 
@@ -475,23 +451,22 @@ async def create_job(
     prt_file: Optional[UploadFile] = File(None),
     current_user: dict = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
-): # TODO 后续需分析可用性
+):
+    # 中文注释：这里仍保留旧 REST 入口，但实现已经下沉到 JobService/use case。
     """
-    创建新任务（标准REST风格）
-    
-    来自 mold_cost-main，与 /upload 功能相同，提供标准REST API
+    鍒涘缓鏂颁换鍔★紙鏍囧噯REST椋庢牸锛?    
+    鏉ヨ嚜 mold_cost-main锛屼笌 /upload 鍔熻兘鐩稿悓锛屾彁渚涙爣鍑哛EST API
     
     Args:
-        dwg_file: DWG文件（必须）
-        prt_file: PRT文件（可选）
-        current_user: 当前用户
-        db: 数据库会话
-    
+        dwg_file: DWG鏂囦欢锛堝繀椤伙級
+        prt_file: PRT鏂囦欢锛堝彲閫夛級
+        current_user: 褰撳墠鐢ㄦ埛
+        db: 鏁版嵁搴撲細璇?    
     Returns:
         {
             "job_id": "uuid",
             "status": "pending",
-            "message": "任务创建成功"
+            "message": "浠诲姟鍒涘缓鎴愬姛"
         }
     """
     try:
@@ -511,12 +486,12 @@ async def create_job(
         raise
     
     except Exception as e:
-        logger.error(f"❌ 创建任务失败: {e}", exc_info=True)
+        logger.error(f"鉂?鍒涘缓浠诲姟澶辫触: {e}", exc_info=True)
         raise HTTPException(
             status_code=500,
             detail={
                 "error": "INTERNAL_SERVER_ERROR",
-                "message": f"创建任务失败: {str(e)}"
+                "message": f"鍒涘缓浠诲姟澶辫触: {str(e)}"
             }
         )
 
@@ -528,58 +503,59 @@ async def continue_job(
     current_user: dict = Depends(get_current_user)
 ):
     """
-    用户确认特征识别结果后，继续执行后续流程（异步后台任务）
+    鐢ㄦ埛纭鐗瑰緛璇嗗埆缁撴灉鍚庯紝缁х画鎵ц鍚庣画娴佺▼锛堝紓姝ュ悗鍙颁换鍔★級
     
-    来自 mold_cost-main
+    鏉ヨ嚜 mold_cost-main
     
-    触发条件：
-    - 任务状态为 waiting_for_confirmation
-    - 用户在前端检查特征识别结果无误后，点击"开始计算价格"按钮
+    瑙﹀彂鏉′欢锛?    - 浠诲姟鐘舵€佷负 waiting_for_confirmation
+    - 鐢ㄦ埛鍦ㄥ墠绔鏌ョ壒寰佽瘑鍒粨鏋滄棤璇悗锛岀偣鍑?寮€濮嬭绠椾环鏍?鎸夐挳
     
-    执行内容：
-    - 工艺决策（如果配置）
-    - 价格计算
-    - 完成任务
+    鎵ц鍐呭锛?    - 宸ヨ壓鍐崇瓥锛堝鏋滈厤缃級
+    - 浠锋牸璁＄畻
+    - 瀹屾垚浠诲姟
     
-    立即返回，处理在后台执行，通过 WebSocket 推送进度
-    
+    绔嬪嵆杩斿洖锛屽鐞嗗湪鍚庡彴鎵ц锛岄€氳繃 WebSocket 鎺ㄩ€佽繘搴?    
     Args:
-        job_id: 任务ID
+        job_id: 浠诲姟ID
     
     Returns:
         {
             "status": "accepted",
-            "message": "任务已提交，请通过 WebSocket 监听进度",
+            "message": "浠诲姟宸叉彁浜わ紝璇烽€氳繃 WebSocket 鐩戝惉杩涘害",
             "job_id": "xxx"
         }
     
-    示例:
+    绀轰緥:
         ```bash
         curl -X POST http://localhost:8211/jobs/{job_id}/continue
         ```
     """
     try:
         import asyncio
-        logger.info(f"收到继续执行请求: job_id={job_id}")
+        logger.info(f"鏀跺埌缁х画鎵ц璇锋眰: job_id={job_id}")
         
-        # 导入 Orchestrator
-        from agents import get_orchestrator_agent
+        # 瀵煎叆 Orchestrator
+        orchestrator = None
         
-        # 获取 Orchestrator 实例
-        orchestrator = get_orchestrator_agent()
+        # 鑾峰彇 Orchestrator 瀹炰緥
         
-        # 创建后台任务（不等待完成）
+        # 中文注释：继续执行在后台协程中推进。
         asyncio.create_task(_execute_continue_job(orchestrator, job_id))
         
-        logger.info(f"任务已提交到后台: job_id={job_id}")
+        logger.info(f"浠诲姟宸叉彁浜ゅ埌鍚庡彴: job_id={job_id}")
         
-        # 立即返回
+        # 绔嬪嵆杩斿洖
         return {
             "status": "accepted",
-            "message": "任务已提交，请通过 WebSocket 监听进度",
+            "message": "浠诲姟宸叉彁浜わ紝璇烽€氳繃 WebSocket 鐩戝惉杩涘害",
             "job_id": job_id
         }
         
     except Exception as e:
-        logger.error(f"提交任务失败: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"提交任务失败: {str(e)}")
+        logger.error(f"鎻愪氦浠诲姟澶辫触: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"鎻愪氦浠诲姟澶辫触: {str(e)}")
+
+
+
+
+

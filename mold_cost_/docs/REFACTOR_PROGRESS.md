@@ -112,3 +112,25 @@
 - 新目录结构不再只有空壳，pricing/features/review 都已有桥接落点
 - agent 到脚本层的直接耦合开始收缩
 - 后续可以围绕这些桥接点逐步替换旧实现，而不是继续从 `scripts` 横向扩散
+
+## 阶段 6：可用性验证与历史残留清理
+目标：
+- 验证重构后的主骨架可以在离线条件下真实导入、组装并执行最小流程
+- 清理已确认无运行引用的历史备份文件
+- 修正影响 Windows 控制台验证的日志编码噪音
+
+任务与完成情况：
+- 已完成：修正 [shared/unified_logging.py](/d:/workspace/project/python/mold3.0/mold_cost_/shared/unified_logging.py) 中的 emoji 初始化日志，降低 `gbk` 控制台下的编码告警
+- 已完成：将 [api_gateway/routers/jobs.py](/d:/workspace/project/python/mold3.0/mold_cost_/api_gateway/routers/jobs.py) 的继续执行辅助函数桥接到 `ContinueJobUseCase`
+- 已完成：新增离线冒烟测试 [test_refactor_smoke.py](/d:/workspace/project/python/mold3.0/mold_cost_/tests/unit/test_refactor_smoke.py)
+- 已完成：删除 4 个确认无引用的历史备份文件
+- 已完成：运行 `pytest tests/unit/test_refactor_smoke.py -q` 做最小链路验证
+
+阶段结果：
+- 新的 `workflow/use case/router/service` 主骨架已能离线完成导入和最小委派执行
+- `jobs continue` 的后台执行入口已经不再直接依赖旧 orchestrator 结果处理逻辑
+- 第一批可安全删除的历史备份文件已经清掉
+
+当前仍保留的遗留项：
+- `review_graph` 当前仍以桥接方式复用 `InteractionAgent`，尚未完全替换为真实 LangGraph 节点
+- 大量 `scripts/*` 仍承载旧业务实现，当前还被桥接层复用，不能直接整体删除；后续需要按模块迁移后再分批清理

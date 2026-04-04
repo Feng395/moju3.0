@@ -275,7 +275,7 @@ def init_logging(
     
     # 记录初始化信息
     root_logger.info(
-        f"✅ 统一日志系统初始化完成: "
+        f"统一日志系统初始化完成: "
         f"level={level}, "
         f"console={enable_console}, "
         f"file={enable_file}, "
