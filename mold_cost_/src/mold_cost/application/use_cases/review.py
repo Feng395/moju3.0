@@ -1,4 +1,4 @@
-"""审核流程用例集合。"""
+"""Review use cases backed by the workflow graph."""
 
 from __future__ import annotations
 
@@ -8,14 +8,14 @@ from ...application.workflows.review_graph import review_graph
 
 
 class StartReviewUseCase:
-    """启动审核流程。"""
+    """Advance the review workflow through load/check/prompt nodes."""
 
     async def execute(self, job_id: str, db_session):
         return await review_graph.start_review(job_id=job_id, db_session=db_session)
 
 
 class ModifyReviewUseCase:
-    """处理审核修改。"""
+    """Resume the workflow from wait_user_message into apply_review_change."""
 
     async def execute(self, job_id: str, modification_text: str, user_id: str, db_session):
         return await review_graph.handle_modification(
@@ -27,7 +27,7 @@ class ModifyReviewUseCase:
 
 
 class ConfirmReviewUseCase:
-    """确认审核修改。"""
+    """Confirm staged changes and resume the review session."""
 
     async def execute(self, job_id: str, user_id: str, db_session):
         return await review_graph.confirm_changes(
@@ -38,20 +38,19 @@ class ConfirmReviewUseCase:
 
 
 class RefreshReviewDataUseCase:
-    """刷新审核数据。"""
+    """Reload review data and rerun the start-of-review nodes."""
 
     async def execute(self, job_id: str, db_session):
         return await review_graph.refresh_data(job_id=job_id, db_session=db_session)
 
 
 class GetReviewStateUseCase:
-    """查询审核状态。"""
+    """Expose persisted review state without changing route payloads."""
 
     async def execute(self, job_id: str) -> dict[str, Any] | None:
         return await review_graph.get_review_state(job_id=job_id)
 
     async def execute_with_lock(self, job_id: str) -> dict[str, Any] | None:
-        """同时返回审核状态和锁状态，供路由直接响应。"""
         state = await review_graph.get_review_state(job_id=job_id)
         if not state:
             return None
@@ -62,14 +61,12 @@ class GetReviewStateUseCase:
 
 
 class ReviewChatUseCase:
-    """审核聊天用例。"""
+    """Keep chat routes on top of the chat execution adapter."""
 
     async def get_state(self, job_id: str):
-        """获取审核状态供聊天上下文使用。"""
         return await review_graph.get_review_state(job_id=job_id)
 
     async def chat(self, job_id: str, message: str, history: list[dict], current_data):
-        """执行非流式聊天。"""
         return await review_graph.chat(
             job_id=job_id,
             message=message,
@@ -78,7 +75,6 @@ class ReviewChatUseCase:
         )
 
     async def chat_stream(self, job_id: str, message: str, history: list[dict], current_data):
-        """执行流式聊天。"""
         async for chunk in review_graph.chat_stream(
             job_id=job_id,
             message=message,

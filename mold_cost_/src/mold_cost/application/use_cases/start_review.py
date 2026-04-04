@@ -1,4 +1,4 @@
-"""审核启动兼容用例。"""
+"""Compatibility import for the review start use case."""
 
 from __future__ import annotations
 

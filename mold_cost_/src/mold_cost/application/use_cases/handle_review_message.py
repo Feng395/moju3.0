@@ -1,4 +1,4 @@
-"""审核消息处理兼容用例。"""
+"""Compatibility imports for review message use cases."""
 
 from __future__ import annotations
 
