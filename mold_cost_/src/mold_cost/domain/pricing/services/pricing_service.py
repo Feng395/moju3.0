@@ -1,4 +1,4 @@
-"""定价领域 bridge 服务。"""
+﻿"""定价领域 bridge 服务。"""
 
 from __future__ import annotations
 
@@ -9,19 +9,19 @@ class LegacyPricingService:
     """桥接现有 PricingAgent，同时收口 bridge 期共享的定价操作。"""
 
     async def calculate(self, context: dict) -> dict:
+        """复用现有 PricingAgent 作为兼容期的统一计算入口。"""
         from agents import get_pricing_agent
 
         agent = get_pricing_agent()
         return await agent.process(context)
 
     async def update_job_total_cost(self, job_id: str) -> float:
-        """统一汇总 subgraphs.total_cost，并回写 jobs.total_cost。"""
+        """统一汇总 `subgraphs.total_cost`，并回写 `jobs.total_cost`。"""
         from shared.database import get_db
         from shared.models import Job, Subgraph
         from sqlalchemy import func, select, update
 
         async for db in get_db():
-            # 中文注释：bridge 期先复用现有 Job/Subgraph 模型，避免 MCP 与本地 agent 各自维护一份 SQL。
             result = await db.execute(
                 select(func.coalesce(func.sum(Subgraph.total_cost), 0)).where(
                     Subgraph.job_id == job_id

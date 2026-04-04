@@ -1,4 +1,4 @@
-"""Pricing bridge 结构 golden 回归测试。"""
+﻿"""Pricing bridge 结构 golden 回归测试。"""
 
 from __future__ import annotations
 
@@ -26,10 +26,12 @@ DIRECT_SCRIPTS_IMPORT_PATTERNS = (
 
 
 def _load_inventory() -> dict:
+    """读取 pricing bridge 的 golden inventory。"""
     return json.loads(INVENTORY_PATH.read_text(encoding="utf-8"))
 
 
 def _read_repo_text(relative_path: str) -> str:
+    """按仓库相对路径读取源码文本，供静态断言使用。"""
     return (ROOT / relative_path).read_text(encoding="utf-8")
 
 

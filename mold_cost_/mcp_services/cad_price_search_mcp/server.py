@@ -1,13 +1,8 @@
-"""
-CAD 和价格搜索 MCP 服务器 (SSE模式)
-整合 CAD 解析和价格计算功能
-端口：8200
+﻿"""
+CAD 鍜屼环鏍兼悳绱?MCP 鏈嶅姟鍣?(SSE妯″紡)
+鏁村悎 CAD 瑙ｆ瀽鍜屼环鏍艰绠楀姛鑳?绔彛锛?200
 
-职责：
-1. CAD 处理：DWG 拆图、特征识别
-2. 价格搜索：零件信息、价格信息检索
-3. 价格计算：材料费、加工费等计算
-"""
+鑱岃矗锛?1. CAD 澶勭悊锛欴WG 鎷嗗浘銆佺壒寰佽瘑鍒?2. 浠锋牸鎼滅储锛氶浂浠朵俊鎭€佷环鏍间俊鎭绱?3. 浠锋牸璁＄畻锛氭潗鏂欒垂銆佸姞宸ヨ垂绛夎绠?"""
 from shared.unified_logging import init_logging, get_logger
 from mcp.server import Server
 from mcp.server.sse import SseServerTransport
@@ -25,17 +20,17 @@ from dotenv import load_dotenv
 import logging
 from decimal import Decimal
 
-# 自定义 JSON 编码器，处理 Decimal 类型
+# 鑷畾涔?JSON 缂栫爜鍣紝澶勭悊 Decimal 绫诲瀷
 class DecimalEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, Decimal):
             return float(obj)
         return super(DecimalEncoder, self).default(obj)
 
-# 加载环境变量
+# 鍔犺浇鐜鍙橀噺
 load_dotenv()
 
-# 添加项目根目录到 Python 路径
+# 娣诲姞椤圭洰鏍圭洰褰曞埌 Python 璺緞
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 sys.path.insert(0, str(project_root / "scripts" / "cad_chaitu"))
@@ -46,15 +41,15 @@ from refactor_bootstrap import ensure_src_path
 
 ensure_src_path()
 
-# 初始化统一日志系统（统一到项目根目录的 logs 文件夹）
+# 鍒濆鍖栫粺涓€鏃ュ織绯荤粺锛堢粺涓€鍒伴」鐩牴鐩綍鐨?logs 鏂囦欢澶癸級
 init_logging(log_dir=str(project_root / "logs"))
 
-# 使用固定的模块名称，而不是 __name__
-# 这样即使作为主程序运行，也能正确分类到 mcp_services.log
+# 浣跨敤鍥哄畾鐨勬ā鍧楀悕绉帮紝鑰屼笉鏄?__name__
+# 杩欐牱鍗充娇浣滀负涓荤▼搴忚繍琛岋紝涔熻兘姝ｇ‘鍒嗙被鍒?mcp_services.log
 logger = get_logger("mcp_services.cad_price_search_mcp.server")
 
 # ============================================================================
-# 导入 CAD 处理模块（可选）
+# 瀵煎叆 CAD 澶勭悊妯″潡锛堝彲閫夛級
 # ============================================================================
 try:
     from cad_chaitu import chaitu_process
@@ -62,21 +57,19 @@ try:
 
     batch_feature_recognition_process = feature_recognition_service.batch_recognize
     CAD_AVAILABLE = True
-    logger.info("[OK] CAD 处理模块导入成功")
+    logger.info("[OK] CAD 澶勭悊妯″潡瀵煎叆鎴愬姛")
 except ImportError as e:
     CAD_AVAILABLE = False
-    logger.warning(f"[WARN] CAD 处理模块导入失败: {e}")
-    logger.warning("       CAD 功能将不可用，但价格计算功能仍可正常使用")
+    logger.warning(f"[WARN] CAD 澶勭悊妯″潡瀵煎叆澶辫触: {e}")
+    logger.warning("       CAD 鍔熻兘灏嗕笉鍙敤锛屼絾浠锋牸璁＄畻鍔熻兘浠嶅彲姝ｅ父浣跨敤")
     chaitu_process = None
     batch_feature_recognition_process = None
 
-# 导入进度发布器
-from shared.progress_publisher import ProgressPublisher
+# 瀵煎叆杩涘害鍙戝竷鍣?from shared.progress_publisher import ProgressPublisher
 from shared.progress_stages import ProgressStage, ProgressPercent
 
 # ============================================================================
-# 导入价格搜索和计算模块
-# ============================================================================
+# 瀵煎叆浠锋牸鎼滅储鍜岃绠楁ā鍧?# ============================================================================
 from mold_cost.domain.pricing.search import (
     base_itemcode_search,
     material_search,
@@ -90,8 +83,7 @@ from mold_cost.domain.pricing.search import (
     nc_search,
     total_search,
     search,
-    density_search  # 新增：密度检索
-)
+    density_search  # 鏂板锛氬瘑搴︽绱?)
 
 from mold_cost.domain.pricing.calculators import (
     price_material,
@@ -121,42 +113,40 @@ from mold_cost.domain.pricing.calculators import (
 )
 from mold_cost.domain.pricing.services.pricing_service import pricing_service
 
-# 创建进度发布器实例
-try:
+# 鍒涘缓杩涘害鍙戝竷鍣ㄥ疄渚?try:
     progress_publisher = ProgressPublisher()
-    logger.info("[OK] 进度发布器初始化成功")
+    logger.info("[OK] 杩涘害鍙戝竷鍣ㄥ垵濮嬪寲鎴愬姛")
 except Exception as e:
-    logger.warning(f"[WARN] 进度发布器初始化失败: {e}")
-    logger.warning("       MCP 服务将继续运行，但不会发布进度")
+    logger.warning(f"[WARN] 杩涘害鍙戝竷鍣ㄥ垵濮嬪寲澶辫触: {e}")
+    logger.warning("       MCP 鏈嶅姟灏嗙户缁繍琛岋紝浣嗕笉浼氬彂甯冭繘搴?)
     progress_publisher = None
 
-# 创建 MCP 服务器
-mcp_server = Server("cad-price-search-mcp")
+# 鍒涘缓 MCP 鏈嶅姟鍣?mcp_server = Server("cad-price-search-mcp")
 
 # ============================================================================
-# 工具定义
+# 宸ュ叿瀹氫箟
 # ============================================================================
 
 @mcp_server.list_tools()
 async def list_tools() -> list[Tool]:
-    """列出所有可用工具 - CAD工具 + 价格工具 Wind"""
+    """鍒楀嚭鎵€鏈夊彲鐢ㄥ伐鍏?- CAD宸ュ叿 + 浠锋牸宸ュ叿 Wind"""
     tools = []
     
-    # ========== CAD 处理工具 ==========
+    # ========== CAD 澶勭悊宸ュ叿 ==========
     cad_tools = [
         Tool(
             name="process_cad_and_features",
-            description="完整的 CAD 处理流程：下载 DWG → 拆图 → 特征识别",
+            description="瀹屾暣鐨?CAD 澶勭悊娴佺▼锛氫笅杞?DWG 鈫?鎷嗗浘 鈫?鐗瑰緛璇嗗埆",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "job_id": {
                         "type": "string",
-                        "description": "任务ID（必填，UUID格式）"
+                        "description": "浠诲姟ID锛堝繀濉紝UUID鏍煎紡锛?
                     },
                     "dwg_url": {
                         "type": "string",
-                        "description": "DWG 文件的 URL 或 MinIO 路径（可选）"
+                        "description": "DWG 鏂囦欢鐨?URL 鎴?MinIO 璺緞锛堝彲閫夛級"
                     }
                 },
                 "required": ["job_id"]
@@ -164,17 +154,17 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="cad_chaitu",
-            description="单独的 CAD 拆图功能：下载 DWG → 拆图 → 上传子图到 MinIO",
+            description="鍗曠嫭鐨?CAD 鎷嗗浘鍔熻兘锛氫笅杞?DWG 鈫?鎷嗗浘 鈫?涓婁紶瀛愬浘鍒?MinIO",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "job_id": {
                         "type": "string",
-                        "description": "任务ID（必填，UUID格式）"
+                        "description": "浠诲姟ID锛堝繀濉紝UUID鏍煎紡锛?
                     },
                     "dwg_url": {
                         "type": "string",
-                        "description": "DWG 文件的 URL 或 MinIO 路径（可选）"
+                        "description": "DWG 鏂囦欢鐨?URL 鎴?MinIO 璺緞锛堝彲閫夛級"
                     }
                 },
                 "required": ["job_id"]
@@ -182,17 +172,17 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="feature_recognition",
-            description="单独的特征识别功能：从 MinIO 下载子图 DXF → 提取特征 → 保存到数据库",
+            description="鍗曠嫭鐨勭壒寰佽瘑鍒姛鑳斤細浠?MinIO 涓嬭浇瀛愬浘 DXF 鈫?鎻愬彇鐗瑰緛 鈫?淇濆瓨鍒版暟鎹簱",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "job_id": {
                         "type": "string",
-                        "description": "任务ID（必填，UUID格式）"
+                        "description": "浠诲姟ID锛堝繀濉紝UUID鏍煎紡锛?
                     },
                     "subgraph_id": {
                         "type": "string",
-                        "description": "子图ID（可选，不提供则处理所有子图）"
+                        "description": "瀛愬浘ID锛堝彲閫夛紝涓嶆彁渚涘垯澶勭悊鎵€鏈夊瓙鍥撅級"
                     }
                 },
                 "required": ["job_id"]
@@ -200,7 +190,7 @@ async def list_tools() -> list[Tool]:
         )
     ]
     
-    # ========== 价格搜索工具 ==========
+    # ========== 浠锋牸鎼滅储宸ュ叿 ==========
     search_tool_configs = [
         ("search_base_itemcode", base_itemcode_search.MCP_TOOL_META),
         ("search_material", material_search.MCP_TOOL_META),
@@ -214,10 +204,9 @@ async def list_tools() -> list[Tool]:
         ("search_nc", nc_search.MCP_TOOL_META),
         ("search_total", total_search.MCP_TOOL_META),
         ("search_subgraphs_cost", search.MCP_TOOL_META),
-        ("search_density", density_search.MCP_TOOL_META),  # 新增：密度检索
-    ]
+        ("search_density", density_search.MCP_TOOL_META),  # 鏂板锛氬瘑搴︽绱?    ]
     
-    # ========== 价格计算工具 ==========
+    # ========== 浠锋牸璁＄畻宸ュ叿 ==========
     calculate_tool_configs = [
         ("calculate_material_cost", price_material.MCP_TOOL_META),
         ("calculate_heat_treatment_cost", price_heat.MCP_TOOL_META),
@@ -245,13 +234,13 @@ async def list_tools() -> list[Tool]:
         ("judgment_cleanup", judgment.MCP_TOOL_META),
         ("update_job_total_cost_only", {
             "name": "update_job_total_cost_only",
-            "description": "只更新 jobs.total_cost（从所有子图汇总），不更新 subgraphs",
+            "description": "鍙洿鏂?jobs.total_cost锛堜粠鎵€鏈夊瓙鍥炬眹鎬伙級锛屼笉鏇存柊 subgraphs",
             "inputSchema": {
                 "type": "object",
                 "properties": {
                     "job_id": {
                         "type": "string",
-                        "description": "任务ID (UUID)"
+                        "description": "浠诲姟ID (UUID)"
                     }
                 },
                 "required": ["job_id"]
@@ -259,10 +248,10 @@ async def list_tools() -> list[Tool]:
         }),
     ]
     
-    # 添加 CAD 工具
+    # 娣诲姞 CAD 宸ュ叿
     tools.extend(cad_tools)
     
-    # 生成价格搜索工具
+    # 鐢熸垚浠锋牸鎼滅储宸ュ叿
     for tool_name, meta in search_tool_configs:
         tools.append(Tool(
             name=tool_name,
@@ -270,7 +259,7 @@ async def list_tools() -> list[Tool]:
             inputSchema=meta["inputSchema"]
         ))
     
-    # 生成价格计算工具
+    # 鐢熸垚浠锋牸璁＄畻宸ュ叿
     for tool_name, meta in calculate_tool_configs:
         tools.append(Tool(
             name=tool_name,
@@ -282,9 +271,9 @@ async def list_tools() -> list[Tool]:
 
 @mcp_server.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[TextContent]:
-    """调用工具 - 统一路由"""
+    """璋冪敤宸ュ叿 - 缁熶竴璺敱"""
     try:
-        # ========== CAD 处理工具路由 ==========
+        # ========== CAD 澶勭悊宸ュ叿璺敱 ==========
         if name == "process_cad_and_features":
             return await handle_process_cad_and_features(arguments)
         elif name == "cad_chaitu":
@@ -292,36 +281,36 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         elif name == "feature_recognition":
             return await handle_feature_recognition(arguments)
         
-        # ========== 价格工具路由 ==========
+        # ========== 浠锋牸宸ュ叿璺敱 ==========
         else:
             return await handle_price_tool(name, arguments)
     
     except Exception as e:
         import traceback
         error_detail = traceback.format_exc()
-        logger.error(f"[ERROR] 工具执行异常: {e}")
+        logger.error(f"[ERROR] 宸ュ叿鎵ц寮傚父: {e}")
         logger.error(error_detail)
         return [TextContent(
             type="text",
             text=json.dumps({
                 "status": "error",
-                "message": f"工具执行异常: {str(e)}",
+                "message": f"宸ュ叿鎵ц寮傚父: {str(e)}",
                 "detail": error_detail
             }, ensure_ascii=False, cls=DecimalEncoder)
         )]
 
 # ============================================================================
-# CAD 工具处理函数
+# CAD 宸ュ叿澶勭悊鍑芥暟
 # ============================================================================
 
 async def handle_process_cad_and_features(arguments: dict) -> list[TextContent]:
-    """完整流程：拆图 + 特征识别"""
+    """瀹屾暣娴佺▼锛氭媶鍥?+ 鐗瑰緛璇嗗埆"""
     if not CAD_AVAILABLE:
         return [TextContent(
             type="text",
             text=json.dumps({
                 "status": "error",
-                "message": "CAD 处理功能不可用，请安装 ezdxf 和 minio 依赖包"
+                "message": "CAD 澶勭悊鍔熻兘涓嶅彲鐢紝璇峰畨瑁?ezdxf 鍜?minio 渚濊禆鍖?
             }, ensure_ascii=False)
         )]
     
@@ -333,67 +322,67 @@ async def handle_process_cad_and_features(arguments: dict) -> list[TextContent]:
             type="text",
             text=json.dumps({
                 "status": "error",
-                "message": "job_id 参数必填"
+                "message": "job_id 鍙傛暟蹇呭～"
             }, ensure_ascii=False)
         )]
     
-    logger.info(f">> 开始处理 CAD 任务: {job_id}")
+    logger.info(f">> 寮€濮嬪鐞?CAD 浠诲姟: {job_id}")
     
-    # 步骤1: CAD 拆图
-    logger.info(f"[步骤1] 开始 CAD 拆图...")
+    # 姝ラ1: CAD 鎷嗗浘
+    logger.info(f"[姝ラ1] 寮€濮?CAD 鎷嗗浘...")
     chaitu_result = await chaitu_process(dwg_url, job_id)
     
     if chaitu_result.get("status") != "ok":
-        logger.error(f"[ERROR] CAD 拆图失败: {chaitu_result.get('message')}")
+        logger.error(f"[ERROR] CAD 鎷嗗浘澶辫触: {chaitu_result.get('message')}")
         return [TextContent(
             type="text",
             text=json.dumps({
                 "status": "error",
-                "message": f"CAD 拆图失败: {chaitu_result.get('message')}",
+                "message": f"CAD 鎷嗗浘澶辫触: {chaitu_result.get('message')}",
                 "chaitu_result": chaitu_result
             }, ensure_ascii=False)
         )]
     
-    logger.info(f"[OK] CAD 拆图完成: {chaitu_result.get('message')}")
+    logger.info(f"[OK] CAD 鎷嗗浘瀹屾垚: {chaitu_result.get('message')}")
     
-    # 步骤2: 特征识别
-    logger.info(f"[步骤2] 开始特征识别...")
+    # 姝ラ2: 鐗瑰緛璇嗗埆
+    logger.info(f"[姝ラ2] 寮€濮嬬壒寰佽瘑鍒?..")
     feature_result = batch_feature_recognition_process(job_id, None)
     
     if not feature_result.get("success"):
-        logger.error(f"[ERROR] 特征识别失败: {feature_result.get('message')}")
+        logger.error(f"[ERROR] 鐗瑰緛璇嗗埆澶辫触: {feature_result.get('message')}")
         return [TextContent(
             type="text",
             text=json.dumps({
                 "status": "error",
-                "message": f"特征识别失败: {feature_result.get('message')}",
+                "message": f"鐗瑰緛璇嗗埆澶辫触: {feature_result.get('message')}",
                 "chaitu_result": chaitu_result,
                 "feature_result": feature_result
             }, ensure_ascii=False)
         )]
     
-    logger.info(f"[OK] 特征识别完成: {feature_result.get('message')}")
+    logger.info(f"[OK] 鐗瑰緛璇嗗埆瀹屾垚: {feature_result.get('message')}")
     
-    # 返回完整结果
+    # 杩斿洖瀹屾暣缁撴灉
     result = {
         "status": "ok",
-        "message": "CAD 处理和特征识别完成",
+        "message": "CAD 澶勭悊鍜岀壒寰佽瘑鍒畬鎴?,
         "job_id": job_id,
         "chaitu": chaitu_result,
         "features": feature_result
     }
     
-    logger.info(f"[COMPLETE] 所有处理完成!")
+    logger.info(f"[COMPLETE] 鎵€鏈夊鐞嗗畬鎴?")
     return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False))]
 
 async def handle_cad_chaitu(arguments: dict) -> list[TextContent]:
-    """单独的拆图功能"""
+    """鍗曠嫭鐨勬媶鍥惧姛鑳?""
     if not CAD_AVAILABLE:
         return [TextContent(
             type="text",
             text=json.dumps({
                 "status": "error",
-                "message": "CAD 处理功能不可用，请安装 ezdxf 和 minio 依赖包"
+                "message": "CAD 澶勭悊鍔熻兘涓嶅彲鐢紝璇峰畨瑁?ezdxf 鍜?minio 渚濊禆鍖?
             }, ensure_ascii=False)
         )]
     
@@ -405,25 +394,24 @@ async def handle_cad_chaitu(arguments: dict) -> list[TextContent]:
             type="text",
             text=json.dumps({
                 "status": "error",
-                "message": "job_id 参数必填"
+                "message": "job_id 鍙傛暟蹇呭～"
             }, ensure_ascii=False)
         )]
     
-    # 发布进度：拆图开始
-    if progress_publisher:
-        logger.info(f"[DEBUG] 准备发布拆图开始进度: job_id={job_id}")
+    # 鍙戝竷杩涘害锛氭媶鍥惧紑濮?    if progress_publisher:
+        logger.info(f"[DEBUG] 鍑嗗鍙戝竷鎷嗗浘寮€濮嬭繘搴? job_id={job_id}")
         progress_publisher.publish_progress(
             job_id=job_id,
             stage=ProgressStage.CAD_SPLIT_STARTED,
             progress=ProgressPercent.CAD_SPLIT_STARTED,
-            message="正在拆图...",
+            message="姝ｅ湪鎷嗗浘...",
             details={"source": "mcp_service"}
         )
-        logger.info(f"[SEND] 发布进度: 拆图开始 (job_id={job_id})")
+        logger.info(f"[SEND] 鍙戝竷杩涘害: 鎷嗗浘寮€濮?(job_id={job_id})")
     
     result = await chaitu_process(dwg_url, job_id)
     
-    # 发布进度：拆图完成或失败
+    # 鍙戝竷杩涘害锛氭媶鍥惧畬鎴愭垨澶辫触
     if progress_publisher:
         if result.get("status") == "ok":
             data = result.get("data", {})
@@ -433,36 +421,36 @@ async def handle_cad_chaitu(arguments: dict) -> list[TextContent]:
                 job_id=job_id,
                 stage=ProgressStage.CAD_SPLIT_COMPLETED,
                 progress=ProgressPercent.CAD_SPLIT_COMPLETED,
-                message=f"拆图完成，生成{total_count}个子图",
+                message=f"鎷嗗浘瀹屾垚锛岀敓鎴恵total_count}涓瓙鍥?,
                 details={
                     "source": "mcp_service",
                     "subgraph_count": total_count
                 }
             )
-            logger.info(f"[SEND] 发布进度: 拆图完成 (job_id={job_id}, 子图数={total_count})")
+            logger.info(f"[SEND] 鍙戝竷杩涘害: 鎷嗗浘瀹屾垚 (job_id={job_id}, 瀛愬浘鏁?{total_count})")
         else:
             progress_publisher.publish_progress(
                 job_id=job_id,
                 stage=ProgressStage.CAD_SPLIT_FAILED,
                 progress=ProgressPercent.CAD_SPLIT_STARTED,
-                message=f"拆图失败: {result.get('message', '未知错误')}",
+                message=f"鎷嗗浘澶辫触: {result.get('message', '鏈煡閿欒')}",
                 details={
                     "source": "mcp_service",
                     "error": result.get("message")
                 }
             )
-            logger.info(f"[SEND] 发布进度: 拆图失败 (job_id={job_id})")
+            logger.info(f"[SEND] 鍙戝竷杩涘害: 鎷嗗浘澶辫触 (job_id={job_id})")
     
     return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False))]
 
 async def handle_feature_recognition(arguments: dict) -> list[TextContent]:
-    """单独的特征识别功能"""
+    """鍗曠嫭鐨勭壒寰佽瘑鍒姛鑳?""
     if not CAD_AVAILABLE:
         return [TextContent(
             type="text",
             text=json.dumps({
                 "success": False,
-                "message": "CAD 处理功能不可用，请安装 ezdxf 和 minio 依赖包"
+                "message": "CAD 澶勭悊鍔熻兘涓嶅彲鐢紝璇峰畨瑁?ezdxf 鍜?minio 渚濊禆鍖?
             }, ensure_ascii=False)
         )]
     
@@ -474,33 +462,32 @@ async def handle_feature_recognition(arguments: dict) -> list[TextContent]:
             type="text",
             text=json.dumps({
                 "success": False,
-                "message": "job_id 参数必填"
+                "message": "job_id 鍙傛暟蹇呭～"
             }, ensure_ascii=False)
         )]
     
-    # 调用脚本处理（只负责业务逻辑）
-    result = batch_feature_recognition_process(job_id, subgraph_id)
+    # 璋冪敤鑴氭湰澶勭悊锛堝彧璐熻矗涓氬姟閫昏緫锛?    result = batch_feature_recognition_process(job_id, subgraph_id)
     
     return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False))]
 
 # ============================================================================
-# 价格工具处理函数
+# 浠锋牸宸ュ叿澶勭悊鍑芥暟
 # ============================================================================
 
 async def handle_price_tool(name: str, arguments: dict) -> list[TextContent]:
-    """处理价格相关工具"""
+    """澶勭悊浠锋牸鐩稿叧宸ュ叿"""
     job_id = arguments.get("job_id")
     subgraph_ids = arguments.get("subgraph_ids", [])
     
     if not job_id:
         return [TextContent(
             type="text",
-            text=json.dumps({"status": "error", "message": "job_id 参数必填"}, ensure_ascii=False)
+            text=json.dumps({"status": "error", "message": "job_id 鍙傛暟蹇呭～"}, ensure_ascii=False)
         )]
     
-    logger.info(f"[OK] 调用工具: {name}, job_id={job_id}, subgraph_ids={subgraph_ids}")
+    logger.info(f"[OK] 璋冪敤宸ュ叿: {name}, job_id={job_id}, subgraph_ids={subgraph_ids}")
     
-    # ========== 搜索工具路由 ==========
+    # ========== 鎼滅储宸ュ叿璺敱 ==========
     if name == "search_base_itemcode":
         result = await base_itemcode_search.search_by_job_id(job_id, subgraph_ids)
     elif name == "search_material":
@@ -528,7 +515,7 @@ async def handle_price_tool(name: str, arguments: dict) -> list[TextContent]:
     elif name == "search_density":
         result = await density_search.search_by_job_id(job_id, subgraph_ids)
     
-    # ========== 计算工具路由 ==========
+    # ========== 璁＄畻宸ュ叿璺敱 ==========
     elif name == "calculate_material_cost":
         base_data = await base_itemcode_search.search_by_job_id(job_id, subgraph_ids)
         material_data = await material_search.search_by_job_id(job_id, subgraph_ids)
@@ -674,24 +661,20 @@ async def handle_price_tool(name: str, arguments: dict) -> list[TextContent]:
         logger.info(f"[MCP] calculate_final_total_cost completed")
     
     elif name == "judgment_cleanup":
-        # 数据清理和校验
-        base_data = await base_itemcode_search.search_by_job_id(job_id, subgraph_ids)
+        # 鏁版嵁娓呯悊鍜屾牎楠?        base_data = await base_itemcode_search.search_by_job_id(job_id, subgraph_ids)
         search_data = {"base_itemcode": base_data}
         logger.info(f"[MCP] judgment_cleanup: job_id={job_id}")
         result = await judgment.calculate(search_data, job_id, subgraph_ids)
         logger.info(f"[MCP] judgment_cleanup completed")
     
     elif name == "update_job_total_cost_only":
-        # 中文注释：优先走 domain.pricing bridge 服务；下面保留 legacy SQL 块但由于提前返回不会再执行。
         logger.info(f"[MCP] update_job_total_cost_only: job_id={job_id}")
         total_cost = await pricing_service.update_job_total_cost(job_id)
         result = {"status": "ok", "job_id": job_id, "total_cost": total_cost}
         logger.info(f"[MCP] update_job_total_cost_only completed: {total_cost:.2f}")
         return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, cls=DecimalEncoder))]
-        # 只更新 jobs.total_cost，从所有子图汇总
-        logger.info(f"[MCP] update_job_total_cost_only: job_id={job_id}")
-        # 查询所有子图的 total_cost 并汇总
-        from api_gateway.database import db
+        # 鍙洿鏂?jobs.total_cost锛屼粠鎵€鏈夊瓙鍥炬眹鎬?        logger.info(f"[MCP] update_job_total_cost_only: job_id={job_id}")
+        # 鏌ヨ鎵€鏈夊瓙鍥剧殑 total_cost 骞舵眹鎬?        from api_gateway.database import db
         query_sql = """
             SELECT COALESCE(SUM(total_cost), 0) as total_cost
             FROM subgraphs
@@ -700,8 +683,7 @@ async def handle_price_tool(name: str, arguments: dict) -> list[TextContent]:
         row = await db.fetch_one(query_sql, job_id)
         total_cost = float(row["total_cost"]) if row else 0.0
         
-        # 更新 jobs 表
-        update_sql = """
+        # 鏇存柊 jobs 琛?        update_sql = """
             UPDATE jobs
             SET 
                 total_cost = $2,
@@ -716,36 +698,31 @@ async def handle_price_tool(name: str, arguments: dict) -> list[TextContent]:
     else:
         return [TextContent(
             type="text",
-            text=json.dumps({"status": "error", "message": f"未知工具: {name}"}, ensure_ascii=False)
+            text=json.dumps({"status": "error", "message": f"鏈煡宸ュ叿: {name}"}, ensure_ascii=False)
         )]
     
-    # 添加状态字段
-    if "status" not in result:
+    # 娣诲姞鐘舵€佸瓧娈?    if "status" not in result:
         result["status"] = "ok"
     
-    logger.info(f"[OK] 工具执行完成: {name}")
+    logger.info(f"[OK] 宸ュ叿鎵ц瀹屾垚: {name}")
     return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, cls=DecimalEncoder))]
 
 # ============================================================================
-# 应用创建函数（供 mcp_services/main.py 调用）
-# ============================================================================
+# 搴旂敤鍒涘缓鍑芥暟锛堜緵 mcp_services/main.py 璋冪敤锛?# ============================================================================
 
 def create_app(host: str = "0.0.0.0", port: int = 8200):
     """
-    创建 MCP ASGI 应用
+    鍒涘缓 MCP ASGI 搴旂敤
     
     Args:
-        host: 监听地址
-        port: 监听端口
+        host: 鐩戝惉鍦板潃
+        port: 鐩戝惉绔彛
     
     Returns:
-        ASGI 应用（供 uvicorn 使用）
-    """
-    # 创建 SSE 传输层
-    sse = SseServerTransport("/messages")
+        ASGI 搴旂敤锛堜緵 uvicorn 浣跨敤锛?    """
+    # 鍒涘缓 SSE 浼犺緭灞?    sse = SseServerTransport("/messages")
     
-    # 健康检查端点
-    async def health_check(request):
+    # 鍋ュ悍妫€鏌ョ鐐?    async def health_check(request):
         return JSONResponse({
             "status": "healthy",
             "service": "cad-price-search-mcp",
@@ -762,7 +739,7 @@ def create_app(host: str = "0.0.0.0", port: int = 8200):
             }
         })
     
-    # 直接调用工具的 HTTP 端点
+    # 鐩存帴璋冪敤宸ュ叿鐨?HTTP 绔偣
     async def call_tool_http(request):
         try:
             body = await request.json()
@@ -770,9 +747,9 @@ def create_app(host: str = "0.0.0.0", port: int = 8200):
             arguments = body.get("arguments", {})
             
             if not tool_name:
-                return JSONResponse({"status": "error", "message": "缺少 tool_name 参数"}, status_code=400)
+                return JSONResponse({"status": "error", "message": "缂哄皯 tool_name 鍙傛暟"}, status_code=400)
             
-            logger.info(f"[HTTP] 调用工具: {tool_name}")
+            logger.info(f"[HTTP] 璋冪敤宸ュ叿: {tool_name}")
             
             result_list = await call_tool(tool_name, arguments)
             
@@ -780,20 +757,20 @@ def create_app(host: str = "0.0.0.0", port: int = 8200):
                 result_text = result_list[0].text
                 result = json.loads(result_text)
             else:
-                result = {"status": "error", "message": "工具未返回结果"}
+                result = {"status": "error", "message": "宸ュ叿鏈繑鍥炵粨鏋?}
             
-            logger.info(f"[HTTP] 工具执行完成: {tool_name}")
+            logger.info(f"[HTTP] 宸ュ叿鎵ц瀹屾垚: {tool_name}")
             return JSONResponse(result)
         except Exception as e:
             import traceback
-            logger.error(f"[HTTP] 工具执行失败: {tool_name}, error={e}")
+            logger.error(f"[HTTP] 宸ュ叿鎵ц澶辫触: {tool_name}, error={e}")
             return JSONResponse({
                 "status": "error",
                 "message": str(e),
                 "traceback": traceback.format_exc()
             }, status_code=500)
     
-    # Starlette 路由
+    # Starlette 璺敱
     starlette_app = Starlette(
         routes=[
             Route("/health", health_check),
@@ -801,8 +778,7 @@ def create_app(host: str = "0.0.0.0", port: int = 8200):
         ]
     )
     
-    # 主 ASGI 应用（合并 SSE 和 HTTP 端点）
-    async def main_app(scope, receive, send):
+    # 涓?ASGI 搴旂敤锛堝悎骞?SSE 鍜?HTTP 绔偣锛?    async def main_app(scope, receive, send):
         path = scope.get("path", "")
         
         if path in ["/health", "/call_tool"]:
@@ -819,3 +795,5 @@ def create_app(host: str = "0.0.0.0", port: int = 8200):
             await send({"type": "http.response.body", "body": b"Not Found"})
     
     return main_app
+
+
