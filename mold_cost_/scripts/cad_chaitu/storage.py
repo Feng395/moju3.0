@@ -36,7 +36,31 @@ class FileStorageManager:
                     logger.error("MinIO 客户端未初始化")
                     return False
                 logger.info(f"从 MinIO 获取文件: {source}")
-                return self.minio_client.get_file(source, save_path)
+                # Support both MinIO client styles used in this repo:
+                # 1. download_file(object_name, local_path) -> bool
+                # 2. get_file(object_name) -> bytes
+                download_method = getattr(self.minio_client, "download_file", None)
+                if callable(download_method):
+                    return bool(download_method(source, save_path))
+
+                get_method = getattr(self.minio_client, "get_file", None)
+                if callable(get_method):
+                    try:
+                        # scripts/minio_client.py style: get_file(object_name, save_path) -> bool
+                        return bool(get_method(source, save_path))
+                    except TypeError:
+                        # api_gateway/utils/minio_client.py style: get_file(object_name) -> bytes
+                        data = get_method(source)
+                        if not data:
+                            logger.error(f"MinIO 文件为空或读取失败: {source}")
+                            return False
+
+                        with open(save_path, 'wb') as f:
+                            f.write(data)
+                        return True
+
+                logger.error("MinIO 客户端缺少可用的下载接口")
+                return False
             
             if source.startswith(('http://', 'https://')):
                 async with httpx.AsyncClient(timeout=60.0) as client:

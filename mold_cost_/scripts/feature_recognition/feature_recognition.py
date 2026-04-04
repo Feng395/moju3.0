@@ -81,6 +81,8 @@ DB_CONFIG = {
     'database': os.getenv('DB_NAME')
 }
 
+_SUBGRAPHS_HAS_XT_FILE_URL = None
+
 # API服务配置（从统一配置获取）
 from scripts.config_loader import get_server_config
 server_config = get_server_config()
@@ -110,6 +112,27 @@ def get_db_connection():
         raise
 
 
+def _subgraphs_has_xt_file_url(cursor) -> bool:
+    global _SUBGRAPHS_HAS_XT_FILE_URL
+
+    if _SUBGRAPHS_HAS_XT_FILE_URL is not None:
+        return _SUBGRAPHS_HAS_XT_FILE_URL
+
+    cursor.execute(
+        """
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = 'subgraphs' AND column_name = 'xt_file_url'
+        """
+    )
+    _SUBGRAPHS_HAS_XT_FILE_URL = cursor.fetchone() is not None
+    if _SUBGRAPHS_HAS_XT_FILE_URL:
+        logging.info("检测到 subgraphs.xt_file_url 列，启用 .x_t 路径读取")
+    else:
+        logging.warning("未检测到 subgraphs.xt_file_url 列，跳过 .x_t 路径读取")
+    return _SUBGRAPHS_HAS_XT_FILE_URL
+
+
 def get_subgraphs_from_db(job_id: str, subgraph_id: Optional[str] = None) -> List[Dict[str, Any]]:
     """
     从数据库查询子图信息
@@ -127,11 +150,14 @@ def get_subgraphs_from_db(job_id: str, subgraph_id: Optional[str] = None) -> Lis
         conn = get_db_connection()
         cursor = conn.cursor()
         
+        has_xt_file_url = _subgraphs_has_xt_file_url(cursor)
+        select_xt_column = ", xt_file_url" if has_xt_file_url else ""
+
         if subgraph_id:
             # 查询特定子图
             cursor.execute(
-                """
-                SELECT subgraph_id, part_code, subgraph_file_url, xt_file_url
+                f"""
+                SELECT subgraph_id, part_code, subgraph_file_url{select_xt_column}
                 FROM subgraphs
                 WHERE job_id = %s AND subgraph_id = %s
                 """,
@@ -140,8 +166,8 @@ def get_subgraphs_from_db(job_id: str, subgraph_id: Optional[str] = None) -> Lis
         else:
             # 查询所有子图
             cursor.execute(
-                """
-                SELECT subgraph_id, part_code, subgraph_file_url, xt_file_url
+                f"""
+                SELECT subgraph_id, part_code, subgraph_file_url{select_xt_column}
                 FROM subgraphs
                 WHERE job_id = %s
                 ORDER BY part_code
@@ -157,7 +183,7 @@ def get_subgraphs_from_db(job_id: str, subgraph_id: Optional[str] = None) -> Lis
                 'subgraph_id': row[0],
                 'part_code': row[1],
                 'subgraph_file_url': row[2],
-                'xt_file_url': row[3]  # MinIO 中 .x_t 文件路径，由拆图流程写入
+                'xt_file_url': row[3] if has_xt_file_url else None  # MinIO 中 .x_t 文件路径，由拆图流程写入
             })
         
         logging.info(f"从数据库查询到 {len(subgraphs)} 个子图")

@@ -33,6 +33,7 @@ from typing import Dict, Any, List, Optional
 import logging
 import asyncio
 import os
+import uuid
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -496,10 +497,16 @@ class CADAgent(BaseAgent):
         from shared.models import Subgraph
         from shared.database import get_db
         from sqlalchemy import select
+
+        try:
+            job_uuid = uuid.UUID(job_id)
+        except (ValueError, AttributeError):
+            self.logger.error(f"job_id 格式错误: {job_id}")
+            return []
         
         async for db in get_db():
             result = await db.execute(
-                select(Subgraph.subgraph_id).where(Subgraph.job_id == job_id)
+                select(Subgraph.subgraph_id).where(Subgraph.job_id == job_uuid)
             )
             subgraph_ids = [row[0] for row in result.fetchall()]
             break
@@ -805,7 +812,7 @@ class CADAgent(BaseAgent):
             subgraph_ids = []
             async for db in get_db():
                 result = await db.execute(
-                    select(Subgraph.subgraph_id).where(Subgraph.job_id == job_id)
+                    select(Subgraph.subgraph_id).where(Subgraph.job_id == uuid.UUID(job_id))
                 )
                 subgraph_ids = [row[0] for row in result.fetchall()]
                 break

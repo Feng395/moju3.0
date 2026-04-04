@@ -143,7 +143,7 @@ class Settings(BaseSettings):
     NC_SERVICE_URL: Optional[str] = None  # 兼容旧变量名
     NC_SERVICE_TIMEOUT: Optional[int] = None  # 兼容旧变量名
     
-    ODA_FILE_CONVERTER_PATH: str = "D:\\workspace\\ODA\\ODAFileConverter.exe"
+    ODA_FILE_CONVERTER_PATH: str = "D:\\workspace\\tools\\ODA\\ODAFileConverter.exe"
     
     # 外部API TODO
     FEATURE_REPROCESS_API_URL: str = "http://192.168.1.51:8300/api/features/reprocess"
@@ -288,3 +288,22 @@ def print_config_summary():
 if __name__ == "__main__":
     # 测试配置加载
     print_config_summary()
+    @staticmethod
+    def _parse_bool_like(v):
+        """Accept common environment values such as release/debug in addition to booleans."""
+        if isinstance(v, bool):
+            return v
+        if v is None:
+            return v
+        if isinstance(v, str):
+            normalized = v.strip().lower()
+            if normalized in ('true', '1', 'yes', 'on', 'debug', 'development', 'dev'):
+                return True
+            if normalized in ('false', '0', 'no', 'off', 'release', 'production', 'prod'):
+                return False
+        return v
+
+    @field_validator('DEBUG', 'RELOAD', mode='before')
+    @classmethod
+    def validate_bool_like_flags(cls, v):
+        return cls._parse_bool_like(v)

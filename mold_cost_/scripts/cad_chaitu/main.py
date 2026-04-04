@@ -129,6 +129,22 @@ storage_manager = None
 _minio_client = None
 
 
+def _is_probable_minio_object_path(path: Optional[str]) -> bool:
+    """Heuristically detect object storage paths like dwg/2026/04/file.dwg."""
+    if not path or not isinstance(path, str):
+        return False
+
+    normalized = path.strip().replace("\\", "/")
+    if not normalized or normalized.startswith(("http://", "https://")):
+        return False
+
+    if os.path.isabs(path):
+        return False
+
+    first_segment = normalized.split("/", 1)[0].lower()
+    return first_segment in {"dwg", "prt", "dxf", "xt", "uploads", "files"}
+
+
 def _export_xt_from_prt(prt_local: str, export_files: list, temp_dir: str,
                          xt_minio_base: str, minio_client) -> dict:
     """
@@ -387,6 +403,11 @@ async def chaitu_process(dwg_url: Optional[str], job_id: str, minio_client=None)
             dwg_source = dwg_file_path
             use_minio = True
             logger.info(f"从数据库查询到 dwg_file_path: {dwg_source}")
+
+        # When the caller passes a MinIO object path directly, don't misclassify it as a local file path.
+        if not use_minio and _is_probable_minio_object_path(dwg_source):
+            use_minio = True
+            logger.info(f"识别为 MinIO 对象路径，启用 MinIO 下载: {dwg_source}")
         
         # 从路径或 URL 提取源文件名（不含扩展名）
         if dwg_source.startswith(('http://', 'https://')):
@@ -721,7 +742,7 @@ async def chaitu_process(dwg_url: Optional[str], job_id: str, minio_client=None)
                     continue
                 
                 try:
-                    db_manager.save_subgraph(
+                    save_success = db_manager.save_subgraph(
                         sub_code,
                         file_info['minio_path'],
                         source_filename,
@@ -731,6 +752,11 @@ async def chaitu_process(dwg_url: Optional[str], job_id: str, minio_client=None)
                         xt_url_map.get(sub_code)  # .x_t MinIO 路径，无则 None
                     )
                     
+                    if not save_success:
+                        failed_db_count += 1
+                        logger.error(f"❌ 保存数据库失败[{failed_db_count}]: {sub_code}")
+                        continue
+
                     result_files.append({
                         "path": file_info['minio_path'],
                         "filename": f"{sub_code}.dxf",

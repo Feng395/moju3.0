@@ -132,9 +132,16 @@ class ConfigLoader:
         self._config['MINIO_ENDPOINT'] = os.getenv('MINIO_ENDPOINT')
         self._config['MINIO_ACCESS_KEY'] = os.getenv('MINIO_ACCESS_KEY')
         self._config['MINIO_SECRET_KEY'] = os.getenv('MINIO_SECRET_KEY')
-        self._config['MINIO_USE_HTTPS'] = os.getenv('MINIO_USE_HTTPS', 'false')
+        self._config['MINIO_USE_HTTPS'] = (
+            os.getenv('MINIO_USE_HTTPS')
+            or os.getenv('MINIO_SECURE')
+            or 'false'
+        )
         self._config['MINIO_BUCKET'] = os.getenv('MINIO_BUCKET')
-        self._config['MINIO_BUCKET_FILES'] = os.getenv('MINIO_BUCKET_FILES')
+        self._config['MINIO_BUCKET_FILES'] = (
+            os.getenv('MINIO_BUCKET_FILES')
+            or os.getenv('MINIO_BUCKET')
+        )
         self._config['MINIO_REGION'] = os.getenv('MINIO_REGION')
         self._config['MINIO_EXTERNAL_ENDPOINT'] = os.getenv('MINIO_EXTERNAL_ENDPOINT')
 
