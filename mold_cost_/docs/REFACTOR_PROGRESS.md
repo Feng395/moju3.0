@@ -252,3 +252,25 @@
 当前仍保留的遗留项：
 - `scripts/search/*` 与 `scripts/calculate/*` 的算法本体仍位于 legacy 目录
 - `price_weight.py` 等少量 legacy 文件内部仍可能存在反向脚本引用，后续需要逐文件清理
+
+## 阶段 12：补齐 pricing 逐模块桥接与第一批 golden 回归
+目标：
+- 将 `domain/pricing/search` 与 `domain/pricing/calculators` 从包级桥接推进到逐模块桥接
+- 为 pricing 迁移建立更细粒度的新路径落点
+- 开始补第一批 `golden` 回归测试，先覆盖结构稳定的桥接清单
+
+任务与完成情况：
+- 已完成：为 `search` 目录下的关键 legacy 模块批量生成逐文件桥接，如 [base_itemcode_search.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/domain/pricing/search/base_itemcode_search.py)、[total_search.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/domain/pricing/search/total_search.py)
+- 已完成：为 `calculators` 目录下的关键 legacy 模块批量生成逐文件桥接，如 [price_total.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/domain/pricing/calculators/price_total.py)、[judgment.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/domain/pricing/calculators/judgment.py)
+- 已完成：更新 [pricing/search/__init__.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/domain/pricing/search/__init__.py) 与 [pricing/calculators/__init__.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/domain/pricing/calculators/__init__.py)，优先暴露 bridge 模块
+- 已完成：新增第一批 golden 基线 [pricing_bridge_inventory.json](/d:/workspace/project/python/mold3.0/mold_cost_/tests/golden/pricing_bridge_inventory.json)
+- 已完成：新增 golden 测试 [test_pricing_bridge_golden.py](/d:/workspace/project/python/mold3.0/mold_cost_/tests/golden/test_pricing_bridge_golden.py)
+- 已完成：运行 `pytest tests/unit/test_refactor_smoke.py tests/unit/test_feature_refactor.py tests/golden/test_pricing_bridge_golden.py -q`，结果为 `8 passed`
+
+阶段结果：
+- `domain.pricing` 已经不再只是目录级承接，而是开始具备逐文件迁移能力
+- 第一批 golden 回归测试已落地，后续可以继续引入真实样本快照和价格结果快照
+
+当前仍保留的遗留项：
+- 这些 bridge 文件内部仍转发到 `scripts/search/*` 与 `scripts/calculate/*`，算法本体尚未迁出 legacy 目录
+- 真实业务 golden 样本和数值回归还未建立，目前 golden 仅覆盖桥接清单结构

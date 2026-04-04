@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-# 中文注释：当前阶段先把 legacy 搜索模块统一从这里暴露出去，
-# 后续再逐个把 search_by_job_id 等实现迁移到本目录。
-from scripts.search import (
+# 中文注释：当前阶段优先暴露同名 bridge 模块，
+# 后续可以把单个模块内部实现逐步从 legacy 迁到 domain。
+from . import (
     base_itemcode_search,
     density_search,
     heat_search,
