@@ -1,0 +1,98 @@
+{
+  "schema_version": "golden.sample.v1",
+  "sample_id": "workflow_pricing_m250286_p3",
+  "title": "M250286-P3 upload to pricing regression sample",
+  "description": "Use committed slider recognition outputs to anchor the first workflow-level golden sample.",
+  "stages": [
+    {
+      "name": "upload",
+      "status": "accepted",
+      "artifacts": [
+        {
+          "kind": "upload_metadata",
+          "logical_path": "uploads/M250286-P3.prt",
+          "must_exist_in_repo": false
+        }
+      ],
+      "summary": {
+        "uploaded_files": [
+          "M250286-P3.prt"
+        ],
+        "dwg_logical_path": null,
+        "prt_logical_path": "uploads/M250286-P3.prt",
+        "source_type": "prt_only"
+      }
+    },
+    {
+      "name": "cad_split",
+      "status": "completed",
+      "artifacts": [
+        {
+          "kind": "split_report",
+          "repo_path": "scripts/slider_recognition/M250286-P3_split/批量识别报告.csv",
+          "format": "csv",
+          "must_exist_in_repo": true
+        }
+      ],
+      "summary": {
+        "recognized_rows": 1,
+        "recognized_slider": "DIE-06",
+        "match_score": "100.0"
+      }
+    },
+    {
+      "name": "feature_recognition",
+      "status": "completed",
+      "artifacts": [
+        {
+          "kind": "feature_report",
+          "repo_path": "scripts/slider_recognition/M250286-P3_split/特征面识别报告.csv",
+          "format": "csv",
+          "must_exist_in_repo": true
+        }
+      ],
+      "summary": {
+        "recognized_rows": 1,
+        "recognized_part": "DIE-06",
+        "red_face_count": 45,
+        "match_score": "100.0%"
+      }
+    },
+    {
+      "name": "review",
+      "status": "awaiting_confirm",
+      "artifacts": [
+        {
+          "kind": "pause_resume_fixture",
+          "fixture_path": "tests/integration/fixtures/workflow_pause_resume_fixture.json"
+        }
+      ],
+      "summary": {
+        "decision": "needs_manual_confirmation",
+        "pending_fields": [
+          "material",
+          "heat_treatment",
+          "red_face_match"
+        ],
+        "message_count": 1
+      }
+    },
+    {
+      "name": "pricing",
+      "status": "ready_to_resume",
+      "artifacts": [
+        {
+          "kind": "pricing_bridge_inventory",
+          "repo_path": "tests/golden/pricing_bridge_inventory.json",
+          "format": "json",
+          "must_exist_in_repo": true
+        }
+      ],
+      "summary": {
+        "pricing_driver": "bridge",
+        "required_search_modules": 13,
+        "required_calculator_modules": 24
+      }
+    }
+  ]
+}

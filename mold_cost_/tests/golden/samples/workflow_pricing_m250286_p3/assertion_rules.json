@@ -1,0 +1,99 @@
+{
+  "sample_id": "workflow_pricing_m250286_p3",
+  "rules": [
+    {
+      "name": "stage_sequence",
+      "type": "stage_sequence",
+      "expected": [
+        "upload",
+        "cad_split",
+        "feature_recognition",
+        "review",
+        "pricing"
+      ]
+    },
+    {
+      "name": "repo_artifacts_exist",
+      "type": "repo_artifacts_exist",
+      "stages": [
+        "cad_split",
+        "feature_recognition",
+        "pricing"
+      ]
+    },
+    {
+      "name": "cad_split_csv_summary",
+      "type": "csv_row_count",
+      "stage": "cad_split",
+      "expected_rows": 1,
+      "expected_fields": {
+        "status": "✅ 识别成功",
+        "slider": "DIE-06",
+        "score": "100.0"
+      }
+    },
+    {
+      "name": "feature_csv_summary",
+      "type": "csv_row_count",
+      "stage": "feature_recognition",
+      "expected_rows": 1,
+      "expected_fields": {
+        "识别结果": "DIE-06",
+        "匹配得分": "100.0%"
+      }
+    },
+    {
+      "name": "feature_detail_contains_red_face_count",
+      "type": "csv_field_contains",
+      "stage": "feature_recognition",
+      "field": "详细信息",
+      "expected_substring": "45个红色面"
+    },
+    {
+      "name": "review_pending_fields",
+      "type": "summary_contains",
+      "stage": "review",
+      "path": "pending_fields",
+      "expected": [
+        "material",
+        "heat_treatment",
+        "red_face_match"
+      ]
+    },
+    {
+      "name": "pricing_bridge_inventory",
+      "type": "pricing_inventory_counts",
+      "expected": {
+        "search_modules": 13,
+        "calculator_modules": 24
+      }
+    },
+    {
+      "name": "expected_summary_source_file",
+      "type": "expected_summary_matches",
+      "path": "business_outcome",
+      "expected": {
+        "source_file": "M250286-P3.prt",
+        "recognized_slider": "DIE-06",
+        "feature_report": {
+          "recognized_part": "DIE-06",
+          "red_face_count": 45,
+          "match_score": "100.0%"
+        },
+        "review_checkpoint": {
+          "status": "awaiting_confirm",
+          "pending_fields": [
+            "material",
+            "heat_treatment",
+            "red_face_match"
+          ]
+        },
+        "pricing_contract": {
+          "pricing_driver": "bridge",
+          "search_module_count": 13,
+          "calculator_module_count": 24
+        }
+      }
+    }
+  ]
+}

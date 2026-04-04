@@ -1,0 +1,39 @@
+{
+  "fixture_version": "workflow.pause_resume.v1",
+  "job_id": "job-workflow-pricing-m250286-p3",
+  "user_id": "golden-user",
+  "resume_from_stage": "review",
+  "job_state": {
+    "status": "paused",
+    "artifacts": {
+      "checkpoint_reason": "awaiting_review_confirmation",
+      "checkpoint_source": "golden_regression_fixture"
+    },
+    "errors": []
+  },
+  "review_state": {
+    "review_id": "review-workflow-pricing-m250286-p3",
+    "status": "awaiting_confirm",
+    "suggestions": [
+      {
+        "field": "material",
+        "reason": "Need reviewer to confirm material from uploaded source."
+      },
+      {
+        "field": "heat_treatment",
+        "reason": "Need reviewer to confirm heat treatment before pricing resumes."
+      }
+    ],
+    "messages": [
+      {
+        "role": "system",
+        "content": "Feature recognition finished and the workflow is paused for manual review."
+      }
+    ]
+  },
+  "resume_request": {
+    "action": "continue_job",
+    "job_id": "job-workflow-pricing-m250286-p3",
+    "expected_next_stage": "pricing"
+  }
+}

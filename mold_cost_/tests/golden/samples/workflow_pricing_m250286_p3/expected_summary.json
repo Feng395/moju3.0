@@ -1,0 +1,32 @@
+{
+  "sample_id": "workflow_pricing_m250286_p3",
+  "stage_order": [
+    "upload",
+    "cad_split",
+    "feature_recognition",
+    "review",
+    "pricing"
+  ],
+  "business_outcome": {
+    "source_file": "M250286-P3.prt",
+    "recognized_slider": "DIE-06",
+    "feature_report": {
+      "recognized_part": "DIE-06",
+      "red_face_count": 45,
+      "match_score": "100.0%"
+    },
+    "review_checkpoint": {
+      "status": "awaiting_confirm",
+      "pending_fields": [
+        "material",
+        "heat_treatment",
+        "red_face_match"
+      ]
+    },
+    "pricing_contract": {
+      "pricing_driver": "bridge",
+      "search_module_count": 13,
+      "calculator_module_count": 24
+    }
+  }
+}
