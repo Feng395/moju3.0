@@ -33,12 +33,19 @@
 - 为下一步把 orchestration 迁到 LangGraph 做准备
 
 任务与完成情况：
-- 待开始：新增任务创建、查询、文件访问、继续执行用例
-- 待开始：将 `api_gateway/services` 改为 use case 转发层
-- 待开始：继续把 `jobs router` 直接耦合的继续执行逻辑迁到应用层并替换旧实现
+- 已完成：新增任务创建用例 [create_job.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/application/use_cases/create_job.py)
+- 已完成：新增任务查询与快照查询用例 [get_job.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/application/use_cases/get_job.py)
+- 已完成：新增文件访问用例 [get_job_file.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/application/use_cases/get_job_file.py)
+- 已完成：新增继续执行用例 [continue_job.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/application/use_cases/continue_job.py)
+- 已完成：将 [job_service.py](/d:/workspace/project/python/mold3.0/mold_cost_/api_gateway/services/job_service.py) 改为 use case 转发层
+- 已完成：将 [file_service.py](/d:/workspace/project/python/mold3.0/mold_cost_/api_gateway/services/file_service.py) 改为 use case 转发层
+- 已完成：将 MinIO / RabbitMQ 在 use case 内改为懒加载，避免导入时立刻触发外部连接
+- 未完成：`jobs router` 中 `continue_job` 的旧入口仍未完全替换，计划在 workflow 阶段统一迁移
 
 阶段结果：
-- 当前尚未开始，此处作为下一提交阶段的目标说明
+- 任务主链路已经从 service 下沉到了 application/use_cases
+- API Gateway service 现在主要承担兼容层职责
+- 下一阶段可以开始把继续执行、审核中断恢复、状态推进统一迁入 workflow
 
 ## 下一阶段建议
 
