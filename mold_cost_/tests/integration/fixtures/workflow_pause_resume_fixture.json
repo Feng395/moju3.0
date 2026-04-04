@@ -22,6 +22,10 @@
       {
         "field": "heat_treatment",
         "reason": "Need reviewer to confirm heat treatment before pricing resumes."
+      },
+      {
+        "field": "red_face_match",
+        "reason": "Need reviewer to confirm the red-face recognition result before pricing resumes."
       }
     ],
     "messages": [

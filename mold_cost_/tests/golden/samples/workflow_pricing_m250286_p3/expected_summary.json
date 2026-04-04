@@ -27,6 +27,22 @@
       "pricing_driver": "bridge",
       "search_module_count": 13,
       "calculator_module_count": 24
+    },
+    "pricing_baseline": {
+      "part_code": "DIE-06",
+      "material": "Cr12mov",
+      "heat_treatment": "HRC50-",
+      "dimensions_mm": {
+        "length": 73.0,
+        "width": 151.2,
+        "thickness": 89.88
+      },
+      "quantity": 1,
+      "weight_kg": 5.664,
+      "material_cost": 66.83,
+      "heat_treatment_cost": 21.52,
+      "processing_cost_total": 0.0,
+      "total_cost": 88.35
     }
   }
 }

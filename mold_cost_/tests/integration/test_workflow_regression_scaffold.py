@@ -39,6 +39,7 @@ def test_pause_resume_fixture_can_be_hydrated():
 
     _ContinueJobUseCase, _continue_job_module, job_graph, review_graph = _load_workflow_objects()
     _inventory, bundle = _load_bundle()
+    expected_baseline = bundle["expected_summary"]["business_outcome"]["pricing_baseline"]
     template = load_pause_resume_template(
         Path(__file__).with_name("fixtures") / "workflow_pause_resume_fixture.json"
     )
@@ -55,8 +56,22 @@ def test_pause_resume_fixture_can_be_hydrated():
     assert fixture["job_state"]["status"] == "paused"
     assert fixture["job_state"]["artifacts"]["golden_sample_id"] == bundle["manifest"]["sample_id"]
     assert fixture["job_state"]["artifacts"]["last_completed_stage"] == "feature_recognition"
+    assert fixture["job_state"]["artifacts"]["resume_boundary_stage"] == "review"
     assert fixture["job_state"]["artifacts"]["next_stage"] == "pricing"
+    assert fixture["job_state"]["artifacts"]["pricing_summary"]["reference_part_code"] == "DIE-06"
+    assert fixture["job_state"]["artifacts"]["pricing_key_fields"] == expected_baseline
     assert fixture["review_state"]["status"] == "awaiting_confirm"
+    assert fixture["review_state"]["current_node"] == "confirm_and_resume"
+    assert fixture["review_state"]["waiting_for"] == "confirmation"
+    assert fixture["review_state"]["resume_from"] == "confirm_and_resume"
+    assert fixture["review_state"]["checkpoint_id"] == "confirm_and_resume"
+    assert fixture["review_state"]["pending_fields"] == bundle["manifest"]["stages"][3]["summary"]["pending_fields"]
+    assert {item["field"] for item in fixture["review_state"]["suggestions"]} == {
+        "material",
+        "heat_treatment",
+        "red_face_match",
+    }
+    assert fixture["review_state"]["pricing_key_fields"]["total_cost"] == expected_baseline["total_cost"]
     assert fixture["resume_request"]["action"] == "continue_job"
 
 
@@ -105,6 +120,9 @@ def test_continue_job_use_case_accepts_pause_resume_fixture(monkeypatch):
 
     assert response["status"] == "accepted"
     assert response["job_id"] == fixture["job_state"]["job_id"]
+    assert fixture["job_state"]["artifacts"]["resume_boundary_stage"] == "review"
+    assert fixture["review_state"]["expected_next_stage"] == "pricing"
+    assert fixture["review_state"]["pricing_key_fields"]["material_cost"] == 66.83
 
     asyncio.run(scheduled["coro"])
 

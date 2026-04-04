@@ -91,7 +91,15 @@
       "summary": {
         "pricing_driver": "bridge",
         "required_search_modules": 13,
-        "required_calculator_modules": 24
+        "required_calculator_modules": 24,
+        "reference_part_code": "DIE-06",
+        "key_costs": {
+          "weight_kg": 5.664,
+          "material_cost": 66.83,
+          "heat_treatment_cost": 21.52,
+          "processing_cost_total": 0.0,
+          "total_cost": 88.35
+        }
       }
     }
   ]

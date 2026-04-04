@@ -40,6 +40,24 @@ def build_stage_index(manifest: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return {stage["name"]: stage for stage in manifest["stages"]}
 
 
+def resolve_data_path(data: Any, path: str) -> Any:
+    """中文注释：支持 dot path 读取嵌套 dict/list，让 golden 规则能直接比对关键费用字段。"""
+    current = data
+    for segment in path.split("."):
+        if isinstance(current, dict):
+            assert segment in current, f"Missing path segment '{segment}' in '{path}'"
+            current = current[segment]
+            continue
+        if isinstance(current, list):
+            try:
+                current = current[int(segment)]
+            except (ValueError, IndexError) as exc:
+                raise AssertionError(f"Invalid list segment '{segment}' in '{path}'") from exc
+            continue
+        raise AssertionError(f"Unable to resolve path '{path}' at segment '{segment}'")
+    return current
+
+
 def assert_manifest_contract(manifest: dict[str, Any]) -> None:
     """校验 manifest 的最小合同，保证样本目录结构可复用。"""
     assert manifest["schema_version"] == "golden.sample.v1"
@@ -120,7 +138,7 @@ def evaluate_assertion_rules(
             assert len(rows) == rule["expected_rows"]
 
             first_row = rows[0]
-            # 中文注释：第一版规则先覆盖最稳定的首行摘要字段，避免把高噪声细节写死。
+            # 中文注释：先覆盖最稳定的首行摘要字段，避免把高噪声细节写死。
             for key, expected_value in rule.get("expected_fields", {}).items():
                 assert first_row[key] == str(expected_value)
             continue
@@ -137,7 +155,7 @@ def evaluate_assertion_rules(
 
         if rule_type == "summary_contains":
             stage = stage_index[rule["stage"]]
-            actual_value = stage["summary"][rule["path"]]
+            actual_value = resolve_data_path(stage["summary"], rule["path"])
             assert actual_value == rule["expected"]
             continue
 
@@ -148,7 +166,8 @@ def evaluate_assertion_rules(
             continue
 
         if rule_type == "expected_summary_matches":
-            assert expected_summary[rule["path"]] == rule["expected"]
+            actual_value = resolve_data_path(expected_summary, rule["path"])
+            assert actual_value == rule["expected"]
             continue
 
         raise AssertionError(f"Unsupported rule type: {rule_type}")
@@ -177,6 +196,8 @@ def hydrate_pause_resume_fixture(
     upload_stage = stage_index["upload"]
     review_stage = stage_index["review"]
     pricing_stage = stage_index["pricing"]
+    pricing_key_fields = dict(expected_summary.get("business_outcome", {}).get("pricing_baseline", {}))
+    review_pending_fields = list(review_stage["summary"].get("pending_fields", []))
 
     # 中文注释：这里不依赖真实外部基础设施，只构造 workflow 恢复所需的最小状态。
     job_state = job_graph.to_state(
@@ -195,6 +216,7 @@ def hydrate_pause_resume_fixture(
             "feature_summary": stage_index["feature_recognition"]["summary"],
             "review_summary": review_stage["summary"],
             "pricing_summary": pricing_stage["summary"],
+            "pricing_key_fields": pricing_key_fields,
         },
         errors=list(template["job_state"].get("errors", [])),
     )
@@ -204,6 +226,17 @@ def hydrate_pause_resume_fixture(
         status=template["review_state"]["status"],
         suggestions=list(template["review_state"].get("suggestions", [])),
         messages=list(template["review_state"].get("messages", [])),
+        # 中文注释：把 review 暂停点和 pricing 关键费用一并塞进 fixture，方便回归测试确认恢复边界没漂移。
+        current_node="confirm_and_resume",
+        waiting_for="confirmation",
+        resume_from="confirm_and_resume",
+        checkpoint_id="confirm_and_resume",
+        extra={
+            "golden_sample_id": manifest["sample_id"],
+            "pending_fields": review_pending_fields,
+            "expected_next_stage": template["resume_request"]["expected_next_stage"],
+            "pricing_key_fields": pricing_key_fields,
+        },
     )
 
     # 中文注释：返回序列化结果，便于测试直接断言，也为后续 checkpoint 落库预留接口。

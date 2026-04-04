@@ -69,7 +69,49 @@
       }
     },
     {
-      "name": "expected_summary_source_file",
+      "name": "pricing_stage_reference_part",
+      "type": "summary_contains",
+      "stage": "pricing",
+      "path": "reference_part_code",
+      "expected": "DIE-06"
+    },
+    {
+      "name": "pricing_stage_weight_kg",
+      "type": "summary_contains",
+      "stage": "pricing",
+      "path": "key_costs.weight_kg",
+      "expected": 5.664
+    },
+    {
+      "name": "pricing_stage_material_cost",
+      "type": "summary_contains",
+      "stage": "pricing",
+      "path": "key_costs.material_cost",
+      "expected": 66.83
+    },
+    {
+      "name": "pricing_stage_heat_treatment_cost",
+      "type": "summary_contains",
+      "stage": "pricing",
+      "path": "key_costs.heat_treatment_cost",
+      "expected": 21.52
+    },
+    {
+      "name": "pricing_stage_processing_cost_total",
+      "type": "summary_contains",
+      "stage": "pricing",
+      "path": "key_costs.processing_cost_total",
+      "expected": 0.0
+    },
+    {
+      "name": "pricing_stage_total_cost",
+      "type": "summary_contains",
+      "stage": "pricing",
+      "path": "key_costs.total_cost",
+      "expected": 88.35
+    },
+    {
+      "name": "expected_summary_business_outcome",
       "type": "expected_summary_matches",
       "path": "business_outcome",
       "expected": {
@@ -92,6 +134,22 @@
           "pricing_driver": "bridge",
           "search_module_count": 13,
           "calculator_module_count": 24
+        },
+        "pricing_baseline": {
+          "part_code": "DIE-06",
+          "material": "Cr12mov",
+          "heat_treatment": "HRC50-",
+          "dimensions_mm": {
+            "length": 73.0,
+            "width": 151.2,
+            "thickness": 89.88
+          },
+          "quantity": 1,
+          "weight_kg": 5.664,
+          "material_cost": 66.83,
+          "heat_treatment_cost": 21.52,
+          "processing_cost_total": 0.0,
+          "total_cost": 88.35
         }
       }
     }
