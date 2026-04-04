@@ -67,11 +67,11 @@ class AllTasksWorker:
         """Delegate job orchestration to the workflow facade."""
         job_id = message.get("job_id")
         action = message.get("action", "start")
-        logger.info("Received job message: job_id=%s, action=%s", job_id, action)
+        logger.info("Received job message: job_id=%s, thread_id=%s, action=%s", job_id, job_id, action)
 
         try:
             # 中文注释：start / continue 在 worker 层不再分叉，
-            # 统一由 job_graph 根据 action 路由到对应步骤流。
+            # 统一由 job_graph 根据 action 和 checkpoint 决定真实运行路径。
             result = await job_graph.handle_message(message)
             status = result.get("status")
 

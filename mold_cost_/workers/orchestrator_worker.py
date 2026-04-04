@@ -41,14 +41,14 @@ class OrchestratorWorker:
         logger.info("Starting OrchestratorWorker")
         await self.mq.connect()
         self.running = True
-        # 中文注释：保留旧 worker 进程形态，但实际业务入口统一收口到 job_graph。
+        # 中文注释：保留旧 worker 进程形态，但消息一律交给 workflow，worker 不再理解编排细节。
         await self.mq.consume(QUEUE_JOB_PROCESSING, self.handle_message, early_ack=True)
 
     async def handle_message(self, message: dict):
         """Pass job messages to the workflow facade."""
         job_id = message.get("job_id")
         action = message.get("action", "start")
-        logger.info("Received orchestrator message: job_id=%s, action=%s", job_id, action)
+        logger.info("Received orchestrator message: job_id=%s, thread_id=%s, action=%s", job_id, job_id, action)
 
         try:
             # 中文注释：worker 不再直接展开校验、编排和状态推进，只负责把消息交给 workflow。

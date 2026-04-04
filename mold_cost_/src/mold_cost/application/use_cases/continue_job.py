@@ -17,7 +17,7 @@ class ContinueJobUseCase:
 
     async def submit(self, job_id: str) -> dict[str, Any]:
         asyncio.create_task(self._execute_continue_job(job_id))
-        logger.info("Continue-job request accepted: job_id=%s", job_id)
+        logger.info("Continue-job request accepted: job_id=%s, thread_id=%s", job_id, job_id)
         return {
             "status": "accepted",
             "message": "任务已提交，请通过 WebSocket 监听进度",
@@ -27,9 +27,9 @@ class ContinueJobUseCase:
     async def _execute_continue_job(self, job_id: str) -> None:
         """Enqueue continue action; fall back to direct workflow execution if needed."""
         try:
-            # 中文注释：continue 优先走统一 job queue，和 start 共用同一条 workflow 入口。
+            # 中文注释：continue 优先走统一 job queue，恢复所需 thread_id/checkpoint 全由 workflow 自己解析。
             await self._publish_continue_message(job_id)
-            logger.info("[后台任务] Continue action queued: job_id=%s", job_id)
+            logger.info("[后台任务] Continue action queued: job_id=%s, thread_id=%s", job_id, job_id)
         except Exception as exc:
             logger.warning(
                 "[后台任务] Queue publish failed, falling back to local workflow: job_id=%s, error=%s",
@@ -38,8 +38,8 @@ class ContinueJobUseCase:
                 exc_info=True,
             )
             try:
-                # 中文注释：只有消息发送失败时才退回本地执行，避免在 use case 层重新分叉编排逻辑。
-                result = await job_graph.handle_message({"job_id": job_id, "action": "continue"})
+                # 中文注释：只有消息发送失败时才退回本地 workflow 执行，避免 use case 层再理解恢复细节。
+                result = await job_graph.continue_job(job_id)
                 if result.get("status") == "error":
                     logger.error("[后台任务] Continue execution failed: %s", result.get("message"))
                 else:
