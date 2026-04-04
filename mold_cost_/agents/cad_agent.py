@@ -38,7 +38,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 # 导入工艺规则匹配器
-from scripts.process_rule_matcher import match_and_update_process_rules
+from mold_cost.domain.pricing.services.process_rule_matcher import match_and_update_process_rules
 
 logger = get_logger(__name__)
 

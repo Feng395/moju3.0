@@ -221,7 +221,7 @@ class CADAgentLocal:
             
             # 执行工艺规则匹配
             try:
-                from scripts.process_rule_matcher import match_and_update_process_rules
+                from mold_cost.domain.pricing.services.process_rule_matcher import match_and_update_process_rules
                 # 查询所有子图ID
                 subgraph_ids = await self._get_subgraph_ids(job_id)
                 if subgraph_ids:

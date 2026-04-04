@@ -92,3 +92,23 @@
 - router 层已明显变薄，主要职责变为协议适配和错误映射
 - review/chat 入口不再直接 new legacy agent
 - 下一轮可以集中清理 `jobs.py` 和更多 legacy 反向依赖
+
+## 阶段 5：补齐领域桥接与去反向依赖
+
+目标：
+- 为 `features/pricing/review` 建立真正可落脚的 domain 包
+- 逐步减少 `agents` 对 `scripts/*` 的直接依赖
+- 为后续把 pricing/feature 逻辑继续下沉到领域层做准备
+
+任务与完成情况：
+- 已完成：补齐 [domain/features](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/domain/features)、[domain/pricing](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/domain/pricing)、[domain/review](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/domain/review)
+- 已完成：新增工艺规则匹配桥接 [process_rule_matcher.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/domain/pricing/services/process_rule_matcher.py)
+- 已完成：新增定价桥接服务 [pricing_service.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/domain/pricing/services/pricing_service.py)
+- 已完成：新增审核桥接服务 [review_service.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/domain/review/services/review_service.py)
+- 已完成：将 [cad_agent.py](/d:/workspace/project/python/mold3.0/mold_cost_/agents/cad_agent.py) 和 [cad_agent_local.py](/d:/workspace/project/python/mold3.0/mold_cost_/agents/cad_agent_local.py) 对 `process_rule_matcher` 的直接脚本依赖切到 domain 路径
+- 未完成：`scripts/* -> api_gateway.*` 的反向依赖仍然存在较多，需要后续分批迁移
+
+阶段结果：
+- 新目录结构不再只有空壳，pricing/features/review 都已有桥接落点
+- agent 到脚本层的直接耦合开始收缩
+- 后续可以围绕这些桥接点逐步替换旧实现，而不是继续从 `scripts` 横向扩散
