@@ -30,7 +30,7 @@ services:
 
 ```bash
 # 启动所有服务
-cd infrastructure
+cd mold_cost_/infrastructure
 docker-compose up -d
 
 # 查看服务状态
@@ -45,6 +45,43 @@ docker-compose down
 # 停止并删除数据
 docker-compose down -v
 ```
+
+### 启动失败排查
+
+如果启动时出现下面这类错误：
+
+```text
+failed to resolve reference "docker.io/library/rabbitmq:3.12-management-alpine"
+net/http: TLS handshake timeout
+```
+
+这通常不是 `docker-compose.yml` 写错了，而是 Docker Desktop 到 Docker Hub 的网络链路异常，常见原因是代理、镜像源或 DNS 配置不通。
+
+```bash
+# 1. 先单独测试镜像拉取
+docker pull rabbitmq:3.12-management-alpine
+docker pull postgres:15-alpine
+docker pull redis:7-alpine
+docker pull minio/minio:latest
+docker pull minio/mc:latest
+
+# 2. 如果仍然超时，检查 Docker 当前代理配置
+docker info
+```
+
+重点看 `HTTP Proxy`、`HTTPS Proxy` 和 `No Proxy`。如果 `docker info` 显示了代理，但当前网络并不需要代理，或者代理地址已经失效，请在 Docker Desktop 的 `Settings -> Resources -> Proxies` 中关闭或修正代理后重试。
+
+如果你所在网络访问 Docker Hub 较慢，可以在 Docker Desktop 中配置可用的 registry mirror，然后执行：
+
+```bash
+docker-compose down
+docker-compose pull
+docker-compose up -d
+```
+
+如果只是偶发超时，重试一次 `docker-compose pull` 往往就能恢复。
+
+另外，`add.sql` 属于增量脚本，不应该在全新数据库首启时自动执行。当前 compose 已改为只在首启时加载 `sql/00_init.sql`。
 
 ### 服务配置
 

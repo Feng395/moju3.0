@@ -43,7 +43,7 @@ class ConnectionManager:
         self.active_connections[job_id].append(websocket)
         
         logger.info(f"✅ WebSocket连接建立: job_id={job_id}, 当前连接数={len(self.active_connections[job_id])}")
-        print(f"✅ 连接建立: job_id={job_id}, 当前连接数={len(self.active_connections[job_id])}")
+        # print(f"✅ 连接建立: job_id={job_id}, 当前连接数={len(self.active_connections[job_id])}")
     
     def disconnect(self, websocket: WebSocket, job_id: str):
         """断开连接"""
@@ -51,7 +51,7 @@ class ConnectionManager:
             try:
                 self.active_connections[job_id].remove(websocket)
                 logger.info(f"❌ WebSocket连接断开: job_id={job_id}")
-                print(f"❌ 连接断开: job_id={job_id}")
+                # print(f"❌ 连接断开: job_id={job_id}")
                 
                 # 如果该任务没有连接了，删除key
                 if not self.active_connections[job_id]:
@@ -81,7 +81,7 @@ class ConnectionManager:
                 self.disconnect(conn, job_id)
             
             logger.info(f"📤 消息已发送: job_id={job_id}, 接收者={len(self.active_connections[job_id])}")
-            print(f"📤 消息已发送: job_id={job_id}, 接收者={len(self.active_connections[job_id])}")
+            # print(f"📤 消息已发送: job_id={job_id}, 接收者={len(self.active_connections[job_id])}")
         else:
             logger.warning(f"⚠️  没有活跃连接: job_id={job_id}")
     
@@ -107,7 +107,7 @@ class ConnectionManager:
         self.redis_client = redis_client
         
         logger.info("🚀 启动Redis订阅器...")
-        print("🚀 启动Redis订阅器...")
+        # print("🚀 启动Redis订阅器...")
         
         try:
             # 订阅多个频道模式
@@ -116,7 +116,7 @@ class ConnectionManager:
             logger.info("✅ Redis订阅器已启动")
             logger.info("   - job:*:progress (编排Agent进度)")
             logger.info("   - job:*:review (交互Agent审核)")
-            print("✅ Redis订阅器已启动，监听 job:*:progress 和 job:*:review")
+            # print("✅ Redis订阅器已启动，监听 job:*:progress 和 job:*:review")
             
             # 持续监听消息
             async for message in pubsub.listen():
@@ -130,10 +130,10 @@ class ConnectionManager:
         
         except asyncio.CancelledError:
             logger.info("🛑 Redis订阅器已取消")
-            print("🛑 Redis订阅器已取消")
+            # print("🛑 Redis订阅器已取消")
         except Exception as e:
             logger.error(f"❌ Redis订阅器错误: {e}", exc_info=True)
-            print(f"❌ Redis订阅器错误: {e}")
+            # print(f"❌ Redis订阅器错误: {e}")
     
     async def _handle_redis_message(self, message):
         """
@@ -203,7 +203,7 @@ class ConnectionManager:
                 await self._persist_to_database(job_id, ws_message)
             
             logger.info(f"✅ Redis消息已处理: job_id={job_id}, channel={channel_type}, type={ws_message.get('type')}")
-            print(f"✅ Redis消息已处理: job_id={job_id}, type={ws_message.get('type')}")
+            # print(f"✅ Redis消息已处理: job_id={job_id}, type={ws_message.get('type')}")
         
         except json.JSONDecodeError as e:
             logger.error(f"❌ JSON解析失败: {e}")

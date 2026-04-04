@@ -55,7 +55,7 @@ sudo apt install ffmpeg
 
 ```bash
 cd mold_cost_/speech_services
-start_speech.bat
+./start_speech.bat
 ```
 
 #### Linux/macOS
@@ -237,8 +237,11 @@ time curl -X POST http://localhost:8888/api/transcribe \
 
 **解决**：安装 FFmpeg
 ```bash
-# Windows
+# Windows（任选一种）
 winget install ffmpeg
+"C:\Program Files\WindowsApps\Microsoft.DesktopAppInstaller_1.28.219.0_x64__8wekyb3d8bbwe\winget.exe" install ffmpeg
+
+# 如果 winget 命令不存在，请手动安装 FFmpeg 并把 ffmpeg.exe 所在目录加入 PATH
 
 # macOS
 brew install ffmpeg

@@ -26,7 +26,7 @@ minio==7.2.20  # 使用 mold_cost-main 的较新版本
 
 # ========== 认证和安全 ==========
 python-jose[cryptography]==3.3.0  # 来自 mold_cost-main
-PyJWT==2.8.0  # 来自 mold_cost_（JWT标准库）
+PyJWT==2.10.1  # 来自 mold_cost_（JWT标准库），与 mcp 依赖兼容
 passlib[bcrypt]==1.7.4  # 两者相同
 cryptography==42.0.0  # 来自 mold_cost_
 
@@ -50,8 +50,8 @@ loguru>=0.7.0  # 来自 mold_cost-main
 # ========== AI框架（Agent编排）==========
 langchain==1.2.3  # 使用 mold_cost-main 的明确版本
 langgraph==1.0.5  # 使用 mold_cost-main 的明确版本
-langchain-openai>=0.1.0,<1.0  # 来自 mold_cost_
-openai==2.15.0  # 使用 mold_cost-main 的明确版本
+langchain-openai==1.1.11  # 与当前 langchain/langchain-core 版本兼容
+openai==2.26.0  # 满足 langchain-openai 的 OpenAI SDK 依赖
 
 # ========== MCP Protocol ==========
 mcp>=1.25,<2  # 来自 mold_cost-main

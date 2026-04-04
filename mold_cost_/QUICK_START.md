@@ -11,7 +11,7 @@
 **Windows:**
 ```bash
 cd mold_cost_
-start.bat
+.\start.bat
 ```
 
 **Linux/macOS:**

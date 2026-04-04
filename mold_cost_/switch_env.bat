@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul 2>&1
 REM 环境配置切换脚本
 REM 用于快速切换不同的环境配置
 

@@ -22,7 +22,7 @@ mcp_services/
 **Windows:**
 ```bash
 cd mold_cost_/mcp_services
-start_mcp.bat
+.\start_mcp.bat
 ```
 
 **Linux/macOS:**

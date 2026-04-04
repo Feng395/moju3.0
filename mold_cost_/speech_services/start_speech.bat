@@ -1,67 +1,105 @@
 @echo off
-REM Speech Services 启动脚本 (Windows)
-REM 启动语音识别服务（端口 8888）
-
-REM 设置控制台使用 UTF-8 编码
+setlocal
 chcp 65001 >nul
+set "PYTHONUTF8=1"
+set "PYTHONIOENCODING=utf-8"
+
+set "SCRIPT_DIR=%~dp0"
+set "PORT=8888"
+cd /d "%SCRIPT_DIR%"
+
+set "DEFAULT_MOJU_PYTHON=C:\Users\Wind\.conda\envs\moju\python.exe"
+set "PYTHON_EXE="
+
+if defined CONDA_PREFIX if exist "%CONDA_PREFIX%\python.exe" (
+    set "PYTHON_EXE=%CONDA_PREFIX%\python.exe"
+)
+
+if not defined PYTHON_EXE if exist "%DEFAULT_MOJU_PYTHON%" (
+    set "PYTHON_EXE=%DEFAULT_MOJU_PYTHON%"
+)
+
+if not defined PYTHON_EXE (
+    where python >nul 2>&1
+    if not errorlevel 1 (
+        set "PYTHON_EXE=python"
+    )
+)
 
 echo.
 echo ========================================
-echo   启动 Speech Services (语音识别服务)
+echo   Start Speech Services
 echo ========================================
 echo.
 
-cd /d "%~dp0"
-
-REM 检查 Python 是否安装
-python --version >nul 2>&1
-if errorlevel 1 (
-    echo [错误] 未找到 Python，请先安装 Python 3.8+
+if not defined PYTHON_EXE (
+    echo [ERROR] Python was not found.
+    echo [ERROR] Activate the moju conda environment or install Python first.
     pause
     exit /b 1
 )
 
-REM 检查 FFmpeg 是否安装
-echo [提示] 检查 FFmpeg...
-ffmpeg -version >nul 2>&1
+echo [INFO] Python: %PYTHON_EXE%
+"%PYTHON_EXE%" --version
 if errorlevel 1 (
-    echo [警告] 未找到 FFmpeg，语音识别可能无法正常工作
-    echo [提示] 请使用以下命令安装 FFmpeg:
-    echo         winget install ffmpeg
-    echo.
+    echo [ERROR] Failed to run Python.
     pause
+    exit /b 1
 )
 
-REM 检查依赖是否安装
-echo [提示] 检查依赖...
-python -c "import whisper" >nul 2>&1
+echo.
+echo [INFO] Checking FFmpeg...
+where ffmpeg >nul 2>&1
 if errorlevel 1 (
-    echo [提示] 依赖未安装，正在安装...
-    pip install -r requirements.txt
+    echo [WARN] FFmpeg was not found in PATH.
+    echo [WARN] Audio decoding may fail until FFmpeg is installed.
+    echo [WARN] Install FFmpeg manually and add ffmpeg.exe to PATH.
+    echo.
+)
+
+echo [INFO] Checking Python dependencies...
+"%PYTHON_EXE%" -c "import whisper, torch" >nul 2>&1
+if errorlevel 1 (
+    echo [INFO] Missing dependencies detected. Installing requirements...
+    "%PYTHON_EXE%" -m pip install -r "%SCRIPT_DIR%requirements.txt"
     if errorlevel 1 (
-        echo [错误] 安装依赖失败
+        echo [ERROR] Failed to install requirements.
         pause
         exit /b 1
     )
-    echo [成功] 依赖安装完成
+    echo [INFO] Requirements installed.
     echo.
 )
 
-echo [INFO] 正在启动 Speech Services...
-echo [INFO] 端口: 8888
-echo [INFO] 模型: small (推荐，速度快且准确)
-echo [INFO] API 文档: http://localhost:8888/docs
-echo [INFO] 按 Ctrl+C 停止服务
+echo [INFO] Runtime summary:
+"%PYTHON_EXE%" -c "import torch; print('  torch=' + torch.__version__); print('  cuda=' + str(torch.version.cuda)); print('  cuda_available=' + str(torch.cuda.is_available())); print('  device=' + (torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU'))"
+if errorlevel 1 (
+    echo [WARN] Failed to query torch runtime info.
+)
+
 echo.
-echo [提示] 如需使用其他模型，请编辑此脚本修改 --model 参数
-echo         tiny   - 最快，准确率较低
-echo         base   - 很快，准确率一般
-echo         small  - 较快，准确率较高 (推荐)
-echo         medium - 中等速度，准确率高
-echo         large  - 较慢，准确率最高
+echo [INFO] Checking port %PORT%...
+powershell -NoProfile -Command "$conn = Get-NetTCPConnection -LocalPort %PORT% -ErrorAction SilentlyContinue | Where-Object { $_.State -eq 'Listen' }; if ($conn) { exit 1 } else { exit 0 }" >nul 2>&1
+if errorlevel 1 (
+    echo [ERROR] Port %PORT% is already in use.
+    echo [ERROR] Stop the existing service or change the port before starting again.
+    pause
+    exit /b 1
+)
+
+echo.
+echo [INFO] Starting Speech Services...
+echo [INFO] Host: 0.0.0.0
+echo [INFO] Port: %PORT%
+echo [INFO] Model: small
+echo [INFO] Docs: http://localhost:%PORT%/docs
+echo [INFO] Press Ctrl+C to stop.
 echo.
 
-REM 直接运行 main.py，使用 small 模型
-python main.py --host 0.0.0.0 --port 8888 --model small %*
+"%PYTHON_EXE%" "%SCRIPT_DIR%main.py" --host 0.0.0.0 --port %PORT% --model small %*
 
+set "EXIT_CODE=%ERRORLEVEL%"
+echo.
+echo [INFO] Speech Services exited with code %EXIT_CODE%.
 pause
+exit /b %EXIT_CODE%

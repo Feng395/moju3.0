@@ -145,7 +145,7 @@ class Settings(BaseSettings):
     
     ODA_FILE_CONVERTER_PATH: str = "D:\\workspace\\ODA\\ODAFileConverter.exe"
     
-    # 外部API
+    # 外部API TODO
     FEATURE_REPROCESS_API_URL: str = "http://192.168.1.51:8300/api/features/reprocess"
     PRICING_RECALCULATE_API_URL: str = "http://192.168.1.51:8300/api/pricing/recalculate"
     WEIGHT_PRICE_API_URL: str = "http://192.168.0.20:8201/api/price_wg"
