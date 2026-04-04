@@ -94,29 +94,29 @@
   },
   "next_extract_candidates": [
     {
-      "module": "mold_cost.domain.pricing.search.density_search",
-      "legacy_module": "scripts.search.density_search",
-      "reason": "单表查询，subgraph_ids 仅为兼容参数，迁出时无需拆分跨模块逻辑。"
+      "module": "mold_cost.domain.pricing.search.base_itemcode_search",
+      "legacy_module": "scripts.search.base_itemcode_search",
+      "reason": "已是明确的双表读取路径，下一步可以抽成 subgraphs/features 组合仓储，替换掉现有 bridge。"
     },
     {
-      "module": "mold_cost.domain.pricing.search.heat_search",
-      "legacy_module": "scripts.search.heat_search",
-      "reason": "与 density_search 同型，只有 job_price_snapshots 读取路径，适合作为模板迁出。"
+      "module": "mold_cost.domain.pricing.search.tooth_hole_search",
+      "legacy_module": "scripts.search.tooth_hole_search",
+      "reason": "仍是 job_price_snapshots 单表查询，只比本轮多了 category 分组，迁移风险较低。"
     },
     {
-      "module": "mold_cost.domain.pricing.search.material_search",
-      "legacy_module": "scripts.search.material_search",
-      "reason": "查询面单一，返回契约稳定，后续可和 heat/density 共用快照查询抽象。"
+      "module": "mold_cost.domain.pricing.search.water_mill_search",
+      "legacy_module": "scripts.search.water_mill_search",
+      "reason": "查询模型和 tooth_hole_search 同型，适合复用本轮 price snapshot 查询抽象继续迁出。"
     },
     {
-      "module": "mold_cost.domain.pricing.search.nc_search",
-      "legacy_module": "scripts.search.nc_search",
-      "reason": "仍是单表快照读取，只多了 min_num 字段，复杂度低于任何 calculator。"
+      "module": "mold_cost.domain.pricing.search.wire_base_search",
+      "legacy_module": "scripts.search.wire_base_search",
+      "reason": "同样是全局快照查询，但包含 wire/rule 分组和轻量映射，适合作为第二批模板。"
     },
     {
-      "module": "mold_cost.domain.pricing.search.wire_standard_search",
-      "legacy_module": "scripts.search.wire_standard_search",
-      "reason": "查询形态简单，和 material/heat 类似，迁出后能进一步统一 search bridge 模板。"
+      "module": "mold_cost.domain.pricing.search.wire_special_search",
+      "legacy_module": "scripts.search.wire_special_search",
+      "reason": "与 wire_base_search 共用同一张快照表，继续迁移可以验证 price snapshot service 的复用边界。"
     }
   ],
   "bridge_assertions": {

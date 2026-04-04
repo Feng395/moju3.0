@@ -1,4 +1,4 @@
-﻿"""Pricing bridge 结构 golden 回归测试。"""
+"""Pricing bridge 结构 golden 回归测试。"""
 
 from __future__ import annotations
 
@@ -50,9 +50,14 @@ def test_pricing_bridge_inventory_matches_golden():
     for module_name in golden["search_modules"]:
         module = importlib.import_module(f"mold_cost.domain.pricing.search.{module_name}")
         assert getattr(search_package, module_name) is module
-        assert module._legacy_module.__name__ == golden["legacy_targets"]["search"][module_name]
         assert callable(module.search_by_job_id)
         assert isinstance(module.MCP_TOOL_META, dict)
+        if hasattr(module, "_legacy_module"):
+            assert module._legacy_module.__name__ == golden["legacy_targets"]["search"][module_name]
+        else:
+            # 中文注释：已迁出模块不再桥接 legacy scripts，实现文件中也不应残留直接引用。
+            module_source = Path(module.__file__).read_text(encoding="utf-8")
+            assert "scripts.search." not in module_source
 
     for module_name in golden["calculator_modules"]:
         module = importlib.import_module(f"mold_cost.domain.pricing.calculators.{module_name}")
@@ -116,6 +121,7 @@ def test_pricing_bridge_next_extract_candidates_remain_actionable():
 
         if ".search." in module_path:
             assert legacy_module == search_targets[module_name]
+            assert hasattr(imported, "_legacy_module")
         else:
             assert legacy_module == calculator_targets[module_name]
 
