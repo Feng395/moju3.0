@@ -9,6 +9,7 @@ from ...application.workflows.review_graph import review_graph
 
 class StartReviewUseCase:
     """Advance the review workflow through load/check/prompt nodes."""
+    # use case 保持极薄，只负责把 HTTP / worker 入口导向 workflow。
 
     async def execute(self, job_id: str, db_session):
         return await review_graph.start_review(job_id=job_id, db_session=db_session)
@@ -62,6 +63,7 @@ class GetReviewStateUseCase:
 
 class ReviewChatUseCase:
     """Keep chat routes on top of the chat execution adapter."""
+    # 聊天路由不直接碰 session/store 细节，统一经由 review_graph 进入适配层。
 
     async def get_state(self, job_id: str):
         return await review_graph.get_review_state(job_id=job_id)

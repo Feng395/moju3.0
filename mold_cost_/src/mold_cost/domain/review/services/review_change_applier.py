@@ -21,6 +21,7 @@ class InteractionAgentReviewChangeApplier(ReviewChangeApplier):
         user_id: str,
         db_session,
     ) -> Any:
+        # 变更执行仍是 legacy 强项，这里只做边界隔离，不改内部算法。
         agent = self._agent_factory()
         return await agent.handle_modification(
             job_id=job_id,

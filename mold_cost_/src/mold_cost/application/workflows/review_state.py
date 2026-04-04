@@ -8,6 +8,7 @@ from typing import Any
 
 @dataclass(slots=True)
 class ReviewState:
+    # raw_data / display_view 是两层数据：前者用于版本校验和落库，后者用于前端展示。
     job_id: str
     review_id: str | None = None
     status: str = "pending"
@@ -29,6 +30,7 @@ class ReviewState:
 
     @classmethod
     def from_payload(cls, job_id: str, payload: dict[str, Any]) -> "ReviewState":
+        # extra 保留未知字段，避免兼容迁移期间把 legacy 状态内容丢掉。
         known_fields = {
             "review_id",
             "status",
@@ -70,6 +72,7 @@ class ReviewState:
         )
 
     def to_payload(self) -> dict[str, Any]:
+        # 对外仍保持 dict 形态，兼容现有 Redis 存储和路由读取方式。
         payload = {
             "job_id": self.job_id,
             "review_id": self.review_id,

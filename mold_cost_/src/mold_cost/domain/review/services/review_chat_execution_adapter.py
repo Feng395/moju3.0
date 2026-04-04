@@ -22,6 +22,7 @@ class InteractionAgentReviewChatExecutor(ReviewChatExecutionAdapter):
         prompt: str,
         context_data: dict[str, Any],
     ) -> str:
+        # 补全建议仍复用 legacy 私有方法，但调用点已收敛到独立适配层。
         agent = self._agent_factory()
         return await agent._generate_completion_suggestion(prompt, context_data)
 

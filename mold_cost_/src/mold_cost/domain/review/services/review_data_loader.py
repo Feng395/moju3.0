@@ -25,6 +25,7 @@ class LegacyReviewDataLoader(ReviewDataLoader):
         return self._review_repo
 
     async def load(self, job_id: str, db_session) -> dict[str, list[dict[str, Any]]]:
+        # 这里只负责取数；路由兼容返回结构由 workflow 决定。
         logger.info("Loading review data: job_id=%s", job_id)
         return await self.review_repo.get_all_review_data(db_session, job_id)
 

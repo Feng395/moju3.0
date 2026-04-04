@@ -56,9 +56,11 @@ class ReviewGraph:
         """Start a review session and persist its initial workflow state."""
         logger.info("Start review via ReviewGraph: job_id=%s", job_id)
 
+        # 启动审核时先抢占会话锁，确保同一 job 只有一个活跃审核会话。
         if not await self._get_session_service().acquire(job_id, timeout=1800):
             return OpResult(status="error", message="该任务正在被其他用户审核中")
 
+        # 显式经过 workflow 起始节点，而不是直接整段转发给 InteractionAgent。
         state = await self.load_review_data(job_id=job_id, db_session=db_session)
         state = self.check_completeness(state)
         return await self.generate_review_prompt_or_suggestion(
@@ -117,6 +119,7 @@ class ReviewGraph:
                 message=f"存在 {len(current_state.modifications)} 个未确认的修改，请先确认或取消修改后再刷新",
             )
 
+        # refresh 复用启动阶段的前半段节点，但保持旧路由的返回语义。
         state = await self.load_review_data(
             job_id=job_id,
             db_session=db_session,
@@ -171,12 +174,14 @@ class ReviewGraph:
         mark_reloaded: bool = False,
     ) -> ReviewState:
         """Workflow node: load raw review data and normalize it into ReviewState."""
+        # 该节点只负责取数和组装状态，不负责推送消息或执行聊天。
         raw_data = await self._get_data_loader().load(job_id=job_id, db_session=db_session)
         display_view = self._get_data_loader().build_display_view(raw_data)
         state_store = self._get_state_store()
 
         created_at = previous_state.created_at if previous_state else now_shanghai().isoformat()
         extra = dict(previous_state.extra) if previous_state else {}
+        # 新一轮加载后丢弃旧的补全提示，避免过期 suggestion 污染当前状态。
         extra.pop("last_completion_prompt", None)
 
         state = state_store.build_state(
@@ -202,6 +207,7 @@ class ReviewGraph:
 
     def check_completeness(self, state: ReviewState) -> ReviewState:
         """Workflow node: evaluate completeness and derive status."""
+        # 完整性检查结果直接写回状态，供提示生成和状态查询复用。
         completeness = self._get_data_loader().check_completeness(state.raw_data)
         state.completeness = completeness
         state.status = "reviewing" if completeness.get("is_complete") else "pending_completion"
@@ -216,11 +222,13 @@ class ReviewGraph:
         reloaded: bool,
     ) -> OpResult:
         """Workflow node: persist state and optionally generate completion guidance."""
+        # 先持久化状态，再推展示数据，保证查询接口总能看到最新快照。
         await self._get_state_store().save(state)
         await self._get_notifier().push_display_view(state.job_id, state.display_view, db_session=db_session)
 
         if not state.completeness.get("is_complete", True):
             missing_fields = state.completeness.get("missing_fields", [])
+            # suggestion 生成属于聊天执行边界，由 chat executor 统一隔离。
             completion_prompt = self._get_data_loader().build_completion_prompt(missing_fields, state.raw_data)
             completion_suggestion = await self._get_chat_executor().generate_completion_suggestion(
                 completion_prompt,
@@ -245,6 +253,7 @@ class ReviewGraph:
                 },
                 db_session=db_session,
             )
+            # refresh 场景保持旧协议：刷新成功，但 data 中明确标记 is_complete=False。
             if refresh:
                 return OpResult(
                     status="ok",
@@ -305,9 +314,11 @@ class ReviewGraph:
         state_store = self._get_state_store()
 
         if allow_reacquire:
+            # 修改入口允许自动续租或重建锁，尽量延长审核会话连续性。
             if not await session_service.ensure_active(job_id, timeout=1800):
                 return None, OpResult(status="error", message="会话已被其他用户占用或已过期，请重新启动审核")
         else:
+            # confirm 入口不偷偷重建会话，避免掩盖真实的会话失效问题。
             if not await session_service.is_locked(job_id):
                 return None, OpResult(status="error", message="审核会话已过期或被释放")
             await session_service.renew(job_id, timeout=1800)
@@ -318,6 +329,7 @@ class ReviewGraph:
             return state, None
 
         if allow_reload and db_session is not None:
+            # 状态丢失但锁仍有效时，重建起始状态，避免让用户整轮审核白做。
             reloaded_state = await self.load_review_data(
                 job_id=job_id,
                 db_session=db_session,
@@ -348,6 +360,7 @@ class ReviewGraph:
         db_session,
     ):
         """Workflow node: delegate actual modification execution through the adapter boundary."""
+        # 这里仍复用 legacy InteractionAgent，只是把调用时机提升到 workflow 层。
         return await self._get_change_applier().handle_modification(
             job_id=state.job_id,
             modification_text=modification_text,
@@ -357,6 +370,7 @@ class ReviewGraph:
 
     async def confirm_and_resume(self, *, state: ReviewState, user_id: str, db_session):
         """Workflow node: confirm changes and keep the review session resumable."""
+        # confirm 后继续保留会话，沿用 legacy 语义支持后续多轮修改。
         return await self._get_change_applier().confirm_changes(
             job_id=state.job_id,
             user_id=user_id,
@@ -383,6 +397,7 @@ class ReviewGraph:
             return None
 
         graph = StateGraph(dict)
+        # 这里先显式声明节点边界，后续再逐步把 direct-call 迁到真实图执行。
         for node_name in (
             "load_review_data",
             "check_completeness",
@@ -405,6 +420,7 @@ class ReviewGraph:
 
     def _build_langgraph_node(self, node_name: str):
         def _node(state: dict[str, Any]) -> dict[str, Any]:
+            # 当前只用于表达节点边界，不承载真实业务执行。
             return {**state, "_last_review_node": node_name}
 
         return _node
@@ -440,16 +456,19 @@ class ReviewGraph:
 
     def _get_chat_executor(self) -> ReviewChatExecutionAdapter:
         if self._chat_executor is None:
+            # chat executor 专门隔离 review chat 与 suggestion 的模型调用边界。
             self._chat_executor = InteractionAgentReviewChatExecutor(agent_factory=self._get_agent)
         return self._chat_executor
 
     def _get_change_applier(self) -> ReviewChangeApplier:
         if self._change_applier is None:
+            # change applier 继续桥接 legacy 变更逻辑，避免本轮重写 InteractionAgent。
             self._change_applier = InteractionAgentReviewChangeApplier(agent_factory=self._get_agent)
         return self._change_applier
 
     def _get_notifier(self) -> ReviewNotifier:
         if self._notifier is None:
+            # notifier 统一承接 websocket / redis / 持久化副作用。
             self._notifier = InteractionAgentReviewNotifier(agent_factory=self._get_agent)
         return self._notifier
 

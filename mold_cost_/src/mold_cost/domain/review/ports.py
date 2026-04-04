@@ -21,6 +21,7 @@ class ReviewService(Protocol):
 
 class ReviewSessionService(Protocol):
     """Manage review-session locking semantics."""
+    # 这一层只回答“会话是否有效”，不关心审核数据内容。
 
     async def acquire(self, job_id: str, timeout: int = 1800) -> bool: ...
 
@@ -33,6 +34,7 @@ class ReviewSessionService(Protocol):
 
 class ReviewStateStore(Protocol):
     """Persist and restore workflow state."""
+    # 这一层隔离 Redis/序列化细节，避免 workflow 直接依赖具体存储实现。
 
     def build_state(self, job_id: str, **kwargs: Any) -> ReviewState: ...
 
@@ -49,6 +51,7 @@ class ReviewStateStore(Protocol):
 
 class ReviewDataLoader(Protocol):
     """Load review data and derive workflow inputs."""
+    # 数据加载、display view 构建、完整性检查都收敛在这个边界。
 
     async def load(self, job_id: str, db_session) -> dict[str, list[dict[str, Any]]]: ...
 
@@ -65,6 +68,7 @@ class ReviewDataLoader(Protocol):
 
 class ReviewChatExecutionAdapter(Protocol):
     """Handle LLM-backed review chat and prompt generation."""
+    # 统一封装 suggestion 和 review chat，避免 workflow 混入模型调用细节。
 
     async def generate_completion_suggestion(
         self,
@@ -91,6 +95,7 @@ class ReviewChatExecutionAdapter(Protocol):
 
 class ReviewChangeApplier(Protocol):
     """Apply review changes and confirmations."""
+    # 当前默认桥接 legacy InteractionAgent，后续可以单独替换。
 
     async def handle_modification(
         self,
@@ -105,6 +110,7 @@ class ReviewChangeApplier(Protocol):
 
 class ReviewNotifier(Protocol):
     """Push review-side effects to websocket / persistence channels."""
+    # 所有推送副作用统一走 notifier，便于后续替换消息基础设施。
 
     async def push_display_view(self, job_id: str, display_view: list[dict[str, Any]], db_session=None) -> None: ...
 

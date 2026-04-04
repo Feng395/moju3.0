@@ -24,6 +24,7 @@ class RedisReviewSessionService(ReviewSessionService):
 
     @staticmethod
     def _lock_key(job_id: str) -> str:
+        # review 锁与 review state 分开存，避免状态重建时误判会话是否有效。
         return f"review:lock:{job_id}"
 
     async def acquire(self, job_id: str, timeout: int = 1800) -> bool:
@@ -40,6 +41,7 @@ class RedisReviewSessionService(ReviewSessionService):
             return False
 
     async def ensure_active(self, job_id: str, timeout: int = 1800) -> bool:
+        # 修改入口优先续租已有锁；锁丢失时才尝试重新建立。
         if await self.is_locked(job_id):
             return await self.renew(job_id, timeout=timeout)
         return await self.acquire(job_id, timeout=timeout)

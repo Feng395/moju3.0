@@ -36,6 +36,7 @@ class RedisReviewStateStore(ReviewStateStore):
         return ReviewState(job_id=job_id, **kwargs)
 
     def calculate_data_version(self, raw_data: dict[str, Any]) -> dict[str, str]:
+        # 版本哈希按记录粒度计算，用于确认阶段的乐观并发校验。
         version: dict[str, str] = {}
         for table_name, records in raw_data.items():
             if not isinstance(records, list):
@@ -58,6 +59,7 @@ class RedisReviewStateStore(ReviewStateStore):
         return ReviewState.from_payload(job_id=job_id, payload=json.loads(data))
 
     async def save(self, state: ReviewState, ex: int = 3600) -> None:
+        # 状态 TTL 至少不短于会话锁，避免出现“锁还在但状态先过期”。
         if ex < 300:
             ex = 300
         await self.redis_client.set(

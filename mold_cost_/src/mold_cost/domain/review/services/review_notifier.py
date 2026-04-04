@@ -15,6 +15,7 @@ class InteractionAgentReviewNotifier(ReviewNotifier):
         self._agent_factory = agent_factory or self._default_agent_factory
 
     async def push_display_view(self, job_id: str, display_view: list[dict[str, Any]], db_session=None) -> None:
+        # 推送逻辑仍复用 legacy 方法，workflow 侧只表达“何时推”。
         agent = self._agent_factory()
         await agent._push_display_view(job_id, display_view, db_session=db_session)
 
