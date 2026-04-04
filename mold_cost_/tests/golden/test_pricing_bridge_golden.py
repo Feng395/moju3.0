@@ -88,11 +88,17 @@ def test_pricing_bridge_residual_api_gateway_inventory_matches_code():
 
 
 def test_pricing_bridge_next_extract_candidates_remain_actionable():
-    """验证下一批迁移候选仍然存在、可导入，并且确实还带着 legacy DB 依赖。"""
+    """验证下一批迁移候选仍然存在、可导入，并且仍落在 legacy 脚本实现里。"""
     golden = _load_inventory()
     candidates = golden["next_extract_candidates"]
-    search_residuals = set(golden["legacy_api_gateway_dependencies"]["search"])
-    calculator_residuals = set(golden["legacy_api_gateway_dependencies"]["calculators"])
+    search_targets = golden["legacy_targets"]["search"]
+    calculator_targets = golden["legacy_targets"]["calculators"]
+    legacy_db_markers = (
+        "mold_cost.infrastructure.db.repositories.script_db",
+        "batch_upsert_with_steps",
+        "db.fetch_all(",
+        "db.execute(",
+    )
 
     assert 3 <= len(candidates) <= 5
 
@@ -101,17 +107,17 @@ def test_pricing_bridge_next_extract_candidates_remain_actionable():
         legacy_module = candidate["legacy_module"]
         reason = candidate["reason"]
         module_name = module_path.rsplit(".", 1)[-1]
+        legacy_code = (ROOT / Path(*legacy_module.split("."))).with_suffix(".py").read_text(encoding="utf-8")
 
         imported = importlib.import_module(module_path)
         assert imported is not None
         assert reason.strip()
+        assert any(marker in legacy_code for marker in legacy_db_markers)
 
         if ".search." in module_path:
-            assert module_name in search_residuals
-            assert legacy_module == golden["legacy_targets"]["search"][module_name]
+            assert legacy_module == search_targets[module_name]
         else:
-            assert module_name in calculator_residuals
-            assert legacy_module == golden["legacy_targets"]["calculators"][module_name]
+            assert legacy_module == calculator_targets[module_name]
 
 
 def test_pricing_workflow_samples_have_valid_contracts():

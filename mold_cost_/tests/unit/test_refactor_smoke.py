@@ -90,34 +90,72 @@ def test_job_graph_can_delegate_to_stubbed_orchestrator(monkeypatch):
     assert continue_result == {"status": "continued", "job_id": "job-continue"}
 
 
-def test_review_graph_can_delegate_to_stubbed_agent(monkeypatch):
-    """验证审核工作流外壳能正常委派给交互代理。"""
+def test_review_graph_can_run_with_stubbed_review_services():
+    """验证审核工作流可以在脱离 Redis / WebSocket 的情况下走通新服务边界。"""
+    from agents.base_agent import OpResult
     from mold_cost.application.workflows.review_graph import ReviewGraph
+    from mold_cost.application.workflows.review_state import ReviewState
 
-    class StubAgent:
-        async def start_review(self, job_id: str, db_session):
-            return {"action": "start", "job_id": job_id, "db": db_session}
+    class StubSessionService:
+        def __init__(self):
+            self._locks: set[str] = set()
 
-        async def handle_modification(self, job_id: str, modification_text: str, user_id: str, db_session):
+        async def acquire(self, job_id: str, timeout: int = 1800) -> bool:
+            self._locks.add(job_id)
+            return True
+
+        async def ensure_active(self, job_id: str, timeout: int = 1800) -> bool:
+            self._locks.add(job_id)
+            return True
+
+        async def renew(self, job_id: str, timeout: int = 1800) -> bool:
+            return job_id in self._locks
+
+        async def is_locked(self, job_id: str) -> bool:
+            return job_id in self._locks
+
+    class StubStateStore:
+        def __init__(self):
+            self._states: dict[str, ReviewState] = {}
+
+        def build_state(self, job_id: str, **kwargs):
+            return ReviewState(job_id=job_id, **kwargs)
+
+        def calculate_data_version(self, raw_data: dict):
+            return {"features:sub-1": "v1"}
+
+        def serialize(self, state: ReviewState) -> dict:
+            return state.to_payload()
+
+        async def load(self, job_id: str):
+            return self._states.get(job_id)
+
+        async def save(self, state: ReviewState, ex: int = 3600) -> None:
+            self._states[state.job_id] = state
+
+        async def renew(self, job_id: str, timeout: int = 3600) -> bool:
+            return job_id in self._states
+
+    class StubDataLoader:
+        async def load(self, job_id: str, db_session):
             return {
-                "action": "modify",
-                "job_id": job_id,
-                "modification_text": modification_text,
-                "user_id": user_id,
-                "db": db_session,
+                "features": [{"feature_id": "feat-1"}],
+                "subgraphs": [{"subgraph_id": "sub-1"}],
+                "job_price_snapshots": [{"snapshot_id": "snap-1"}],
             }
 
-        async def confirm_changes(self, job_id: str, user_id: str, db_session):
-            return {"action": "confirm", "job_id": job_id, "user_id": user_id, "db": db_session}
+        def build_display_view(self, raw_data: dict):
+            return [{"kind": "feature", "count": len(raw_data["features"])}]
 
-        async def refresh_data(self, job_id: str, db_session):
-            return {"action": "refresh", "job_id": job_id, "db": db_session}
+        def check_completeness(self, raw_data: dict):
+            return {"is_complete": True, "missing_fields": []}
 
-        async def get_review_state(self, job_id: str):
-            return {"job_id": job_id, "status": "reviewing"}
+        def build_completion_prompt(self, missing_fields: list[dict], raw_data: dict):
+            return "请补全缺失字段"
 
-        async def check_lock(self, job_id: str) -> bool:
-            return job_id == "locked-job"
+    class StubChatExecutor:
+        async def generate_completion_suggestion(self, prompt: str, context_data: dict) -> str:
+            return f"suggestion:{prompt}"
 
         async def chat(self, job_id: str, message: str, history: list[dict], current_data):
             return {
@@ -130,15 +168,56 @@ def test_review_graph_can_delegate_to_stubbed_agent(monkeypatch):
         async def chat_stream(self, job_id: str, message: str, history: list[dict], current_data):
             yield {"job_id": job_id, "chunk": message}
 
-    graph = ReviewGraph()
-    monkeypatch.setattr(graph, "_get_agent", lambda: StubAgent())
+    class StubChangeApplier:
+        async def handle_modification(self, job_id: str, modification_text: str, user_id: str, db_session):
+            return {
+                "action": "modify",
+                "job_id": job_id,
+                "modification_text": modification_text,
+                "user_id": user_id,
+                "db": db_session,
+            }
 
-    assert asyncio.run(graph.start_review("job-review", "db"))["action"] == "start"
+        async def confirm_changes(self, job_id: str, user_id: str, db_session):
+            return {"action": "confirm", "job_id": job_id, "user_id": user_id, "db": db_session}
+
+    class StubNotifier:
+        async def push_display_view(self, job_id: str, display_view: list[dict], db_session=None) -> None:
+            return None
+
+        async def push_completion_request(self, job_id: str, completion_data: dict, db_session=None) -> None:
+            return None
+
+        async def push_system_message(self, job_id: str, message_text: str, db_session=None) -> None:
+            return None
+
+    graph = ReviewGraph(
+        session_service=StubSessionService(),
+        state_store=StubStateStore(),
+        data_loader=StubDataLoader(),
+        chat_executor=StubChatExecutor(),
+        change_applier=StubChangeApplier(),
+        notifier=StubNotifier(),
+    )
+
+    start_result = asyncio.run(graph.start_review("job-review", "db"))
+    assert isinstance(start_result, OpResult)
+    assert start_result.status == "ok"
+    assert start_result.data["job_id"] == "job-review"
+
     assert asyncio.run(graph.handle_modification("job-review", "修改材料", "u1", "db"))["action"] == "modify"
     assert asyncio.run(graph.confirm_changes("job-review", "u1", "db"))["action"] == "confirm"
-    assert asyncio.run(graph.refresh_data("job-review", "db"))["action"] == "refresh"
-    assert asyncio.run(graph.get_review_state("job-review")) == {"job_id": "job-review", "status": "reviewing"}
-    assert asyncio.run(graph.check_lock("locked-job")) is True
+
+    refresh_result = asyncio.run(graph.refresh_data("job-review", "db"))
+    assert isinstance(refresh_result, OpResult)
+    assert refresh_result.status == "ok"
+    assert refresh_result.data["refresh_count"] == 1
+    assert refresh_result.data["is_complete"] is True
+
+    persisted_state = asyncio.run(graph.get_review_state("job-review"))
+    assert persisted_state["job_id"] == "job-review"
+    assert persisted_state["status"] == "reviewing"
+    assert asyncio.run(graph.check_lock("job-review")) is True
     assert asyncio.run(graph.chat("job-review", "你好", [], {"x": 1}))["message"] == "你好"
 
     async def _collect_stream():
@@ -150,18 +229,20 @@ def test_review_graph_can_delegate_to_stubbed_agent(monkeypatch):
     assert asyncio.run(_collect_stream()) == [{"job_id": "job-review", "chunk": "stream"}]
 
 
-def test_legacy_continue_helper_bridges_to_use_case(monkeypatch):
-    """验证旧 jobs 路由中的继续执行辅助函数已经桥接到新用例。"""
+def test_continue_job_route_bridges_to_job_service(monkeypatch):
+    """验证 jobs 路由的 continue 入口已经桥接到新的任务服务。"""
     from api_gateway.routers import jobs as jobs_router
 
     calls: list[str] = []
 
-    class FakeContinueJobUseCase:
-        async def _execute_continue_job(self, job_id: str):
+    class FakeJobService:
+        async def submit_continue_job(self, job_id: str):
             calls.append(job_id)
+            return {"status": "accepted", "job_id": job_id}
 
-    monkeypatch.setattr(jobs_router, "ContinueJobUseCase", FakeContinueJobUseCase)
+    monkeypatch.setattr(jobs_router, "JobService", FakeJobService)
 
-    asyncio.run(jobs_router._execute_continue_job(None, "job-legacy"))
+    result = asyncio.run(jobs_router.continue_job("job-legacy", current_user={"user_id": "u1"}))
 
+    assert result == {"status": "accepted", "job_id": "job-legacy"}
     assert calls == ["job-legacy"]

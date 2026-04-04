@@ -274,3 +274,123 @@
 当前仍保留的遗留项：
 - 这些 bridge 文件内部仍转发到 `scripts/search/*` 与 `scripts/calculate/*`，算法本体尚未迁出 legacy 目录
 - 真实业务 golden 样本和数值回归还未建立，目前 golden 仅覆盖桥接清单结构
+
+## 阶段 13：Job Workflow 显式状态流深化
+目标：
+- 将 `job_graph` 从最小 facade 推进为显式状态推进工作流
+- 固化 `JobState` 的稳定字段面，为后续 LangGraph checkpoint / interrupt 做准备
+- 统一 worker 与 continue-job 路径的 workflow 入口
+
+任务与完成情况：
+- 已完成：扩展 [job_state.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/application/workflows/job_state.py)，固化 `job_id / dwg_path / prt_path / subgraph_ids / feature_summary / review_status / pricing_summary / errors / artifacts` 等状态字段
+- 已完成：重写 [job_graph.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/application/workflows/job_graph.py)，显式声明 `load_context -> validate_* -> execute_* -> collect_post_run -> finalize` 步骤
+- 已完成：为 `job_graph` 增加 `checkpoint_config`、`build_checkpoint`、`serialize_state` 等接口，预留后续持久化落点
+- 已完成：改造 [continue_job.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/application/use_cases/continue_job.py)，continue 优先走统一 job queue，消息失败时退回本地 workflow
+- 已完成：重写 [workers/orchestrator_worker.py](/d:/workspace/project/python/mold3.0/mold_cost_/workers/orchestrator_worker.py) 与 [workers/all_tasks_worker.py](/d:/workspace/project/python/mold3.0/mold_cost_/workers/all_tasks_worker.py)，worker 不再自行持有编排细节
+
+阶段结果：
+- `job_graph` 已不再是简单 passthrough，而是具备显式状态推进、checkpoint 元数据和 start/continue 统一入口的工作流 facade
+- 后续接入真实 LangGraph 时，可以围绕现有 `JobState` 与步骤边界平移，而不需要再次从 worker 回收状态逻辑
+
+当前仍保留的遗留项：
+- `job_graph` 仍然在执行节点内复用 legacy orchestrator，尚未完全切换到真实 LangGraph runtime
+- checkpoint 目前仍是本地 envelope，尚未落到真实持久化后端
+
+## 阶段 14：Review Workflow 服务边界拆分
+目标：
+- 将 `review_graph` 从“包一层 InteractionAgent”推进为可拆分的 workflow
+- 拆出 review session、state store、data loader、chat executor、change applier、notifier 边界
+- 保持 review/chat 路由协议兼容
+
+任务与完成情况：
+- 已完成：扩展 [review_graph.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/application/workflows/review_graph.py)，显式落地 `load_review_data / check_completeness / generate_review_prompt_or_suggestion / wait_user_message / apply_review_change / confirm_and_resume` 节点边界
+- 已完成：补齐 review 领域端口 [ports.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/domain/review/ports.py)
+- 已完成：新增 review 服务适配器 [review_session_service.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/domain/review/services/review_session_service.py)、[review_state_adapter.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/domain/review/services/review_state_adapter.py)、[review_data_loader.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/domain/review/services/review_data_loader.py)、[review_chat_execution_adapter.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/domain/review/services/review_chat_execution_adapter.py)、[review_change_applier.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/domain/review/services/review_change_applier.py)、[review_notifier.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/domain/review/services/review_notifier.py)
+- 已完成：保持 [review.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/application/use_cases/review.py) 与现有 review/chat 路由兼容，外部协议未破坏
+
+阶段结果：
+- `review_graph` 已经从“直接 new InteractionAgent”推进到“workflow + 多适配器”结构
+- 会话锁、状态存储、数据加载、聊天执行、变更应用、推送副作用的边界已经清晰收口
+
+当前仍保留的遗留项：
+- chat executor / change applier / notifier 仍桥接 `InteractionAgent`，尚未替换为完全独立实现
+- review state / session 目前仍默认依赖 Redis 适配器
+
+## 阶段 15：CAD 与 Feature 入口继续收口
+目标：
+- 让 CAD 拆图与特征识别的外部调用入口继续集中到领域服务
+- 减少接口层直接触达 legacy 脚本
+- 为 workflow 调用提供稳定的领域服务 API
+
+任务与完成情况：
+- 已完成：扩展 [domain/cad/ports.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/domain/cad/ports.py) 与 [domain/features/ports.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/domain/features/ports.py)
+- 已完成：增强 [split_service.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/domain/cad/services/split_service.py) 与 [recognition_service.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/domain/features/services/recognition_service.py)，使外部入口统一走领域服务
+- 已完成：新增 legacy 基础设施网关 [legacy_cad_split_gateway.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/infrastructure/cad/legacy_cad_split_gateway.py) 与 [legacy_feature_recognition_gateway.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/infrastructure/cad/legacy_feature_recognition_gateway.py)
+- 已完成：收敛 [legacy_cad_api.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/interfaces/api/legacy_cad_api.py) 与 [features.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/application/use_cases/features.py) 的领域服务入口
+- 已完成：继续改造 [server.py](/d:/workspace/project/python/mold3.0/mold_cost_/mcp_services/cad_price_search_mcp/server.py)，MCP 的 CAD / feature 调用边界进一步收口
+
+阶段结果：
+- CAD 拆图与特征识别的 API / MCP 入口已经更稳定地收敛到 `domain.cad` 与 `domain.features`
+- workflow 侧后续接入时，可以直接面向领域服务，而不是继续新增脚本级散点调用
+
+当前仍保留的遗留项：
+- `scripts/cad_chaitu/main.py` 与 `scripts/feature_recognition/feature_recognition.py` 仍承载算法本体
+- 网关层目前仍是 legacy 实现包装，不是全新领域实现
+
+## 阶段 16：反向依赖清理与 jobs 路由瘦身
+目标：
+- 清理 pricing / process matcher 主链上的 `scripts/* -> api_gateway.*` 反向依赖
+- 继续削薄 `jobs.py`
+- 将脚本侧数据库访问统一收口到 infrastructure 仓储出口
+
+任务与完成情况：
+- 已完成：新增脚本数据库兼容出口 [script_db.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/infrastructure/db/repositories/script_db.py)
+- 已完成：批量改造 `scripts/search/*`、`scripts/calculate/*` 与 [process_rule_matcher.py](/d:/workspace/project/python/mold3.0/mold_cost_/scripts/process_rule_matcher.py)，不再通过 `api_gateway.*` 访问数据库
+- 已完成：重写 [jobs.py](/d:/workspace/project/python/mold3.0/mold_cost_/api_gateway/routers/jobs.py)，继续压缩 legacy helper 和编排细节
+- 已完成：同步调整 [job_service.py](/d:/workspace/project/python/mold3.0/mold_cost_/api_gateway/services/job_service.py) 与 [job_repository.py](/d:/workspace/project/python/mold3.0/mold_cost_/api_gateway/repositories/job_repository.py)，路由层继续收口为协议转换 + use case / repository 调用
+- 已完成：在 pricing bridge 基线中验证 `scripts/search/*` 与 `scripts/calculate/*` 对 `api_gateway.*` 的残留依赖已清空
+
+阶段结果：
+- pricing / process matcher 这条主链上的脚本反向依赖已经从 `api_gateway.*` 切走
+- `jobs` 路由继续减薄，继续执行入口统一走 `JobService.submit_continue_job`
+
+当前仍保留的遗留项：
+- `scripts/monitor_redis_websocket.py` 仍存在对 `api_gateway.*` 的依赖
+- 其它未纳入本轮范围的 legacy 脚本后续仍需继续排查
+
+## 阶段 17：Workflow Golden 样本与暂停/恢复回归骨架
+目标：
+- 将测试从 smoke 提升到业务阶段合同回归
+- 建立第一版 workflow 样本三件套
+- 为 review 阶段暂停 / continue 恢复补齐最小夹具
+
+任务与完成情况：
+- 已完成：新增 [tests/golden/README.md](/d:/workspace/project/python/mold3.0/mold_cost_/tests/golden/README.md)，明确 golden 三层结构
+- 已完成：新增第一版 workflow 样本 [manifest.json](/d:/workspace/project/python/mold3.0/mold_cost_/tests/golden/samples/workflow_pricing_m250286_p3/manifest.json)、[expected_summary.json](/d:/workspace/project/python/mold3.0/mold_cost_/tests/golden/samples/workflow_pricing_m250286_p3/expected_summary.json)、[assertion_rules.json](/d:/workspace/project/python/mold3.0/mold_cost_/tests/golden/samples/workflow_pricing_m250286_p3/assertion_rules.json)
+- 已完成：新增 golden / integration 共享工具 [golden_workflow.py](/d:/workspace/project/python/mold3.0/mold_cost_/tools/diagnostics/golden_workflow.py)
+- 已完成：新增 pause/resume 夹具 [workflow_pause_resume_fixture.json](/d:/workspace/project/python/mold3.0/mold_cost_/tests/integration/fixtures/workflow_pause_resume_fixture.json) 与 [test_workflow_regression_scaffold.py](/d:/workspace/project/python/mold3.0/mold_cost_/tests/integration/test_workflow_regression_scaffold.py)
+- 已完成：同步更新 smoke / golden 测试，适配新的 review workflow 和清理后的 pricing 依赖基线
+- 已完成：运行 `pytest tests/unit tests/integration tests/golden -q`，结果为 `16 passed`
+
+阶段结果：
+- 仓库里已经存在第一版可复用 workflow golden 样本与 pause/resume 回归骨架
+- 集成验证粒度从“能导入”推进到了“阶段合同、样本清单、恢复夹具”层面
+
+当前仍保留的遗留项：
+- 当前 workflow golden 仍以阶段摘要、样本清单和结构性断言为主，尚未覆盖完整数值级计价回归
+- 暂停/恢复夹具目前仍是模板化恢复快照，尚未接入真实 LangGraph checkpoint 存储
+
+## 当前整体状态
+
+- `job_graph` 已具备显式状态推进与 checkpoint envelope，但尚未替换为真实 LangGraph runtime
+- `review_graph` 已拆出 session / state / data / chat / change / notifier 边界，但 chat/change 仍桥接 legacy `InteractionAgent`
+- `domain.cad` / `domain.features` / `domain.pricing` 已形成稳定入口，算法本体仍主要位于 `scripts/*`
+- pricing / process matcher 主链上的 `scripts/* -> api_gateway.*` 反向依赖已清理；全仓剩余可见脚本反向依赖主要在 `scripts/monitor_redis_websocket.py`
+- 当前回归基线为：`pytest tests/unit tests/integration tests/golden -q` => `16 passed`
+
+## 下一轮建议
+
+- 优先把 `job_graph` / `review_graph` 从 facade 进一步平移为真实 LangGraph 节点图，并接入真实 checkpoint 存储
+- 从 `next_extract_candidates` 中挑选 3 到 5 个 pricing search 模块，开始第一批“桥接文件 -> 真实领域实现”的迁移
+- 把 review chat / change / notifier 从 `InteractionAgent` 适配器继续拆出来，减少 review 链对 legacy agent 的依赖
+- 扩展 workflow golden 样本，从结构回归推进到数值级 pricing 回归
