@@ -7,6 +7,11 @@ import sys
 import os
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from refactor_bootstrap import ensure_src_path
+
+ensure_src_path()
+
 print("=" * 80)
 print("服务诊断工具")
 print("=" * 80)
@@ -62,7 +67,9 @@ print("-" * 80)
 print("【特征识别服务】模块导入测试")
 print("-" * 80)
 try:
-    from feature_recognition import batch_feature_recognition_process
+    from mold_cost.domain.features.services import feature_recognition_service
+
+    batch_feature_recognition_process = feature_recognition_service.batch_recognize
     print("✅ 特征识别服务模块导入成功")
     print(f"   batch_feature_recognition_process 函数: {batch_feature_recognition_process}")
 except Exception as e:

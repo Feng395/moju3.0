@@ -142,8 +142,8 @@ class CADAgentLocal:
         try:
             self.logger.info(f"[本地脚本模式] 调用 feature_recognition 脚本")
             
-            # 导入本地脚本
-            from scripts.feature_recognition.feature_recognition import batch_feature_recognition_process
+            # 中文注释：统一通过领域服务桥接 legacy 脚本，避免 agent 继续直接依赖 scripts 路径。
+            from mold_cost.domain.features.services import feature_recognition_service
             
             # 发布开始进度
             if self.progress_publisher:
@@ -186,8 +186,10 @@ class CADAgentLocal:
             
             # 调用本地脚本（同步函数，带进度回调）
             result = await asyncio.to_thread(
-                batch_feature_recognition_process,
-                job_id, None, _progress_callback
+                feature_recognition_service.batch_recognize,
+                job_id,
+                None,
+                _progress_callback,
             )
             
             # batch_feature_recognition_process 返回格式:

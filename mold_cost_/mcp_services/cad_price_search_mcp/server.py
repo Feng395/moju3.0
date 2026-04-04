@@ -42,6 +42,10 @@ sys.path.insert(0, str(project_root / "scripts" / "cad_chaitu"))
 sys.path.insert(0, str(project_root / "scripts" / "recognition"))
 sys.path.insert(0, str(project_root / "scripts"))
 
+from refactor_bootstrap import ensure_src_path
+
+ensure_src_path()
+
 # 初始化统一日志系统（统一到项目根目录的 logs 文件夹）
 init_logging(log_dir=str(project_root / "logs"))
 
@@ -54,7 +58,9 @@ logger = get_logger("mcp_services.cad_price_search_mcp.server")
 # ============================================================================
 try:
     from cad_chaitu import chaitu_process
-    from feature_recognition import batch_feature_recognition_process
+    from mold_cost.domain.features.services import feature_recognition_service
+
+    batch_feature_recognition_process = feature_recognition_service.batch_recognize
     CAD_AVAILABLE = True
     logger.info("[OK] CAD 处理模块导入成功")
 except ImportError as e:

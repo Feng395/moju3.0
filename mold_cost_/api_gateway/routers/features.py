@@ -14,64 +14,31 @@
 """
 from shared.unified_logging import get_logger
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
 import logging
-import asyncio
+
+from mold_cost.application.use_cases.features import ReprocessFeaturesUseCase
 
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/features", tags=["features"])
 
-
-async def _execute_feature_recognition(
-    cad_agent,
-    job_id: str,
-    subgraph_ids: List[str],
-    force_reprocess: bool
-):
-    """
-    后台执行特征识别任务
-    
-    Args:
-        cad_agent: CADAgent 实例
-        job_id: 任务ID
-        subgraph_ids: 子图ID列表
-        force_reprocess: 是否强制重新处理
-    """
-    try:
-        logger.info(f"[后台任务] 开始执行特征识别: job_id={job_id}")
-        
-        # 调用批量特征识别方法（不发布进度）
-        result = await cad_agent.recognize_features_batch({
-            "job_id": job_id,
-            "subgraph_ids": subgraph_ids,
-            "force_reprocess": force_reprocess
-        })
-        
-        logger.info(
-            f"[后台任务] 特征识别完成: job_id={job_id}, "
-            f"status={result.get('status')}, total={result.get('total')}"
-        )
-        
-    except Exception as e:
-        logger.error(f"[后台任务] 特征识别失败: job_id={job_id}, error={e}", exc_info=True)
-
-
 class ReprocessRequest(BaseModel):
     """重新执行特征识别请求"""
-    job_id: str
-    subgraph_ids: List[str]
-    force_reprocess: Optional[bool] = True
-    
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "job_id": "4fada577-6d86-4b8f-8c2e-0f991fd65a3c",
                 "subgraph_ids": ["sub_001", "sub_002"],
-                "force_reprocess": True
+                "force_reprocess": True,
             }
         }
+    )
+
+    job_id: str
+    subgraph_ids: List[str]
+    force_reprocess: Optional[bool] = True
 
 
 @router.post("/reprocess")
@@ -110,29 +77,14 @@ async def reprocess_features(request: ReprocessRequest):
             f"强制重新处理={request.force_reprocess}"
         )
         
-        # 导入 Agent 工厂函数
-        from agents import get_cad_agent
-        
-        # 获取 CADAgent 实例
-        cad_agent = get_cad_agent()
-        
-        # 创建后台任务（不等待完成）
-        asyncio.create_task(_execute_feature_recognition(
-            cad_agent=cad_agent,
+        # 中文注释：路由层只负责参数校验与转发，后台调度统一交给应用层用例。
+        result = await ReprocessFeaturesUseCase().submit(
             job_id=request.job_id,
             subgraph_ids=request.subgraph_ids,
-            force_reprocess=request.force_reprocess
-        ))
-        
+            force_reprocess=request.force_reprocess,
+        )
         logger.info(f"特征识别任务已提交到后台: job_id={request.job_id}")
-        
-        # 立即返回
-        return {
-            "status": "accepted",
-            "message": "特征识别任务已提交，请通过 WebSocket 监听进度",
-            "job_id": request.job_id,
-            "subgraph_count": len(request.subgraph_ids)
-        }
+        return result
         
     except Exception as e:
         logger.error(f"提交特征识别任务失败: {e}", exc_info=True)

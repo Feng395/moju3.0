@@ -11,7 +11,7 @@ ensure_src_path()
 
 def test_refactor_entrypoints_can_import():
     """验证新旧入口在不连接外部服务时可以完成导入。"""
-    from api_gateway.routers import chat_router, jobs, review_router
+    from api_gateway.routers import chat_router, features, jobs, review_router
     from api_gateway.services.file_service import FileService
     from api_gateway.services.job_service import JobService
     from mold_cost.application.workflows.job_graph import job_graph
@@ -19,6 +19,7 @@ def test_refactor_entrypoints_can_import():
 
     # 中文注释：这里只校验装配成功，不触发真实外部调用。
     assert jobs.router is not None
+    assert features.router is not None
     assert review_router.router is not None
     assert chat_router.router is not None
     assert isinstance(JobService(), JobService)

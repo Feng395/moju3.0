@@ -887,13 +887,18 @@ def save_features_to_db(subgraph_id: str, job_id: str, features: Dict[str, Any])
             conn.close()
 
 
-def batch_feature_recognition_process(job_id: str, subgraph_id: Optional[str] = None) -> Dict[str, Any]:
+def batch_feature_recognition_process(
+    job_id: str,
+    subgraph_id: Optional[str] = None,
+    progress_callback=None,
+) -> Dict[str, Any]:
     """
     批量特征识别处理函数（使用并行下载优化）
     
     Args:
         job_id: 任务ID
         subgraph_id: 子图ID（可选，如果不提供则处理所有子图）
+        progress_callback: 进度回调，可用于向外层推送批处理进度
     
     Returns:
         Dict: {
@@ -948,7 +953,17 @@ def batch_feature_recognition_process(job_id: str, subgraph_id: Optional[str] = 
         results = []
         success_count = 0
         failed_count = 0
-        
+        total_count = len(download_results)
+
+        def _emit_progress():
+            """中文注释：进度回调仅作为外层桥接辅助，不影响识别主流程。"""
+            if progress_callback is None:
+                return
+            try:
+                progress_callback(len(results), total_count, success_count, failed_count)
+            except Exception as callback_error:
+                logging.warning(f"进度回调执行失败: {callback_error}")
+
         for sg_id, download_result in download_results.items():
             part_code = subgraph_map[sg_id]['part_code']
             
@@ -962,6 +977,7 @@ def batch_feature_recognition_process(job_id: str, subgraph_id: Optional[str] = 
                     'message': f"下载失败: {download_result.get('error', '未知错误')}"
                 })
                 failed_count += 1
+                _emit_progress()
                 continue
             
             try:
@@ -978,6 +994,7 @@ def batch_feature_recognition_process(job_id: str, subgraph_id: Optional[str] = 
                         'message': '特征识别失败'
                     })
                     failed_count += 1
+                    _emit_progress()
                     continue
                 
                 # 保存到数据库
@@ -1039,6 +1056,8 @@ def batch_feature_recognition_process(job_id: str, subgraph_id: Optional[str] = 
                 })
                 failed_count += 1
         
+            _emit_progress()
+
         # 返回结果
         logging.info(f"批量处理完成: 成功 {success_count}, 失败 {failed_count}")
         
