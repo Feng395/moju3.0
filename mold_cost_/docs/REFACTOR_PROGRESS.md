@@ -73,3 +73,22 @@
 - 后台任务执行链已经统一走 workflow 外壳
 - LangGraph 目前以最小门面形式存在，真实节点拆分可在后续继续推进
 - 旧 agent 仍在内部复用，但对外依赖边界已经明显收敛
+
+## 阶段 4：审核与聊天路由收口
+
+目标：
+- 让 review/chat 路由从直接依赖 `InteractionAgent` 改为依赖 use case
+- 保留原有 HTTP 路径和返回结构，降低前端联调成本
+- 继续削薄 router 层职责
+
+任务与完成情况：
+- 已完成：重写 [review_router.py](/d:/workspace/project/python/mold3.0/mold_cost_/api_gateway/routers/review_router.py)，统一转发到 review use case
+- 已完成：重写 [chat_router.py](/d:/workspace/project/python/mold3.0/mold_cost_/api_gateway/routers/chat_router.py)，聊天状态和聊天执行统一走 `ReviewChatUseCase`
+- 已完成：`review_graph` 增加 chat/chat_stream/check_lock 能力，承接审核交互入口
+- 已完成：审核链路从 router 到 workflow 基本收口完成
+- 未完成：`jobs.py` 中 continue 入口仍保留 legacy 实现，虽然后台 worker 已改走 workflow，但该路由仍建议在下一轮完全切换
+
+阶段结果：
+- router 层已明显变薄，主要职责变为协议适配和错误映射
+- review/chat 入口不再直接 new legacy agent
+- 下一轮可以集中清理 `jobs.py` 和更多 legacy 反向依赖
