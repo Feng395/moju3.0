@@ -159,3 +159,25 @@
 当前仍保留的遗留项：
 - `scripts/unified_api.py` 与 `scripts/cad_chaitu/unified_api.py` 仍保留旧式入口形态，且文件内存在历史编码/注释残留，后续需要单独清理
 - 特征识别核心算法本体仍位于 `scripts/feature_recognition/feature_recognition.py`，当前属于“实现保留、入口收口”的阶段，尚未完全迁移出 legacy 目录
+
+## 阶段 8：统一历史独立 API 入口
+目标：
+- 清理 `scripts/unified_api.py` 与 `scripts/cad_chaitu/unified_api.py` 中的大块历史实现
+- 保留旧启动路径可用性，但将真实实现统一收口到 `src` 下的新接口模块
+- 继续减少 legacy 独立服务实现分叉
+
+任务与完成情况：
+- 已完成：新增 [legacy_cad_api.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/interfaces/api/legacy_cad_api.py)，统一承接旧 `/api/chaitu`、`/api/feature-recognition/batch`、`/api/feature-recognition/upload-feature-db` 等入口
+- 已完成：将 [scripts/unified_api.py](/d:/workspace/project/python/mold3.0/mold_cost_/scripts/unified_api.py) 重写为兼容启动壳
+- 已完成：将 [scripts/cad_chaitu/unified_api.py](/d:/workspace/project/python/mold3.0/mold_cost_/scripts/cad_chaitu/unified_api.py) 重写为兼容启动壳
+- 已完成：补充 [interfaces/api/__init__.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/interfaces/api/__init__.py) 并扩展冒烟测试，覆盖 legacy compatibility app 的导入验证
+- 已完成：运行 `py_compile` 和 `pytest tests/unit/test_refactor_smoke.py tests/unit/test_feature_refactor.py -q` 验证兼容壳和新接口模块可用
+
+阶段结果：
+- 两个历史 `unified_api.py` 文件的旧实现代码已经被实际清空并替换为薄壳
+- 旧独立启动方式仍可保留，但内部真实实现已经统一到新接口层
+- 又消掉了一类典型的“历史大文件复制分叉”问题
+
+当前仍保留的遗留项：
+- `scripts/cad_chaitu` 包本身仍包含较重的 legacy 初始化链，当前兼容壳通过按文件加载已可使用，但整个包尚未完全轻量化
+- `scripts/feature_recognition/feature_recognition.py` 与 `scripts/cad_chaitu/main.py` 仍承载核心 legacy 业务实现，后续如需继续清理，需要把算法本体逐步迁出 `scripts`

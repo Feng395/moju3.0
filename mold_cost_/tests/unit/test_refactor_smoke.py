@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import importlib.util
+from pathlib import Path
 
 from refactor_bootstrap import ensure_src_path
 
@@ -15,7 +17,16 @@ def test_refactor_entrypoints_can_import():
     from api_gateway.services.file_service import FileService
     from api_gateway.services.job_service import JobService
     from mold_cost.application.workflows.job_graph import job_graph
+    from mold_cost.interfaces.api import legacy_cad_app
     from mold_cost.application.workflows.review_graph import review_graph
+    from scripts import unified_api as legacy_unified_api
+
+    # 中文注释：这里按文件直接加载 cad_chaitu 下的兼容壳，避免触发旧包的重型初始化链。
+    cad_unified_api_path = Path(__file__).resolve().parents[2] / "scripts" / "cad_chaitu" / "unified_api.py"
+    spec = importlib.util.spec_from_file_location("cad_legacy_unified_api_test", cad_unified_api_path)
+    cad_legacy_unified_api = importlib.util.module_from_spec(spec)
+    assert spec is not None and spec.loader is not None
+    spec.loader.exec_module(cad_legacy_unified_api)
 
     # 中文注释：这里只校验装配成功，不触发真实外部调用。
     assert jobs.router is not None
@@ -26,6 +37,9 @@ def test_refactor_entrypoints_can_import():
     assert isinstance(FileService(), FileService)
     assert job_graph is not None
     assert review_graph is not None
+    assert legacy_cad_app is not None
+    assert legacy_unified_api.app is not None
+    assert cad_legacy_unified_api.app is not None
 
 
 def test_job_graph_can_delegate_to_stubbed_orchestrator(monkeypatch):
