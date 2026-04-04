@@ -16,8 +16,15 @@ def test_refactor_entrypoints_can_import():
     from api_gateway.routers import chat_router, features, jobs, review_router
     from api_gateway.services.file_service import FileService
     from api_gateway.services.job_service import JobService
+    from mold_cost.application.use_cases.get_job_status import GetJobStatusUseCase
+    from mold_cost.application.use_cases.handle_review_message import ReviewChatUseCase
+    from mold_cost.application.use_cases.start_review import StartReviewUseCase
     from mold_cost.application.workflows.job_graph import job_graph
-    from mold_cost.interfaces.api import legacy_cad_app
+    from mold_cost.domain.jobs import JobSummary
+    from mold_cost.infrastructure.mcp import tool_gateway
+    from mold_cost.interfaces.api import get_legacy_cad_app
+    from mold_cost.interfaces.api.routers.jobs import get_jobs_router, get_legacy_jobs_router
+    from mold_cost.interfaces.mcp import get_server_module
     from mold_cost.application.workflows.review_graph import review_graph
     from tools.diagnostics import check_services as tools_check_services
     from tools.diagnostics import verify_integration as tools_verify_integration
@@ -39,9 +46,17 @@ def test_refactor_entrypoints_can_import():
     assert chat_router.router is not None
     assert isinstance(JobService(), JobService)
     assert isinstance(FileService(), FileService)
+    assert isinstance(GetJobStatusUseCase(), GetJobStatusUseCase)
+    assert isinstance(StartReviewUseCase(), StartReviewUseCase)
+    assert isinstance(ReviewChatUseCase(), ReviewChatUseCase)
     assert job_graph is not None
     assert review_graph is not None
-    assert legacy_cad_app is not None
+    assert JobSummary(job_id="job-1", status="pending").job_id == "job-1"
+    assert tool_gateway is not None
+    assert get_legacy_cad_app() is not None
+    assert callable(get_jobs_router)
+    assert callable(get_legacy_jobs_router)
+    assert callable(get_server_module)
     assert tools_check_services.main is not None
     assert tools_verify_integration.main is not None
     assert legacy_check_services.main is not None

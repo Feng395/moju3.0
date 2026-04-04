@@ -205,3 +205,28 @@
 当前仍保留的遗留项：
 - `scripts/monitor_concurrency.py`、`scripts/monitor_locks.py`、`scripts/monitor_redis_websocket.py` 等监控类脚本仍在 `scripts/` 根目录
 - `scripts/feature_recognition/feature_recognition.py` 与 `scripts/cad_chaitu/main.py` 仍是 legacy 算法主实现，后续如继续清理，需要以算法迁移为主，而不是直接删除
+
+## 阶段 10：对照清单补齐骨架文件
+目标：
+- 按实施清单继续补齐新包结构中尚缺的目录、端口定义和兼容入口文件
+- 为后续真正的算法迁移和 LangGraph 深化改造预留稳定落点
+- 保持兼容迁移策略，不直接删除仍在运行链上的核心 legacy 实现
+
+任务与完成情况：
+- 已完成：补齐兼容用例文件 [get_job_status.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/application/use_cases/get_job_status.py)、[start_review.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/application/use_cases/start_review.py)、[handle_review_message.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/application/use_cases/handle_review_message.py)
+- 已完成：补齐领域骨架 [domain/jobs/__init__.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/domain/jobs/__init__.py)、[domain/files/ports.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/domain/files/ports.py)、[domain/review/ports.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/domain/review/ports.py)
+- 已完成：补齐定价子目录 [pricing/search/__init__.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/domain/pricing/search/__init__.py)、[pricing/calculators/__init__.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/domain/pricing/calculators/__init__.py)
+- 已完成：补齐基础设施骨架 [nx_adapter.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/infrastructure/cad/nx_adapter.py)、[tool_gateway.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/infrastructure/mcp/tool_gateway.py)、[prompts/__init__.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/infrastructure/llm/prompts/__init__.py)、[repositories/__init__.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/infrastructure/db/repositories/__init__.py)
+- 已完成：补齐接口层入口 [app.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/interfaces/api/app.py)、[routers/jobs.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/interfaces/api/routers/jobs.py)、[interfaces/mcp/server.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/interfaces/mcp/server.py)、[interfaces/cli/__init__.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/interfaces/cli/__init__.py)
+- 已完成：补齐 [legacy/scripts/README.md](/d:/workspace/project/python/mold3.0/mold_cost_/legacy/scripts/README.md) 以及测试目录说明文件
+- 已完成：扩展冒烟测试，验证新增 wrapper/port/app 级骨架可导入
+
+阶段结果：
+- 这份实施清单中的大部分骨架文件已经在仓库内落地
+- 后续迁移工作可以围绕这些稳定新路径继续推进，而不是再往旧目录新增实现
+- 当前策略仍保持“新路径先建好，旧实现逐步替换”的兼容迁移方式
+
+当前仍保留的遗留项：
+- `scripts/cad_chaitu/main.py` 与 `scripts/feature_recognition/feature_recognition.py` 仍是核心 legacy 算法落点
+- `scripts/search/*` 与 `scripts/calculate/*` 目前主要完成了目录级承接，尚未完成逐文件迁移到 `domain/pricing/search` 和 `domain/pricing/calculators`
+- `job_graph` / `review_graph` 目前仍是 workflow 外壳，尚未完全拆成真实 LangGraph 节点图
