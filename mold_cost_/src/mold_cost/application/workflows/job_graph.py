@@ -9,6 +9,7 @@ from typing import Any
 import uuid
 
 from ...core.logging import get_logger
+from ...infrastructure.workflows.job_file_checkpoint_store import JobFileCheckpointStore
 from .job_state import JobAction, JobState
 
 logger = get_logger(__name__)
@@ -37,10 +38,11 @@ class JobGraph:
     )
     STOP_AND_FINALIZE_STATUSES = {"failed", "ignored"}
 
-    def __init__(self, *, orchestrator=None, checkpointer=None):
+    def __init__(self, *, orchestrator=None, checkpointer=None, durable_store=None):
         self._compiled_graph = None
         self._orchestrator = orchestrator
         self._checkpointer = checkpointer if checkpointer is not None else self._build_default_checkpointer()
+        self._durable_store = durable_store if durable_store is not None else JobFileCheckpointStore()
 
     def invoke(self, state: JobState) -> JobState:
         """Compatibility hook for older sync callers."""
@@ -57,13 +59,17 @@ class JobGraph:
         state = await self._prepare_input_state(job_id=job_id, action=action)
 
         if graph is None:
-            return await self._run_flow_legacy(state)
+            final_state = await self._run_flow_legacy(state)
+            self._persist_durable_checkpoint(final_state)
+            return final_state
 
         config = self.checkpoint_config(job_id=job_id)
         payload = await graph.ainvoke(self._to_runtime_payload(state), config=config)
         final_state = self.deserialize_state(payload if isinstance(payload, dict) else {})
         snapshot = await self.get_checkpoint_snapshot(job_id=job_id)
-        return self._attach_runtime_checkpoint(final_state, snapshot)
+        final_state = self._attach_runtime_checkpoint(final_state, snapshot)
+        self._persist_durable_checkpoint(final_state)
+        return final_state
 
     async def start_job(self, job_id: str) -> dict[str, Any]:
         logger.info("Starting job via JobGraph: job_id=%s", job_id)
@@ -216,26 +222,24 @@ class JobGraph:
             return state
 
         snapshot = await self.get_checkpoint_snapshot(job_id=job_id)
-        if snapshot is None or not snapshot.values:
+        if snapshot is not None and snapshot.values:
+            return self._restore_resumed_state(
+                job_id=job_id,
+                action=action,
+                payload=snapshot.values,
+                checkpoint_config=snapshot.config,
+            )
+
+        durable_snapshot = self._load_durable_checkpoint(job_id)
+        if durable_snapshot is None:
             return state
 
-        # 中文注释：continue 只在 workflow 层恢复同一 thread 的最近 checkpoint，
-        # worker 和 use case 仍只需要传 job_id，不感知 LangGraph 细节。
-        resumed_state = self.deserialize_state(snapshot.values)
-        resumed_state.action = action
-        resumed_state.job_id = job_id
-        resumed_state.thread_id = job_id
-        resumed_state.current_step = "bootstrap"
-        resumed_state.status = "created"
-        resumed_state.errors = list(resumed_state.errors)
-        resumed_state.subgraph_ids = list(resumed_state.subgraph_ids)
-        resumed_state.feature_summary = dict(resumed_state.feature_summary)
-        resumed_state.pricing_summary = dict(resumed_state.pricing_summary)
-        resumed_state.artifacts = dict(resumed_state.artifacts)
-        resumed_state.artifacts["resume_checkpoint"] = self._normalize_checkpoint_config(snapshot.config, job_id)
-        resumed_state.artifacts["resumed_from_thread"] = job_id
-        resumed_state.resume_from = resumed_state.resume_from or "execute_continue"
-        return resumed_state
+        return self._restore_resumed_state(
+            job_id=job_id,
+            action=action,
+            payload=durable_snapshot.get("state") or {},
+            checkpoint_config=durable_snapshot.get("checkpoint", {}).get("config"),
+        )
 
     async def _run_flow_legacy(self, state: JobState) -> JobState:
         state.status = "running"
@@ -650,6 +654,60 @@ class JobGraph:
         configurable = dict((config or {}).get("configurable") or {})
         configurable.setdefault("thread_id", job_id)
         return {"configurable": configurable}
+
+    def _persist_durable_checkpoint(self, state: JobState) -> None:
+        checkpoint = state.artifacts.get("checkpoint")
+        if not isinstance(checkpoint, dict):
+            checkpoint = self.build_checkpoint(state)
+            state.artifacts["checkpoint"] = checkpoint
+        target = self._durable_store.save(
+            job_id=state.job_id,
+            state=self.serialize_state(state),
+            checkpoint=checkpoint,
+        )
+        state.artifacts["durable_checkpoint"] = {
+            "backend": "job_file_checkpoint_store",
+            "path": str(target),
+            "thread_id": state.job_id,
+        }
+
+    def _load_durable_checkpoint(self, job_id: str) -> dict[str, Any] | None:
+        snapshot = self._durable_store.load(job_id)
+        if snapshot is None:
+            return None
+        checkpoint = snapshot.get("checkpoint")
+        if isinstance(checkpoint, dict):
+            checkpoint["thread_id"] = job_id
+            config = checkpoint.get("config")
+            if isinstance(config, dict):
+                checkpoint["config"] = self._normalize_checkpoint_config(config, job_id)
+        snapshot["thread_id"] = job_id
+        return snapshot
+
+    def _restore_resumed_state(
+        self,
+        *,
+        job_id: str,
+        action: JobAction,
+        payload: dict[str, Any],
+        checkpoint_config: dict[str, Any] | None,
+    ) -> JobState:
+        resumed_state = self.deserialize_state(payload)
+        resumed_state.action = action
+        resumed_state.job_id = job_id
+        resumed_state.thread_id = job_id
+        resumed_state.current_step = "bootstrap"
+        resumed_state.status = "created"
+        resumed_state.errors = list(resumed_state.errors)
+        resumed_state.subgraph_ids = list(resumed_state.subgraph_ids)
+        resumed_state.feature_summary = dict(resumed_state.feature_summary)
+        resumed_state.pricing_summary = dict(resumed_state.pricing_summary)
+        resumed_state.artifacts = dict(resumed_state.artifacts)
+        resumed_state.artifacts["resume_checkpoint"] = self._normalize_checkpoint_config(checkpoint_config, job_id)
+        resumed_state.artifacts["resume_checkpoint_source"] = "durable_store"
+        resumed_state.artifacts["resumed_from_thread"] = job_id
+        resumed_state.resume_from = resumed_state.resume_from or "execute_continue"
+        return resumed_state
 
     @staticmethod
     def _build_default_checkpointer():

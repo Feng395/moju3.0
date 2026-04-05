@@ -53,6 +53,7 @@ class ContinueJobUseCase:
             rabbitmq_client.queue_job_processing,
             {
                 "job_id": job_id,
+                "thread_id": job_id,
                 "action": "continue",
                 "requested_at": datetime.utcnow().isoformat(),
             },

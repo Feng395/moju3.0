@@ -30,12 +30,12 @@ DIRECT_SCRIPTS_IMPORT_PATTERNS = (
 
 def _load_inventory() -> dict:
     """读取 pricing bridge 的 golden inventory。"""
-    return json.loads(INVENTORY_PATH.read_text(encoding="utf-8"))
+    return json.loads(INVENTORY_PATH.read_text(encoding="utf-8-sig"))
 
 
 def _read_repo_text(relative_path: str) -> str:
     """按仓库相对路径读取源码文本，供静态断言使用。"""
-    return (ROOT / relative_path).read_text(encoding="utf-8")
+    return (ROOT / relative_path).read_text(encoding="utf-8-sig")
 
 
 def _load_workflow_sample_bundle() -> dict:
@@ -47,7 +47,7 @@ def _load_workflow_sample_bundle() -> dict:
 def _load_real_pricing_part_sample() -> dict:
     """中文注释：从已提交的真实特征导出中锁定 DIE-06，保证数值回归挂钩真实零件样本而不是纯手工夹具。"""
     feature_export_path = ROOT / "scripts" / "features_export.json"
-    records = json.loads(feature_export_path.read_text(encoding="utf-8"))
+    records = json.loads(feature_export_path.read_text(encoding="utf-8-sig"))
     return next(
         record
         for record in records
@@ -78,7 +78,7 @@ def test_pricing_bridge_inventory_matches_golden():
             assert module._legacy_module.__name__ == golden["legacy_targets"]["search"][module_name]
         else:
             # 中文注释：已迁出模块不再桥接 legacy scripts，实现文件中也不应残留直接引用。
-            module_source = Path(module.__file__).read_text(encoding="utf-8")
+            module_source = Path(module.__file__).read_text(encoding="utf-8-sig")
             assert "scripts.search." not in module_source
 
     for module_name in golden["calculator_modules"]:
@@ -107,7 +107,7 @@ def test_pricing_bridge_residual_api_gateway_inventory_matches_code():
         actual_residuals = []
         for module_name, legacy_module in legacy_targets.items():
             legacy_path = ROOT / Path(*legacy_module.split("."))
-            legacy_code = legacy_path.with_suffix(".py").read_text(encoding="utf-8")
+            legacy_code = legacy_path.with_suffix(".py").read_text(encoding="utf-8-sig")
             if "api_gateway." in legacy_code:
                 actual_residuals.append(module_name)
 
@@ -134,7 +134,7 @@ def test_pricing_bridge_next_extract_candidates_remain_actionable():
         legacy_module = candidate["legacy_module"]
         reason = candidate["reason"]
         module_name = module_path.rsplit(".", 1)[-1]
-        legacy_code = (ROOT / Path(*legacy_module.split("."))).with_suffix(".py").read_text(encoding="utf-8")
+        legacy_code = (ROOT / Path(*legacy_module.split("."))).with_suffix(".py").read_text(encoding="utf-8-sig")
 
         imported = importlib.import_module(module_path)
         assert imported is not None

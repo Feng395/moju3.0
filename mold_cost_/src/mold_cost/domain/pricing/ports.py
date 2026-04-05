@@ -27,3 +27,9 @@ class PricingSnapshotSearchRepository(Protocol):
         categories: Sequence[str],
         columns: Sequence[str],
     ) -> list[dict[str, Any]]: ...
+
+    async def fetch_base_itemcode_parts(
+        self,
+        job_id: str,
+        subgraph_ids: Sequence[str],
+    ) -> list[dict[str, Any]]: ...

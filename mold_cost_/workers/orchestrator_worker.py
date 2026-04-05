@@ -31,10 +31,11 @@ logger = get_logger("workers.orchestrator_worker")
 class OrchestratorWorker:
     """Legacy worker shell that delegates orchestration to JobGraph."""
 
-    def __init__(self, enable_retry: bool = False):
+    def __init__(self, enable_retry: bool = False, job_workflow=None):
         self.mq = MessageQueue()
         self.running = False
         self.enable_retry = enable_retry
+        self.job_workflow = job_workflow or job_graph
 
     async def start(self):
         """Start queue consumption."""
@@ -47,12 +48,13 @@ class OrchestratorWorker:
     async def handle_message(self, message: dict):
         """Pass job messages to the workflow facade."""
         job_id = message.get("job_id")
+        thread_id = message.get("thread_id") or job_id
         action = message.get("action", "start")
-        logger.info("Received orchestrator message: job_id=%s, thread_id=%s, action=%s", job_id, job_id, action)
+        logger.info("Received orchestrator message: job_id=%s, thread_id=%s, action=%s", job_id, thread_id, action)
 
         try:
             # 中文注释：worker 不再直接展开校验、编排和状态推进，只负责把消息交给 workflow。
-            result = await job_graph.handle_message(message)
+            result = await self.job_workflow.handle_message(message)
             status = result.get("status")
 
             if status == "ok":

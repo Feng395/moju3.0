@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
@@ -11,25 +10,19 @@ from shared.timezone_utils import now_shanghai
 
 from agents.message_persistence_manager import get_persistence_manager
 
+from ....infrastructure.messaging.redis_client import redis_client
 from ...review.ports import ReviewNotifier
 
 
 class InteractionAgentReviewNotifier(ReviewNotifier):
     """Reuse the legacy message contract without routing through InteractionAgent."""
 
-    def __init__(self, agent_factory: Callable[[], Any] | None = None):
-        # 中文注释：保留 agent_factory 形参，避免旧装配点在兼容迁移期失效。
-        self._agent_factory = agent_factory
-        self._redis_client = None
+    def __init__(self):
         self._persistence_manager = None
 
     @property
     def redis_client(self):
-        if self._redis_client is None:
-            from api_gateway.utils.redis_client import redis_client
-
-            self._redis_client = redis_client
-        return self._redis_client
+        return redis_client
 
     @property
     def persistence_manager(self):

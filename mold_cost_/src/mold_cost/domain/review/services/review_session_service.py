@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from ....infrastructure.messaging.redis_client import redis_client
 from ...review.ports import ReviewSessionService
 from ....core.logging import get_logger
 
@@ -16,11 +17,7 @@ class RedisReviewSessionService(ReviewSessionService):
 
     @property
     def redis_client(self):
-        if self._redis_client is None:
-            from api_gateway.utils.redis_client import redis_client
-
-            self._redis_client = redis_client
-        return self._redis_client
+        return redis_client
 
     @staticmethod
     def _lock_key(job_id: str) -> str:

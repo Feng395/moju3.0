@@ -9,6 +9,7 @@ from typing import Any
 
 from ....application.workflows.review_state import ReviewState
 from ....core.logging import get_logger
+from ....infrastructure.messaging.redis_client import redis_client
 from ...review.ports import ReviewStateStore
 
 logger = get_logger(__name__)
@@ -22,11 +23,7 @@ class RedisReviewStateStore(ReviewStateStore):
 
     @property
     def redis_client(self):
-        if self._redis_client is None:
-            from api_gateway.utils.redis_client import redis_client
-
-            self._redis_client = redis_client
-        return self._redis_client
+        return redis_client
 
     @staticmethod
     def _state_key(job_id: str) -> str:

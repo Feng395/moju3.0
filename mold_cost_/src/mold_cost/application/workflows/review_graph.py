@@ -391,12 +391,6 @@ class ReviewGraph:
             return "数据已重新加载，但仍存在必填字段缺失，请先补全这些字段"
         return "发现部分必填字段为空，请先补全这些字段"
 
-    @staticmethod
-    def _get_agent():
-        from agents.interaction_agent import InteractionAgent
-
-        return InteractionAgent()
-
     def _get_session_service(self) -> ReviewSessionService:
         if self._session_service is None:
             self._session_service = RedisReviewSessionService()
@@ -414,21 +408,20 @@ class ReviewGraph:
 
     def _get_chat_executor(self) -> ReviewChatExecutionAdapter:
         if self._chat_executor is None:
-            # 中文注释：chat executor 继续承接 review/chat 路由，同时 suggestion 已从 agent 私有方法中剥离。
-            self._chat_executor = InteractionAgentReviewChatExecutor(agent_factory=self._get_agent)
+            # 中文注释：默认 chat executor 已直接走共享 LLM 配置，不再默认实例化 InteractionAgent。
+            self._chat_executor = InteractionAgentReviewChatExecutor()
         return self._chat_executor
 
     def _get_change_applier(self) -> ReviewChangeApplier:
         if self._change_applier is None:
             self._change_applier = InteractionAgentReviewChangeApplier(
-                agent_factory=self._get_agent,
                 state_store=self._get_state_store(),
             )
         return self._change_applier
 
     def _get_notifier(self) -> ReviewNotifier:
         if self._notifier is None:
-            self._notifier = InteractionAgentReviewNotifier(agent_factory=self._get_agent)
+            self._notifier = InteractionAgentReviewNotifier()
         return self._notifier
 
     async def _start_review_direct(self, *, job_id: str, db_session) -> OpResult:

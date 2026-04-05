@@ -13,7 +13,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 def load_json(path: Path) -> dict[str, Any]:
     """统一读取 utf-8 JSON，避免测试侧重复写样板代码。"""
-    return json.loads(path.read_text(encoding="utf-8"))
+    return json.loads(path.read_text(encoding="utf-8-sig"))
 
 
 def resolve_repo_path(relative_path: str) -> Path:

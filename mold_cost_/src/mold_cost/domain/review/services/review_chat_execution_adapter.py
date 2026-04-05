@@ -2,34 +2,29 @@
 
 from __future__ import annotations
 
-import os
-from collections.abc import Callable
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
 
 import httpx
 
 from ....core.logging import get_logger
+from ....core.settings import settings
 from ...review.ports import ReviewChatExecutionAdapter
 
 logger = get_logger(__name__)
 
 
-class InteractionAgentReviewChatExecutor(ReviewChatExecutionAdapter):
-    """Keep route-compatible review chat while shrinking non-chat InteractionAgent usage."""
+class WorkflowReviewChatExecutor(ReviewChatExecutionAdapter):
+    """Review chat executor backed by the shared LLM configuration."""
 
-    def __init__(self, agent_factory: Callable[[], Any] | None = None):
-        self._agent_factory = agent_factory or self._default_agent_factory
-        self._llm_base_url = os.getenv("OPENAI_BASE_URL", "https://qwen3.qyagent.top/v1")
-        self._llm_api_key = os.getenv("OPENAI_API_KEY", "sk-xxx")
-        self._llm_model = os.getenv("OPENAI_MODEL", "Qwen3-30B-A3B-Instruct")
-        self._llm_timeout = float(os.getenv("LLM_TIMEOUT", "30"))
+    def __init__(self, *, max_history_rounds: int = 5):
+        self._max_history_rounds = max_history_rounds
 
     async def generate_completion_suggestion(
         self,
         prompt: str,
         context_data: dict[str, Any],
     ) -> str:
-        # 中文注释：补全建议不再穿过 InteractionAgent 私有方法，直接走同源 LLM 配置。
         messages = [
             {
                 "role": "system",
@@ -45,30 +40,14 @@ class InteractionAgentReviewChatExecutor(ReviewChatExecutionAdapter):
             },
         ]
         try:
-            async with httpx.AsyncClient(
-                timeout=self._llm_timeout,
-                headers={"User-Agent": "curl/8.0"},
-            ) as client:
-                response = await client.post(
-                    f"{self._llm_base_url}/chat/completions",
-                    json={
-                        "model": self._llm_model,
-                        "messages": messages,
-                        "temperature": 0.2,
-                        "max_tokens": 500,
-                    },
-                    headers={
-                        "Authorization": f"Bearer {self._llm_api_key}",
-                        "Content-Type": "application/json",
-                    },
-                )
-                response.raise_for_status()
-                result = response.json()
-                return result["choices"][0]["message"]["content"]
+            return await self._call_llm(messages, temperature=0.2, max_tokens=500)
         except Exception as exc:
-            logger.warning("Fallback to InteractionAgent completion suggestion: %s", exc, exc_info=True)
-            agent = self._agent_factory()
-            return await agent._generate_completion_suggestion(prompt, context_data)
+            logger.warning("Fallback to local completion suggestion: %s", exc, exc_info=True)
+            missing_fields = context_data.get("missing_fields") or []
+            if missing_fields:
+                joined = "、".join(str(field) for field in missing_fields)
+                return f"请优先补全以下字段：{joined}。"
+            return "请根据当前零件信息补全缺失字段后继续审核。"
 
     async def chat(
         self,
@@ -77,9 +56,10 @@ class InteractionAgentReviewChatExecutor(ReviewChatExecutionAdapter):
         history: list[dict[str, Any]],
         current_data: dict[str, Any] | None,
     ) -> str:
-        # 中文注释：review/chat 路由仍保持 legacy 协议，先不在本轮重写会话式 chat。
-        agent = self._agent_factory()
-        return await agent.chat(job_id=job_id, message=message, history=history, current_data=current_data)
+        response = ""
+        async for chunk in self.chat_stream(job_id=job_id, message=message, history=history, current_data=current_data):
+            response += chunk
+        return response
 
     async def chat_stream(
         self,
@@ -88,17 +68,113 @@ class InteractionAgentReviewChatExecutor(ReviewChatExecutionAdapter):
         history: list[dict[str, Any]],
         current_data: dict[str, Any] | None,
     ) -> AsyncIterator[str]:
-        agent = self._agent_factory()
-        async for chunk in agent.chat_stream(
-            job_id=job_id,
-            message=message,
-            history=history,
-            current_data=current_data,
-        ):
-            yield chunk
+        messages = self._build_chat_messages(message=message, history=history, current_data=current_data or {})
+        try:
+            async for chunk in self._call_llm_stream(messages):
+                yield chunk
+        except Exception as exc:
+            logger.error("Review chat stream failed: %s", exc, exc_info=True)
+            yield f"\n\n抱歉，处理您的消息时出现错误：{exc}"
+
+    def _build_chat_messages(
+        self,
+        *,
+        message: str,
+        history: list[dict[str, Any]],
+        current_data: dict[str, Any],
+    ) -> list[dict[str, str]]:
+        context_info = self._build_context_info(current_data)
+        system_prompt = (
+            "你是一个模具数据审核助手。\n\n"
+            f"当前审核数据概览：\n{context_info}\n\n"
+            "你的职责：\n"
+            "1. 理解用户的修改需求\n"
+            "2. 解析自然语言指令\n"
+            "3. 提供友好的确认和建议\n"
+            "4. 支持多轮对话\n\n"
+            "重要限制：\n"
+            "- 你只能回答与模具数据核算、审核、修改、价格计算相关的问题\n"
+            "- 对于与核算无关的话题，请礼貌说明你只能处理审核相关问题\n"
+            "- 请使用简洁、专业的语言回答用户"
+        )
+        messages = [{"role": "system", "content": system_prompt}]
+        for item in history[-self._max_history_rounds :]:
+            role = str(item.get("role", "user"))
+            content = str(item.get("content", ""))
+            if content:
+                messages.append({"role": role, "content": content})
+        messages.append({"role": "user", "content": message})
+        return messages
 
     @staticmethod
-    def _default_agent_factory():
-        from agents.interaction_agent import InteractionAgent
+    def _build_context_info(data: dict[str, Any]) -> str:
+        info_parts: list[str] = []
+        for table_name, records in data.items():
+            if records:
+                info_parts.append(f"- {table_name}: {len(records)} 条记录")
 
-        return InteractionAgent()
+        if data.get("subgraphs"):
+            info_parts.append("\n子图详情：")
+            for subgraph in data["subgraphs"][:3]:
+                info_parts.append(
+                    f"  - {subgraph.get('subgraph_id')}: "
+                    f"材质={subgraph.get('material')}, "
+                    f"重量={subgraph.get('weight')}kg"
+                )
+
+        return "\n".join(info_parts) if info_parts else "暂无数据"
+
+    async def _call_llm(
+        self,
+        messages: list[dict[str, str]],
+        *,
+        temperature: float,
+        max_tokens: int,
+    ) -> str:
+        from openai import AsyncOpenAI
+
+        http_client = httpx.AsyncClient(timeout=settings.LLM_TIMEOUT, headers={"User-Agent": "curl/8.0"})
+        try:
+            client = AsyncOpenAI(
+                api_key=settings.OPENAI_API_KEY,
+                base_url=settings.OPENAI_BASE_URL,
+                http_client=http_client,
+                default_headers={"User-Agent": "curl/8.0"},
+            )
+            response = await client.chat.completions.create(
+                model=settings.OPENAI_MODEL,
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+            return response.choices[0].message.content or ""
+        finally:
+            await http_client.aclose()
+
+    async def _call_llm_stream(self, messages: list[dict[str, str]]) -> AsyncIterator[str]:
+        from openai import AsyncOpenAI
+
+        http_client = httpx.AsyncClient(timeout=settings.LLM_TIMEOUT, headers={"User-Agent": "curl/8.0"})
+        try:
+            client = AsyncOpenAI(
+                api_key=settings.OPENAI_API_KEY,
+                base_url=settings.OPENAI_BASE_URL,
+                http_client=http_client,
+                default_headers={"User-Agent": "curl/8.0"},
+            )
+            stream = await client.chat.completions.create(
+                model=settings.OPENAI_MODEL,
+                messages=messages,
+                stream=True,
+                temperature=settings.LLM_TEMPERATURE,
+                max_tokens=2000,
+            )
+            async for chunk in stream:
+                content = chunk.choices[0].delta.content
+                if content:
+                    yield content
+        finally:
+            await http_client.aclose()
+
+
+InteractionAgentReviewChatExecutor = WorkflowReviewChatExecutor

@@ -53,6 +53,8 @@ def test_refactor_entrypoints_can_import():
     assert isinstance(ReviewChatUseCase(), ReviewChatUseCase)
     assert job_graph is not None
     assert review_graph is not None
+    assert not hasattr(type(review_graph), "_get_agent")
+    assert review_graph._get_chat_executor().__class__.__name__ == "WorkflowReviewChatExecutor"
     assert JobSummary(job_id="job-1", status="pending").job_id == "job-1"
     assert price_total is not None
     assert total_search is not None

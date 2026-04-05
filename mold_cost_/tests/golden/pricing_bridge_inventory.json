@@ -94,29 +94,19 @@
   },
   "next_extract_candidates": [
     {
-      "module": "mold_cost.domain.pricing.search.base_itemcode_search",
-      "legacy_module": "scripts.search.base_itemcode_search",
-      "reason": "已是明确的双表读取路径，下一步可以抽成 subgraphs/features 组合仓储，替换掉现有 bridge。"
+      "module": "mold_cost.domain.pricing.search.search",
+      "legacy_module": "scripts.search.search",
+      "reason": "Aggregate search entry remains a legacy bridge and still fans out across multiple search helpers."
     },
     {
-      "module": "mold_cost.domain.pricing.search.tooth_hole_search",
-      "legacy_module": "scripts.search.tooth_hole_search",
-      "reason": "仍是 job_price_snapshots 单表查询，只比本轮多了 category 分组，迁移风险较低。"
+      "module": "mold_cost.domain.pricing.search.total_search",
+      "legacy_module": "scripts.search.total_search",
+      "reason": "Total cost summary search still sits on a legacy bridge and is a good low-risk follow-up after the snapshot queries."
     },
     {
-      "module": "mold_cost.domain.pricing.search.water_mill_search",
-      "legacy_module": "scripts.search.water_mill_search",
-      "reason": "查询模型和 tooth_hole_search 同型，适合复用本轮 price snapshot 查询抽象继续迁出。"
-    },
-    {
-      "module": "mold_cost.domain.pricing.search.wire_base_search",
-      "legacy_module": "scripts.search.wire_base_search",
-      "reason": "同样是全局快照查询，但包含 wire/rule 分组和轻量映射，适合作为第二批模板。"
-    },
-    {
-      "module": "mold_cost.domain.pricing.search.wire_special_search",
-      "legacy_module": "scripts.search.wire_special_search",
-      "reason": "与 wire_base_search 共用同一张快照表，继续迁移可以验证 price snapshot service 的复用边界。"
+      "module": "mold_cost.domain.pricing.search.wire_total_search",
+      "legacy_module": "scripts.search.wire_total_search",
+      "reason": "Wire total aggregation still bridges to legacy calculation helpers and remains actionable for the next pricing wave."
     }
   ],
   "bridge_assertions": {
@@ -132,3 +122,4 @@
     }
   ]
 }
+

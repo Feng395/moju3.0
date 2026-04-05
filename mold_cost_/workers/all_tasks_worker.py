@@ -28,9 +28,10 @@ PRICING_RECALCULATE_CONCURRENCY = int(os.getenv("PRICING_RECALCULATE_CONCURRENCY
 class AllTasksWorker:
     """Consume job-processing and pricing-recalculation queues."""
 
-    def __init__(self):
+    def __init__(self, job_workflow=None):
         self.mq = MessageQueue()
         self.pricing_agent = None
+        self.job_workflow = job_workflow or job_graph
         logger.info("AllTasksWorker initialized")
 
     async def start(self):
@@ -66,13 +67,14 @@ class AllTasksWorker:
     async def handle_job_processing_message(self, message: dict):
         """Delegate job orchestration to the workflow facade."""
         job_id = message.get("job_id")
+        thread_id = message.get("thread_id") or job_id
         action = message.get("action", "start")
-        logger.info("Received job message: job_id=%s, thread_id=%s, action=%s", job_id, job_id, action)
+        logger.info("Received job message: job_id=%s, thread_id=%s, action=%s", job_id, thread_id, action)
 
         try:
             # 中文注释：start / continue 在 worker 层不再分叉，
             # 统一由 job_graph 根据 action 和 checkpoint 决定真实运行路径。
-            result = await job_graph.handle_message(message)
+            result = await self.job_workflow.handle_message(message)
             status = result.get("status")
 
             if status == "ok":
