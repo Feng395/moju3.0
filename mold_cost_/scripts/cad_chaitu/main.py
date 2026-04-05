@@ -16,13 +16,9 @@ from concurrent.futures import ThreadPoolExecutor
 from loguru import logger
 import sys
 import ezdxf
+from mold_cost.infrastructure.cad.cad_analysis_runtime import analyze_and_export_subgraphs
 from mold_cost.infrastructure.cad.cad_material_line_runtime import process_material_lines
 from mold_cost.infrastructure.cad.cad_prepare_runtime import prepare_dxf_input
-from mold_cost.infrastructure.cad.cad_region_runtime import (
-    build_batch_export_list,
-    collect_export_files,
-    resolve_region_infos,
-)
 from mold_cost.infrastructure.cad.cad_source_runtime import resolve_dwg_source
 from mold_cost.infrastructure.cad.cad_split_persistence_runtime import persist_split_results
 from mold_cost.infrastructure.cad.cad_upload_runtime import upload_split_files
@@ -439,75 +435,23 @@ async def chaitu_process(dwg_url: Optional[str], job_id: str, minio_client=None)
         
         total_start = datetime.now()
         
-        # 步骤1: 识别所有子图
-        logger.info("步骤1: 开始识别所有子图...")
-        analysis_start = datetime.now()
-        
         try:
-            # 一次性识别所有子图
-            all_regions = []
-            for region_id, region, index, total in analysis_system.analyzer.analyze_cad_file_streaming(temp_dxf):
-                if index == 1:
-                    logger.info(f"✅ 识别到 {total} 个子图")
-                all_regions.append((region_id, region))
-            
-            analysis_time = (datetime.now() - analysis_start).total_seconds()
-            logger.info(f"✅ 子图识别完成，共 {len(all_regions)} 个子图 (耗时: {analysis_time:.2f}s)")
-            
-            if not all_regions:
-                return {"status": "error", "message": "未识别到任何子图"}
-            
-            # 步骤2: 在各个子图范围内识别编号和品名
-            logger.info("步骤2: 识别各子图的编号、品名和编号...")
-            region_resolution = resolve_region_infos(
-                all_regions=all_regions,
-                resolver=analysis_system.analyzer.resolve_region_info,
-            )
-            region_info_list = region_resolution["region_info_list"]
-            failed_recognition_count = region_resolution["failed_recognition_count"]
-            
-            logger.info(f"✅ 编号、品名和编号识别完成，成功识别 {len(region_info_list)} 个子图，失败 {failed_recognition_count} 个")
-            
-            if not region_info_list:
-                return {"status": "error", "message": "所有子图的编号和品名识别失败"}
-
-            region_info_map = region_resolution["region_info_map"]
-            
-            # 步骤3: 智能选择导出策略
-            logger.info("步骤3: 开始导出所有子图...")
-            export_start = datetime.now()
-            
-            # 准备批量导出列表
-            batch_export_list = build_batch_export_list(
-                region_info_list=region_info_list,
+            analysis_result = analyze_and_export_subgraphs(
+                analysis_system=analysis_system,
+                temp_dxf=temp_dxf,
                 temp_dir=temp_dir,
-            )
-            
-            # 使用并发方案导出（每个子图独立读取文件）
-            max_workers = int(os.getenv('EXPORT_WORKERS', '5'))
-            logger.info(f"使用并发方案导出 {len(batch_export_list)} 个子图 (并发数: {max_workers})")
-            export_results = analysis_system.batch_export_regions_concurrent(
-                batch_export_list,
-                pad=0.0,
-                horizontal_spacing=50.0,
-                align_to_origin=True,
-                max_workers=max_workers
-            )
-            
-            # 处理导出结果
-            export_summary = collect_export_files(
-                region_info_list=region_info_list,
-                export_results=export_results,
                 minio_base_path=minio_base_path,
             )
-            export_files = export_summary["export_files"]
-            failed_export_count = export_summary["failed_export_count"]
-            
-            export_time = (datetime.now() - export_start).total_seconds()
-            logger.info(f"✅ 子图导出完成，成功导出 {len(export_files)} 个文件，失败 {failed_export_count} 个 (耗时: {export_time:.2f}s)")
-            
-            if not export_files:
-                return {"status": "error", "message": "所有子图导出失败"}
+            analysis_time = analysis_result.get("analysis_time", 0)
+            export_time = analysis_result.get("export_time", 0)
+            all_regions = analysis_result.get("all_regions", [])
+            region_info_list = analysis_result.get("region_info_list", [])
+            region_info_map = analysis_result.get("region_info_map", {})
+            failed_recognition_count = analysis_result.get("failed_recognition_count", 0)
+            failed_export_count = analysis_result.get("failed_export_count", 0)
+            export_files = analysis_result.get("export_files", [])
+            if not analysis_result["success"]:
+                return {"status": "error", "message": analysis_result["message"]}
             
             # 步骤3.5: 为每个子图添加板料线（新增功能，不影响原有流程）
             logger.info("步骤3.5: 开始为子图添加板料线...")

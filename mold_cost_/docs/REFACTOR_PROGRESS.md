@@ -55,6 +55,7 @@
 
 ### 3. CAD split gateway 建立 src-owned runtime 边界
 - 新增 `src/mold_cost/infrastructure/cad/cad_split_runtime.py`
+- 新增 `src/mold_cost/infrastructure/cad/cad_analysis_runtime.py`
 - 新增 `src/mold_cost/infrastructure/cad/cad_source_runtime.py`
 - 新增 `src/mold_cost/infrastructure/cad/cad_prepare_runtime.py`
 - 新增 `src/mold_cost/infrastructure/cad/cad_region_runtime.py`
@@ -63,9 +64,9 @@
 - 新增 `src/mold_cost/infrastructure/cad/cad_xt_export_runtime.py`
 - 新增 `src/mold_cost/infrastructure/cad/cad_upload_runtime.py`
 - `LegacyCadSplitGateway.split()` 现在通过 `run_cad_split()` 调度 legacy entrypoints
-- `scripts/cad_chaitu/main.py` 现在通过 `src` runtime 处理 DWG/PRT 来源解析、DWG 获取与 DXF 转换准备、子图编号解析/导出计划、板料线后处理、`.x_t` 导出准备、上传与结果落库统计
+- `scripts/cad_chaitu/main.py` 现在通过 `src` runtime 处理子图识别/导出编排、DWG/PRT 来源解析、DWG 获取与 DXF 转换准备、子图编号解析/导出计划、板料线后处理、`.x_t` 导出准备、上传与结果落库统计
 - `src/mold_cost/infrastructure/db/cad_pool.py` 已改为惰性桥接，避免模块导入阶段直接触发 `scripts.cad_chaitu.database`
-- 已补 `tests/unit/test_cad_split_refactor.py`、`test_cad_source_runtime.py`、`test_cad_prepare_runtime.py`、`test_cad_region_runtime.py`、`test_cad_material_line_runtime.py`、`test_cad_upload_runtime.py`、`test_cad_split_persistence_runtime.py`、`test_cad_xt_export_runtime.py` 锁定 CAD split runtime/gateway、来源解析、输入准备、子图编号编排、板料线后处理、上传与持久化边界
+- 已补 `tests/unit/test_cad_split_refactor.py`、`test_cad_analysis_runtime.py`、`test_cad_source_runtime.py`、`test_cad_prepare_runtime.py`、`test_cad_region_runtime.py`、`test_cad_material_line_runtime.py`、`test_cad_upload_runtime.py`、`test_cad_split_persistence_runtime.py`、`test_cad_xt_export_runtime.py` 锁定 CAD split runtime/gateway、子图识别/导出编排、来源解析、输入准备、子图编号编排、板料线后处理、上传与持久化边界
 
 ### 4. Review 默认装配继续收口
 - `review_change_applier` 不再主动 import infrastructure fallback
@@ -153,4 +154,4 @@
 
 ## 当前回归基线
 - `pytest tests/unit tests/integration tests/golden -q`
-- 结果：`180 passed`
+- 结果：`182 passed`
