@@ -16,6 +16,7 @@ from concurrent.futures import ThreadPoolExecutor
 from loguru import logger
 import sys
 import ezdxf
+from mold_cost.infrastructure.cad.cad_material_line_runtime import process_material_lines
 from mold_cost.infrastructure.cad.cad_prepare_runtime import prepare_dxf_input
 from mold_cost.infrastructure.cad.cad_region_runtime import (
     build_batch_export_list,
@@ -24,6 +25,7 @@ from mold_cost.infrastructure.cad.cad_region_runtime import (
 )
 from mold_cost.infrastructure.cad.cad_source_runtime import resolve_dwg_source
 from mold_cost.infrastructure.cad.cad_split_persistence_runtime import persist_split_results
+from mold_cost.infrastructure.cad.cad_upload_runtime import upload_split_files
 
 # 导入板料线集成器
 try:
@@ -510,89 +512,29 @@ async def chaitu_process(dwg_url: Optional[str], job_id: str, minio_client=None)
             # 步骤3.5: 为每个子图添加板料线（新增功能，不影响原有流程）
             logger.info("步骤3.5: 开始为子图添加板料线...")
             material_line_start = datetime.now()
-
-            # 检查是否启用板料线功能（从环境变量读取）
-            enable_material_lines_value = os.getenv('ENABLE_MATERIAL_LINES', 'true')
-            # 确保 enable_material_lines_value 是字符串
-            if isinstance(enable_material_lines_value, str):
-                enable_material_lines = enable_material_lines_value.lower() == 'true'
-            else:
-                enable_material_lines = False
-
-            if enable_material_lines and MATERIAL_LINE_AVAILABLE:
-                try:
-                    integrator = MaterialLineIntegrator(enable=True)
-                    
-                    for file_info in export_files:
-                        try:
-                            region_info = region_info_map.get(file_info['sub_code'], {})
-                            region = region_info.get('region')
-                            lwt, lwt_source = _resolve_subgraph_lwt(file_info['local_path'], region)
-
-                            if lwt:
-                                logger.info(
-                                    f"  🔧 {file_info['sub_code']}: 使用 {lwt_source} "
-                                    f"获取L/W/T = {lwt['L']:.2f}/{lwt['W']:.2f}/{lwt['T']:.2f}"
-                                )
-                                integrator.add_material_lines_to_subgraph(
-                                    dxf_path=file_info['local_path'],
-                                    lwt=lwt,
-                                    sub_code=file_info['sub_code'],
-                                    part_info={
-                                        'part_name': file_info.get('part_name'),
-                                        'part_code': file_info.get('part_code'),
-                                        'lwt_source': lwt_source,
-                                    }
-                                )
-                            else:
-                                logger.debug(f"  ⚠️ {file_info['sub_code']}: 无法解析有效L/W/T，跳过板料线添加")
-                                
-                        except Exception as e:
-                            logger.warning(f"  ⚠️ {file_info['sub_code']}: 板料线添加异常 - {e}")
-                            # 不中断流程，继续处理其他子图
-                    
-                    # 打印统计信息
-                    integrator.print_stats()
-                    
-                    material_line_time = (datetime.now() - material_line_start).total_seconds()
-                    logger.info(f"✅ 板料线添加完成 (耗时: {material_line_time:.2f}s)")
-                    
-                except Exception as e:
-                    logger.warning(f"⚠️ 板料线添加模块异常: {e}")
-                    logger.warning("继续执行后续流程...")
-            else:
-                if not enable_material_lines:
-                    logger.info("ℹ️ 板料线功能已禁用（ENABLE_MATERIAL_LINES=false）")
-                elif not MATERIAL_LINE_AVAILABLE:
-                    logger.warning("⚠️ 板料线模块不可用，跳过板料线添加")
-                
-                material_line_time = 0
-
-            save_debug_files_value = os.getenv('SAVE_MATERIAL_LINE_DEBUG_FILES', 'true')
-            if isinstance(save_debug_files_value, str):
-                save_debug_files = save_debug_files_value.lower() == 'true'
-            else:
-                save_debug_files = False
-
-            if save_debug_files:
-                try:
-                    debug_output_dir = _save_material_line_debug_files(job_id, export_files)
-                except Exception as e:
-                    logger.warning(f"⚠️ 临时保存板料线子图失败: {e}")
+            material_line_result = process_material_lines(
+                job_id=job_id,
+                export_files=export_files,
+                region_info_map=region_info_map,
+                material_line_available=MATERIAL_LINE_AVAILABLE,
+                integrator_factory=MaterialLineIntegrator,
+                resolve_subgraph_lwt=_resolve_subgraph_lwt,
+                save_debug_files=_save_material_line_debug_files,
+            )
+            debug_output_dir = material_line_result["debug_output_dir"]
+            material_line_time = (datetime.now() - material_line_start).total_seconds() if material_line_result["processed"] else 0
+            if material_line_result["processed"]:
+                logger.info(f"✅ 板料线添加完成 (耗时: {material_line_time:.2f}s)")
              
             # 步骤4: 并发上传所有子图到MinIO
             logger.info("步骤4: 开始并发上传所有子图到MinIO...")
             upload_start = datetime.now()
-            
-            # 准备上传文件列表
-            upload_list = [
-                (f['sub_code'], f['local_path'], f['minio_path'])
-                for f in export_files
-            ]
-            
-            # 使用MinIO客户端的批量上传功能
-            upload_results = _minio_client.batch_upload_files(upload_list)
-            
+
+            upload_results = upload_split_files(
+                export_files=export_files,
+                minio_client=_minio_client,
+            )
+
             upload_time = (datetime.now() - upload_start).total_seconds()
             
             # 步骤5: 保存成功上传的文件到数据库
