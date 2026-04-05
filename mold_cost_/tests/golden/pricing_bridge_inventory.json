@@ -94,14 +94,14 @@
   },
   "next_extract_candidates": [
     {
-      "module": "mold_cost.domain.pricing.calculators.price_wire_special",
-      "legacy_module": "scripts.calculate.price_wire_special",
-      "reason": "Wire special is still bridged and remains part of the pricing main path."
-    },
-    {
       "module": "mold_cost.domain.pricing.calculators.price_water_mill_bevel_cost",
       "legacy_module": "scripts.calculate.price_water_mill_bevel_cost",
       "reason": "Water mill bevel cost is still a bridge module and is one of the remaining water-mill calculator tails."
+    },
+    {
+      "module": "mold_cost.domain.pricing.calculators.price_water_mill_chamfer_cost",
+      "legacy_module": "scripts.calculate.price_water_mill_chamfer_cost",
+      "reason": "Water mill chamfer cost is still a bridge module and remains part of the remaining water-mill cleanup cluster."
     },
     {
       "module": "mold_cost.domain.pricing.calculators.price_water_mill_component",
