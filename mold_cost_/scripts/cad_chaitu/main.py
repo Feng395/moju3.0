@@ -5,23 +5,14 @@ CAD 拆图主处理流程
 """
 
 import os
-import tempfile
 import shutil
 import logging
 from pathlib import Path
-from datetime import datetime
 from typing import Optional, Dict, Tuple
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
 from loguru import logger
 import sys
 import ezdxf
-from mold_cost.infrastructure.cad.cad_analysis_runtime import analyze_and_export_subgraphs
-from mold_cost.infrastructure.cad.cad_material_line_runtime import process_material_lines
-from mold_cost.infrastructure.cad.cad_prepare_runtime import prepare_dxf_input
-from mold_cost.infrastructure.cad.cad_source_runtime import resolve_dwg_source
-from mold_cost.infrastructure.cad.cad_split_persistence_runtime import persist_split_results
-from mold_cost.infrastructure.cad.cad_upload_runtime import upload_split_files
+from mold_cost.infrastructure.cad.cad_process_runtime import execute_cad_split_process
 
 # 导入板料线集成器
 try:
@@ -128,7 +119,7 @@ except ImportError:
     from storage import FileStorageManager
     from utils import extract_model_code_from_source
 
-from mold_cost.infrastructure.cad.cad_xt_export_runtime import export_xt_files, export_xt_from_prt_with_nxopen
+from mold_cost.infrastructure.cad.cad_xt_export_runtime import export_xt_from_prt_with_nxopen
 
 
 # 全局实例
@@ -284,208 +275,26 @@ async def chaitu_process(dwg_url: Optional[str], job_id: str, minio_client=None)
     if db_manager is None or storage_manager is None:
         init_managers(_minio_client)
     
-    temp_dir = None
     try:
-        source_resolution = resolve_dwg_source(
+        # 中文说明：DWG 来源解析、输入准备、分析编排、板料线、上传、`.x_t` 与落库流程均已收口到 src runtime。
+        result = await execute_cad_split_process(
             dwg_url=dwg_url,
             job_id=job_id,
             db_manager=db_manager,
-            extract_model_code_from_source=extract_model_code_from_source,
-        )
-        if not source_resolution:
-            return {"status": "error", "message": f"未找到 job_id={job_id} 对应的 dwg_file_path"}
-
-        dwg_source = source_resolution["dwg_source"]
-        use_minio = source_resolution["use_minio"]
-        source_filename = source_resolution["source_filename"]
-        model_code = source_resolution["model_code"]
-
-        logger.info(f"收到拆图请求: dwg_source={dwg_source}, job_id={job_id}, use_minio={use_minio}")
-        logger.info(f"源文件名: {source_filename}, 模型代码: {model_code}")
-
-        # 1. 创建临时目录
-        temp_dir = tempfile.mkdtemp(prefix="chaidan_cad_")
-        prepare_result = await prepare_dxf_input(
-            dwg_source=dwg_source,
-            use_minio=use_minio,
-            temp_dir=temp_dir,
             storage_manager=storage_manager,
+            minio_client=_minio_client,
+            extract_model_code_from_source=extract_model_code_from_source,
             converter_factory=DWGConverter,
             oda_converter_path=ODA_FILE_CONVERTER_PATH,
+            analysis_system_factory=CADAnalysisSystem,
+            material_line_available=MATERIAL_LINE_AVAILABLE,
+            integrator_factory=MaterialLineIntegrator,
+            resolve_subgraph_lwt=_resolve_subgraph_lwt,
+            save_debug_files=_save_material_line_debug_files,
+            export_xt_from_prt=export_xt_from_prt_with_nxopen,
         )
-        if not prepare_result["success"]:
-            return {"status": "error", "message": prepare_result["message"]}
-
-        temp_dxf = prepare_result["temp_dxf"]
-        logger.info(f"✅ DXF 转换成功: {temp_dxf}")
-
-        # 4. 准备流式处理
-        result_files = []
-        timestamp = datetime.now()
-        year = timestamp.strftime("%Y")
-        month = timestamp.strftime("%m")
-        
-        # MinIO 路径格式: dxf/2026/01/{job_id}/{subgraph_id}.dxf
-        minio_base_path = f"dxf/{year}/{month}/{job_id}"
-        
-        logger.info(f"MinIO 基础路径: {minio_base_path}")
-        logger.info("开始流式分析和处理 DXF 文件...")
-
-        # 5. 新流程：先识别所有子图，再批量处理和上传
-        analysis_system = CADAnalysisSystem()
-        analysis_time = 0
-        export_time = 0
-        material_line_time = 0
-        debug_output_dir = None
-        upload_time = 0
-        db_time = 0
-        
-        total_start = datetime.now()
-        
-        try:
-            analysis_result = analyze_and_export_subgraphs(
-                analysis_system=analysis_system,
-                temp_dxf=temp_dxf,
-                temp_dir=temp_dir,
-                minio_base_path=minio_base_path,
-            )
-            analysis_time = analysis_result.get("analysis_time", 0)
-            export_time = analysis_result.get("export_time", 0)
-            all_regions = analysis_result.get("all_regions", [])
-            region_info_list = analysis_result.get("region_info_list", [])
-            region_info_map = analysis_result.get("region_info_map", {})
-            failed_recognition_count = analysis_result.get("failed_recognition_count", 0)
-            failed_export_count = analysis_result.get("failed_export_count", 0)
-            export_files = analysis_result.get("export_files", [])
-            if not analysis_result["success"]:
-                return {"status": "error", "message": analysis_result["message"]}
-            
-            # 步骤3.5: 为每个子图添加板料线（新增功能，不影响原有流程）
-            logger.info("步骤3.5: 开始为子图添加板料线...")
-            material_line_start = datetime.now()
-            material_line_result = process_material_lines(
-                job_id=job_id,
-                export_files=export_files,
-                region_info_map=region_info_map,
-                material_line_available=MATERIAL_LINE_AVAILABLE,
-                integrator_factory=MaterialLineIntegrator,
-                resolve_subgraph_lwt=_resolve_subgraph_lwt,
-                save_debug_files=_save_material_line_debug_files,
-            )
-            debug_output_dir = material_line_result["debug_output_dir"]
-            material_line_time = (datetime.now() - material_line_start).total_seconds() if material_line_result["processed"] else 0
-            if material_line_result["processed"]:
-                logger.info(f"✅ 板料线添加完成 (耗时: {material_line_time:.2f}s)")
-             
-            # 步骤4: 并发上传所有子图到MinIO
-            logger.info("步骤4: 开始并发上传所有子图到MinIO...")
-            upload_start = datetime.now()
-
-            upload_results = upload_split_files(
-                export_files=export_files,
-                minio_client=_minio_client,
-            )
-
-            upload_time = (datetime.now() - upload_start).total_seconds()
-            
-            # 步骤5: 保存成功上传的文件到数据库
-            logger.info("步骤5: 保存数据到数据库...")
-            db_start = datetime.now()
-
-            # 中文说明：.x_t 导出准备逻辑已迁到 src runtime，这里只复用 legacy exporter 本体。
-            try:
-                xt_url_map = await export_xt_files(
-                    job_id=job_id,
-                    temp_dir=temp_dir,
-                    export_files=export_files,
-                    storage_manager=storage_manager,
-                    db_manager=db_manager,
-                    minio_client=_minio_client,
-                    export_xt_from_prt=export_xt_from_prt_with_nxopen,
-                )
-            except Exception as _nxe:
-                logger.warning(f"步骤6 .x_t 导出异常（不影响主流程）: {_nxe}")
-                xt_url_map = {}
-
-            persistence_result = persist_split_results(
-                export_files=export_files,
-                upload_results=upload_results,
-                db_manager=db_manager,
-                source_filename=source_filename,
-                job_id=job_id,
-                xt_url_map=xt_url_map,
-            )
-            result_files = persistence_result["result_files"]
-            db_success_count = persistence_result["db_success_count"]
-            failed_upload_count = persistence_result["failed_upload_count"]
-            failed_db_count = persistence_result["failed_db_count"]
-            
-            db_time = (datetime.now() - db_start).total_seconds()
-            logger.info(
-                f"✅ 数据库保存完成，成功保存 {db_success_count} 条记录，"
-                f"上传失败 {failed_upload_count} 个，数据库失败 {failed_db_count} 个 (耗时: {db_time:.2f}s)"
-            )
-        
-        except Exception as e:
-            logger.error(f"处理异常: {e}")
-            return {"status": "error", "message": f"处理失败: {e}"}
-        
-        if not result_files:
-            return {"status": "error", "message": "所有子图处理失败"}
-
-        total_time = (datetime.now() - total_start).total_seconds()
-        avg_time = total_time / len(result_files) if result_files else 0
-        
-        logger.info(f"✅ 拆图完成！成功处理 {len(result_files)} 个子图")
-        logger.info("=" * 80)
-        logger.info("📊 处理流程统计:")
-        logger.info(f"   步骤1 - 识别图框: {len(all_regions)} 个")
-        logger.info(f"   步骤2 - 识别编号品名: {len(region_info_list)} 个 (失败 {failed_recognition_count} 个)")
-        logger.info(f"   步骤3 - 导出子图: {len(export_files)} 个 (失败 {failed_export_count} 个)")
-        logger.info(f"   步骤3.5 - 添加板料线: {len(export_files)} 个 (耗时 {material_line_time:.2f}s)")
-        logger.info(f"   步骤4 - 上传MinIO: {len(export_files) - failed_upload_count} 个 (失败 {failed_upload_count} 个)")
-        logger.info(f"   步骤5 - 保存数据库: {db_success_count} 个 (失败 {failed_db_count} 个)")
-        logger.info(f"   最终结果: {len(result_files)} 个子图成功")
-        logger.info("=" * 80)
-        logger.info(
-            f"📊 性能统计: "
-            f"识别={analysis_time:.2f}s, "
-            f"导出={export_time:.2f}s, "
-            f"板料线={material_line_time:.2f}s, "
-            f"上传={upload_time:.2f}s, "
-            f"数据库={db_time:.2f}s, "
-            f"总耗时={total_time:.2f}s, "
-            f"平均={avg_time:.2f}s/个"
-        )
-        logger.info(f"📁 MinIO 路径: {minio_base_path}")
-
-        # 提取文件名列表
-        filenames = [item["filename"] for item in result_files]
-
-        return {
-            "status": "ok",
-            "data": {
-                "total_count": len(result_files),
-                "result_files": filenames
-            }
-        }
+        return result
 
     except Exception as e:
         logger.error(f"拆图异常: {e}", exc_info=True)
         return {"status": "error", "message": str(e)}
-    
-    finally:
-        # 清理分析系统缓存
-        try:
-            if 'analysis_system' in locals():
-                analysis_system.clear_cache()
-                logger.debug("✅ 缓存清理完成")
-        except Exception as e:
-            logger.warning(f"清理缓存失败: {e}")
-        
-        # 清理临时目录
-        if temp_dir and os.path.exists(temp_dir):
-            try:
-                shutil.rmtree(temp_dir)
-            except Exception as e:
-                logger.warning(f"清理临时目录失败: {e}")
