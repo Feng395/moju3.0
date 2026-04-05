@@ -366,6 +366,29 @@ class LegacyIntentRecognizerFactory:
         )
 
 
+class LazyFallbackRecognizer:
+    """Delay legacy recognizer construction until src rules真的无法命中。"""
+
+    def __init__(self, factory):
+        self._factory = factory
+        self._instance = None
+
+    def _ensure_instance(self):
+        if self._instance is None and self._factory is not None:
+            self._instance = self._factory.create()
+        return self._instance
+
+    async def recognize(self, message, context, job_id=None, db_session=None):
+        instance = self._ensure_instance()
+        if instance is None:
+            return IntentResult(intent_type=IntentType.UNKNOWN.value, confidence=0.0, raw_message=message)
+        return await instance.recognize(message, context, job_id=job_id, db_session=db_session)
+
+    async def close(self) -> None:
+        if self._instance is not None:
+            await self._instance.close()
+
+
 class SrcReviewIntentRecognizerFactory:
     """Build the default review recognizer with src-first detection."""
 
@@ -373,7 +396,7 @@ class SrcReviewIntentRecognizerFactory:
         self._fallback_factory = fallback_factory or LegacyIntentRecognizerFactory()
 
     def create(self) -> SrcReviewIntentRecognizer:
-        fallback = self._fallback_factory.create() if self._fallback_factory is not None else None
+        fallback = LazyFallbackRecognizer(self._fallback_factory) if self._fallback_factory is not None else None
         recognizer = SrcReviewIntentRecognizer(fallback_recognizer=fallback)
         logger.info("Created src-first review intent recognizer")
         return recognizer

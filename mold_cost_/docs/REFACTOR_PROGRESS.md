@@ -81,7 +81,7 @@
 - 新增 `src/mold_cost/infrastructure/review/query_details_review_handler.py`
 - 新增 `src/mold_cost/infrastructure/review/data_modification_review_handler.py`
 - `DATA_MODIFICATION`、`FEATURE_RECOGNITION`、`PRICE_CALCULATION`、`QUERY_DETAILS`、`WEIGHT_PRICE_CALCULATION`、`GENERAL_CHAT`、`WEIGHT_PRICE_QUERY` 已切到 `src` 侧 review action handlers
-- review 默认 intent recognizer 已改为 `src-first + legacy fallback`，并补齐上下文指代类 query/modification 识别，以及 `wire_base / add_auto_material / nc_base / standard` 等稳定 `query_type`
+- review 默认 intent recognizer 已改为 `src-first + legacy fallback`，并补齐上下文指代类 query/modification 识别、`wire_base / add_auto_material / nc_base / standard` 等稳定 `query_type`，同时 legacy fallback 已改为懒加载实例化
 - `legacy_review_handler_adapter.py` 现在只负责默认 change applier 组装
 
 ### 5. Workflow durable store 已抽为共享文件型基础实现
@@ -155,4 +155,4 @@
 
 ## 当前回归基线
 - `pytest tests/unit tests/integration tests/golden -q`
-- 结果：`192 passed`
+- 结果：`195 passed`

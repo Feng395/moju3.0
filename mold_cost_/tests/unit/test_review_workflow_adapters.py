@@ -398,17 +398,69 @@ async def test_src_review_intent_recognizer_factory_wraps_legacy_fallback():
     module = importlib.import_module("mold_cost.infrastructure.review.intent_recognizer_runtime")
 
     class _FallbackFactory:
+        def __init__(self):
+            self.created = 0
+
         def create(self):
+            self.created += 1
             return SimpleNamespace(
-                recognize=lambda *args, **kwargs: None,
-                close=lambda: None,
+                recognize=_async_return_none,
+                close=_async_return_none,
             )
 
-    factory = module.SrcReviewIntentRecognizerFactory(fallback_factory=_FallbackFactory())
+    fallback_factory = _FallbackFactory()
+    factory = module.SrcReviewIntentRecognizerFactory(fallback_factory=fallback_factory)
     recognizer = factory.create()
 
     assert recognizer.__class__.__name__ == "SrcReviewIntentRecognizer"
     assert recognizer._fallback_recognizer is not None
+    assert fallback_factory.created == 0
+
+
+async def _async_return_none(*args, **kwargs):
+    return None
+
+
+@pytest.mark.asyncio
+async def test_src_review_intent_recognizer_factory_creates_legacy_fallback_lazily():
+    module = importlib.import_module("mold_cost.infrastructure.review.intent_recognizer_runtime")
+
+    class _FallbackRecognizer:
+        def __init__(self):
+            self.calls = []
+
+        async def recognize(self, message, context, job_id=None, db_session=None):
+            self.calls.append((message, job_id, db_session))
+            return SimpleNamespace(intent_type="QUERY_DETAILS", confidence=0.61, parameters={})
+
+        async def close(self):
+            return None
+
+    class _FallbackFactory:
+        def __init__(self):
+            self.created = 0
+            self.instance = None
+
+        def create(self):
+            self.created += 1
+            self.instance = _FallbackRecognizer()
+            return self.instance
+
+    fallback_factory = _FallbackFactory()
+    recognizer = module.SrcReviewIntentRecognizerFactory(fallback_factory=fallback_factory).create()
+
+    assert fallback_factory.created == 0
+
+    result = await recognizer.recognize(
+        "继续按更复杂的上下文来理解这句话",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_DIE-03"}]}},
+        job_id="job-14lazy",
+        db_session="db",
+    )
+
+    assert result.intent_type == "QUERY_DETAILS"
+    assert fallback_factory.created == 1
+    assert fallback_factory.instance.calls == [("继续按更复杂的上下文来理解这句话", "job-14lazy", "db")]
 
 
 @pytest.mark.asyncio
