@@ -1,4 +1,4 @@
-"""legacy 特征识别 gateway。"""
+"""Legacy feature-recognition gateway."""
 
 from __future__ import annotations
 
@@ -8,9 +8,13 @@ import tempfile
 from functools import lru_cache
 from typing import Any
 
+from ...core.settings import settings
+from .feature_analysis_runtime import analyze_dxf_features
+from .feature_batch_runtime import batch_feature_recognition
+
 
 class LegacyFeatureRecognitionGateway:
-    """隔离脚本调用和 MinIO 上传细节的适配器。"""
+    """Isolate legacy DB helpers and upload side effects behind a stable gateway."""
 
     def batch_recognize(
         self,
@@ -18,16 +22,30 @@ class LegacyFeatureRecognitionGateway:
         subgraph_id: str | None = None,
         progress_callback=None,
     ) -> dict[str, Any]:
-        # 中文说明：旧批处理算法仍保留在脚本内，这里只做适配转发。
-        module = self._load_legacy_module()
-        return module.batch_feature_recognition_process(
+        from scripts.feature_recognition.slider_red_face_updater import update_slider_red_face_data
+        from scripts.minio_client import minio_client as legacy_minio_client
+
+        # 中文说明：批处理编排已迁到 src runtime，这里只注入 legacy 侧仍在使用的 DB/MinIO 辅助。
+        return batch_feature_recognition(
             job_id,
-            subgraph_id,
+            subgraph_id=subgraph_id,
             progress_callback=progress_callback,
+            get_subgraphs=self.get_subgraphs,
+            save_features=self.save_features,
+            minio_client=legacy_minio_client,
+            slider_red_face_updater=update_slider_red_face_data,
+            db_config={
+                "host": settings.DB_HOST,
+                "port": settings.DB_PORT,
+                "user": settings.DB_USER,
+                "password": settings.DB_PASSWORD,
+                "database": settings.DB_NAME,
+            },
         )
 
     def analyze_dxf(self, dxf_path: str) -> dict[str, Any] | None:
-        return self._load_legacy_module().analyze_dxf_features(dxf_path)
+        # 中文说明：单文件 DXF 分析直接走 src runtime，避免再次回到旧脚本总入口。
+        return analyze_dxf_features(dxf_path)
 
     def get_subgraphs(self, job_id: str, subgraph_id: str | None = None) -> list[dict[str, Any]]:
         return self._load_legacy_module().get_subgraphs_from_db(job_id, subgraph_id)
@@ -39,7 +57,6 @@ class LegacyFeatureRecognitionGateway:
         from mold_cost.infrastructure.storage.minio_client import minio_client
         from scripts.feature_recognition.slider_red_face_lookup import invalidate_cache
 
-        # 中文说明：上传前先落临时 JSON，复用既有 MinIO 客户端与缓存失效逻辑。
         temp_file = tempfile.NamedTemporaryFile(
             suffix=".json",
             delete=False,
@@ -68,7 +85,7 @@ class LegacyFeatureRecognitionGateway:
     @staticmethod
     @lru_cache(maxsize=1)
     def _load_legacy_module():
-        # 中文说明：懒加载 feature_recognition，避免 domain/service 导入时直接触发脚本初始化。
+        # 中文说明：仅在需要 DB 辅助方法时才加载 legacy 模块，减少导入副作用。
         from scripts.feature_recognition import feature_recognition as legacy_module
 
         return legacy_module

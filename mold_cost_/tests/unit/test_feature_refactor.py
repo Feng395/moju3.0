@@ -196,3 +196,99 @@ def test_legacy_feature_upload_entry_uses_domain_service(monkeypatch):
             "minio_path": "slider/custom.json",
         }
     ]
+
+
+def test_feature_gateway_analyze_dxf_uses_src_runtime(monkeypatch):
+    from mold_cost.infrastructure.cad.legacy_feature_recognition_gateway import LegacyFeatureRecognitionGateway
+
+    calls: list[str] = []
+
+    def _fake_analyze_dxf_features(dxf_path: str):
+        calls.append(dxf_path)
+        return {"path": dxf_path, "source": "src-runtime"}
+
+    monkeypatch.setattr(
+        "mold_cost.infrastructure.cad.legacy_feature_recognition_gateway.analyze_dxf_features",
+        _fake_analyze_dxf_features,
+    )
+
+    gateway = LegacyFeatureRecognitionGateway()
+    result = gateway.analyze_dxf("demo-runtime.dxf")
+
+    assert result == {"path": "demo-runtime.dxf", "source": "src-runtime"}
+    assert calls == ["demo-runtime.dxf"]
+
+
+def test_feature_gateway_batch_recognize_uses_src_runtime(monkeypatch):
+    import sys
+    import types
+
+    from mold_cost.infrastructure.cad.legacy_feature_recognition_gateway import (
+        LegacyFeatureRecognitionGateway,
+        settings,
+    )
+
+    calls = []
+    legacy_batch_calls = []
+    fake_minio_client = object()
+
+    def _fake_batch_feature_recognition(job_id, subgraph_id=None, progress_callback=None, **kwargs):
+        calls.append(
+            {
+                "job_id": job_id,
+                "subgraph_id": subgraph_id,
+                "progress_callback": progress_callback,
+                "kwargs": kwargs,
+            }
+        )
+        return {"success": True, "data": {"total": 0, "success_count": 0, "failed_count": 0, "results": []}}
+
+    def _fake_legacy_batch(*_args, **_kwargs):
+        legacy_batch_calls.append(True)
+        return {"success": False}
+
+    monkeypatch.setattr(
+        "mold_cost.infrastructure.cad.legacy_feature_recognition_gateway.batch_feature_recognition",
+        _fake_batch_feature_recognition,
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "scripts.minio_client",
+        types.SimpleNamespace(minio_client=fake_minio_client),
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "scripts.feature_recognition.slider_red_face_updater",
+        types.SimpleNamespace(update_slider_red_face_data="slider-updater"),
+    )
+
+    gateway = LegacyFeatureRecognitionGateway()
+    monkeypatch.setattr(
+        gateway,
+        "_load_legacy_module",
+        lambda: types.SimpleNamespace(batch_feature_recognition_process=_fake_legacy_batch),
+    )
+
+    callback = lambda *args: None
+    result = gateway.batch_recognize("job-batch", "sub-batch", callback)
+
+    assert result["success"] is True
+    assert legacy_batch_calls == []
+    assert len(calls) == 1
+    captured = calls[0]
+    assert captured["job_id"] == "job-batch"
+    assert captured["subgraph_id"] == "sub-batch"
+    assert captured["progress_callback"] is callback
+    assert captured["kwargs"]["minio_client"] is fake_minio_client
+    assert captured["kwargs"]["slider_red_face_updater"] == "slider-updater"
+    assert captured["kwargs"]["get_subgraphs"].__self__ is gateway
+    assert captured["kwargs"]["get_subgraphs"].__func__ is gateway.get_subgraphs.__func__
+    assert captured["kwargs"]["save_features"].__self__ is gateway
+    assert captured["kwargs"]["save_features"].__func__ is gateway.save_features.__func__
+    assert captured["kwargs"]["db_config"] == {
+        "host": settings.DB_HOST,
+        "port": settings.DB_PORT,
+        "user": settings.DB_USER,
+        "password": settings.DB_PASSWORD,
+        "database": settings.DB_NAME,
+    }
