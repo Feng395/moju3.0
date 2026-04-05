@@ -823,16 +823,16 @@ LangGraph 节点只做状态推进，不重写你现有 CAD/计价算法。
 
 - `job_graph` 与 `review_graph` 已经都运行在真实 LangGraph runtime 上；job 侧已经具备本地 durable fallback，review 侧默认装配已不再直接实例化 `InteractionAgent`
 - `domain.pricing.search` 已完成三批真实模块迁移，`search.py`、`total_search.py`、`wire_total_search.py` 已落地为真实 domain 实现；`process_rule_matcher` 也已从脚本桥接迁到 `src/mold_cost`
-- `domain.pricing.calculators` 已完成四批真实迁移，`price_material.py`、`price_wire_total.py`、`price_total.py`、`price_weight.py`、`price_heat.py`、`price_nc_total.py`、`price_nc_base.py`、`price_tooth_hole.py`、`price_water_mill_total.py`、`price_add_auto_material.py`、`price_wire_base.py`、`price_wire_special.py`、`price_wire_standard.py`、`price_nc_time.py`、`judgment.py` 已不再直接桥接 `scripts.calculate.*`，workflow golden baseline 也已切到新的 domain calculator 自证
+- `domain.pricing.calculators` 已完成五批真实迁移，`price_material.py`、`price_wire_total.py`、`price_total.py`、`price_weight.py`、`price_heat.py`、`price_nc_total.py`、`price_nc_base.py`、`price_tooth_hole.py`、`price_water_mill_total.py`、`price_add_auto_material.py`、`price_wire_base.py`、`price_wire_special.py`、`price_wire_standard.py`、`price_nc_time.py`、`judgment.py`、`price_water_mill_bevel_cost.py`、`price_water_mill_chamfer_cost.py`、`price_water_mill_component.py` 已不再直接桥接 `scripts.calculate.*`，workflow golden baseline 也已切到新的 domain calculator 自证
 - `domain.review.services.review_change_applier` 已通过 infrastructure adapter 去掉对 `agents.action_handlers`、`agents.confirm_handler` 的直连；review 侧剩余 legacy helper 进一步收敛到 `review_data_loader`、`review_notifier` 与共享 `OpResult` 契约
 - `domain.cad` 与 `domain.features` 已形成更稳定的服务契约，API / workflow / worker 已开始统一面向服务结果；算法本体仍主要位于 `scripts/*`
-- pricing / process matcher 主链和 monitor 脚本上的显式 `scripts/* -> api_gateway.*` 反向依赖已基本清理；剩余 legacy 耦合进一步收敛到 review loader/notifier helper、`pricing_service` 与水磨细分 calculator 尾项
-- 当前回归基线更新为：`pytest tests/unit tests/integration tests/golden -q` => `90 passed`
+- pricing / process matcher 主链和 monitor 脚本上的显式 `scripts/* -> api_gateway.*` 反向依赖已基本清理；`pricing_service.update_job_total_cost` 也已下沉到 `script_db`，剩余 legacy 耦合进一步收敛到 review loader/notifier helper、`pricing_service.calculate` 与水磨细分 calculator 尾项
+- 当前回归基线更新为：`pytest tests/unit tests/integration tests/golden -q` => `100 passed`
 
 ## 下一轮建议
 
 - 优先把 `job_graph` / `review_graph` 的 checkpoint backend 从本地 fallback 推进到真正可共享的 durable 存储
-- pricing 下一轮迁移聚焦剩余 water-mill calculator 尾项，优先处理 `price_water_mill_bevel_cost.py`、`price_water_mill_chamfer_cost.py`、`price_water_mill_component.py`，随后评估 `pricing_service.calculate` 去 `PricingAgent` 化
+- pricing 下一轮迁移聚焦剩余 water-mill calculator 尾项，优先处理 `price_water_mill_hanging_table.py`、`price_water_mill_high_cost.py`、`price_water_mill_long_strip.py`，随后继续推进 `pricing_service.calculate` 去 `PricingAgent` 化
 - 继续把 review 里的 `review_data_loader`、`review_notifier` 剩余 legacy helper 从 domain 抽到基础设施适配层
 - 扩展数值级 golden，增加至少 2 到 3 组不同零件与价格分支样本，避免单样本基线失真
 - 继续迁 CAD / feature 算法本体前，先把剩余 legacy 兼容入口和诊断脚本清单再收一轮
