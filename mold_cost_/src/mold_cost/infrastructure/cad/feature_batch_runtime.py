@@ -1,4 +1,4 @@
-"""Batch feature-recognition runtime extracted from the legacy script."""
+"""批量特征识别 runtime。"""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ def batch_feature_recognition(
     slider_red_face_updater: Callable[..., Any] | None = None,
     db_config: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Run batch feature recognition while keeping DB helpers injectable."""
+    """执行批量特征识别，并把 legacy DB helper 保持为可注入依赖。"""
 
     try:
         # 中文说明：DB 查询与保存能力从外部注入，便于逐步替换掉 legacy helper。
@@ -78,6 +78,7 @@ def batch_feature_recognition(
                     continue
 
                 try:
+                    # 中文说明：单文件分析已经迁到 src runtime，批处理这里只负责编排与落库。
                     features = analyze_dxf_features(download_result["save_path"])
                     if features is None:
                         results.append(
@@ -171,6 +172,7 @@ def _maybe_update_slider_red_face(
     slider_red_face_updater: Callable[..., Any] | None,
     db_config: dict[str, Any] | None,
 ) -> None:
+    """仅当识别到滑块红面且上下文完整时，补触发 legacy 后处理。"""
     if slider_red_face_updater is None or not xt_file_url or not db_config:
         return
 

@@ -1,4 +1,4 @@
-"""Runtime helpers for the CAD split gateway."""
+"""CAD 拆图 runtime 边界。"""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ async def run_cad_split(
     minio_client: Any | None,
     load_entrypoints: EntryPointLoader,
 ) -> dict[str, Any]:
-    """Run the legacy CAD split entrypoints behind a src-owned runtime boundary."""
+    """通过 src 侧 runtime 边界统一调度 legacy CAD 拆图入口。"""
 
     chaitu_process, init_managers = load_entrypoints()
     # 中文说明：先初始化 legacy manager，再执行拆图主流程，保持历史调用时序不变。

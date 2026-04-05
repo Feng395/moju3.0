@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Feature recognition package exports.
+特征识别包导出层。
 
-Keep the legacy public API stable while avoiding eager import of the heavy
-`feature_recognition.py` module during package initialization.
+这里保留 legacy 公开接口名称，同时通过惰性导入避免在包初始化阶段
+直接加载重量级 `feature_recognition.py`，减少副作用扩散。
 """
 
 from __future__ import annotations

@@ -1,4 +1,4 @@
-"""DXF feature analysis runtime extracted from the legacy script entrypoint."""
+"""DXF 特征分析 runtime。"""
 
 from __future__ import annotations
 
@@ -31,6 +31,7 @@ SliderCalculator = None
 
 
 def _load_dependencies() -> None:
+    """按需装载 legacy 特征识别依赖，避免模块导入即拉起重型脚本。"""
     # 中文说明：避免模块导入阶段直接拉起 ezdxf 与整套特征识别依赖。
     global ezdxf
     global extract_all_texts
@@ -144,7 +145,7 @@ def _load_dependencies() -> None:
 
 
 def analyze_dxf_features(dxf_file_path: str) -> dict[str, Any] | None:
-    """Analyze a DXF and return normalized feature payload."""
+    """分析单个 DXF，并返回供 src 链路消费的统一特征结果。"""
 
     try:
         # 中文说明：runtime 负责组织调用顺序、归一化输出，算法细节暂时继续复用 legacy 实现。
@@ -225,6 +226,7 @@ def analyze_dxf_features(dxf_file_path: str) -> dict[str, Any] | None:
             views=views,
         )
 
+        # 中文说明：这里统一做字段整形，保证 gateway / service 消费的数据结构稳定。
         return {
             "length_mm": float(round(length_mm, 2)) if length_mm else 0.0,
             "width_mm": float(round(width_mm, 2)) if width_mm else 0.0,
@@ -395,7 +397,7 @@ def _map_wire_process(wire_process_note: str | None) -> str | None:
 
 
 def fallback_grinding_detection(processing_instructions, doc) -> int:
-    """Fallback grinding-face detection when dimensions are incomplete."""
+    """尺寸缺失时的研磨面兜底识别。"""
 
     try:
         all_texts = []
