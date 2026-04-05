@@ -14,7 +14,7 @@
 | --- | --- | --- | --- | --- |
 | R1 | P0 | application 去 `api_gateway` 依赖 | 已落地 | 主链 use case 已下沉到 `src/mold_cost` |
 | R2 | P0 | interfaces/api 成为真实入口 | 已落地 | 新接口层已接管主入口 |
-| R3 | P0 | review 去 legacy handler 运行时 | 收尾中 | `ConfirmHandler` 与 `ActionHandlerFactory` 已摘除，src-first recognizer 已落地，五类 review handlers 已迁入 `src`，剩余少量复杂 handlers |
+| R3 | P0 | review 去 legacy handler 运行时 | 收尾中 | `ConfirmHandler` 与 `ActionHandlerFactory` 已摘除，src-first recognizer 已落地，六类 review handlers 已迁入 `src`，剩余少量复杂 handlers |
 | R4 | P1 | pricing 主链与兼容层收尾 | 收尾中 | 主链已落地，剩余兼容类名与外部入口评估 |
 | R5 | P1 | workflow durable backend 共享化 | 收尾中 | 已共享文件型 store，尚未升级为跨实例 backend |
 | R6 | P1 | CAD / feature 算法本体迁移 | 收尾中 | feature 分析与 batch 编排已迁出，CAD split runtime 边界已立，算法与 DB helper 仍在 legacy |
@@ -25,7 +25,7 @@
 
 | 编号 | 目标 | 当前已完成 | 主要残留 | 下一步动作 | 验收标准 |
 | --- | --- | --- | --- | --- | --- |
-| R3 | review 默认链只依赖 `src/mold_cost` | `review_data_loader`、`review_notifier`、默认确认执行器、src-first recognizer、handler runtime 与 `WEIGHT_PRICE_QUERY` handler 已收口到 `src`，且五类 review handlers 已下沉 | `data_modification/query_details` 与复杂 query / modification fallback 仍通过 adapter 驱动 | 继续下沉剩余复杂 handlers 与 recognizer fallback，缩小 `legacy_review_handler_adapter` 到纯兼容壳 | review 修改/确认主链默认装配不再依赖 `agents.*` 运行时 |
+| R3 | review 默认链只依赖 `src/mold_cost` | `review_data_loader`、`review_notifier`、默认确认执行器、src-first recognizer、handler runtime、`WEIGHT_PRICE_QUERY` 与 `QUERY_DETAILS` handlers 已收口到 `src`，且六类 review handlers 已下沉 | `data_modification` 与复杂 query / modification fallback 仍通过 adapter 驱动 | 继续下沉剩余复杂 handlers 与 recognizer fallback，缩小 `legacy_review_handler_adapter` 到纯兼容壳 | review 修改/确认主链默认装配不再依赖 `agents.*` 运行时 |
 | R4 | pricing 主链与外部入口彻底去 legacy agent 化 | `pricing_service` 已接管主链，worker/API fallback 已落地 | 兼容类名、MCP 外部入口仍需评估是否保留 | 盘点真实调用面，删除无效兼容壳或继续压缩职责 | pricing 主链与主入口不再需要 legacy agent 包装 |
 | R5 | job/review 使用统一共享 durable backend | `FileCheckpointStore` 已被 job/review 共用 | 目前仍是本地文件型实现 | 设计并接入可跨实例恢复的 shared backend | 重启/跨实例后可从同一 backend 恢复相同 thread |
 | R6 | CAD/feature 主链不再依赖 `scripts/*` | `feature_analysis_runtime.py`、`feature_batch_runtime.py`、`cad_split_runtime.py` 已落地 | `get_subgraphs_from_db`、`save_features_to_db`、`chaitu_process` 与相关 DB/storage helper 仍在 legacy | 先迁 feature DB helper，再拆 CAD split storage / db / algorithm runtime | `domain.cad` 与 `domain.features` 主链不再依赖 legacy gateway 指向脚本 |
@@ -41,4 +41,4 @@
 
 ## 当前回归基线
 - `pytest tests/unit tests/integration tests/golden -q`
-- 结果：`151 passed`
+- 结果：`153 passed`

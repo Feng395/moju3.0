@@ -355,12 +355,14 @@ def test_src_review_action_handler_registry_keeps_simple_handlers_in_src():
     feature_handler = registry.get_handler("FEATURE_RECOGNITION")
     chat_handler = registry.get_handler("GENERAL_CHAT")
     price_handler = registry.get_handler("PRICE_CALCULATION")
+    query_handler = registry.get_handler("QUERY_DETAILS")
     weight_handler = registry.get_handler("WEIGHT_PRICE_CALCULATION")
     weight_query_handler = registry.get_handler("WEIGHT_PRICE_QUERY")
 
     assert feature_handler.__class__.__name__ == "FeatureRecognitionReviewActionHandler"
     assert chat_handler.__class__.__name__ == "GeneralChatReviewActionHandler"
     assert price_handler.__class__.__name__ == "PriceCalculationReviewActionHandler"
+    assert query_handler.__class__.__name__ == "QueryDetailsReviewActionHandler"
     assert weight_handler.__class__.__name__ == "WeightPriceCalculationReviewActionHandler"
     assert weight_query_handler.__class__.__name__ == "WeightPriceQueryReviewActionHandler"
 
@@ -370,10 +372,8 @@ def test_src_review_action_handler_registry_falls_back_to_legacy_for_complex_int
 
     registry = module.SrcReviewActionHandlerRegistry()
     data_handler = registry.get_handler("DATA_MODIFICATION")
-    query_handler = registry.get_handler("QUERY_DETAILS")
 
     assert data_handler.__class__.__name__ == "DataModificationHandler"
-    assert query_handler.__class__.__name__ == "QueryDetailsHandler"
     assert "ActionHandlerFactory" not in open(module.__file__, "r", encoding="utf-8").read()
 
 
@@ -482,6 +482,112 @@ async def test_src_review_general_chat_handler_uses_src_chat_executor():
     assert result.status == "ok"
     assert result.requires_confirmation is False
     assert result.message == "可以继续审核、识别特征和重新计价。"
+
+
+@pytest.mark.asyncio
+async def test_src_query_details_handler_uses_history_inference_and_returns_query_type_details():
+    module = importlib.import_module("mold_cost.infrastructure.review.query_details_review_handler")
+
+    class _FakeChatHistoryRepository:
+        def __init__(self):
+            self.calls: list[tuple[object, str, int]] = []
+
+        async def get_recent_session_history(self, db_session, session_id: str, limit: int = 50):
+            self.calls.append((db_session, session_id, limit))
+            return [
+                {"role": "assistant", "content": "刚才我们核对了 DIE-03 的 NC 明细。"},
+                {"role": "user", "content": "那它怎么算的？"},
+            ]
+
+    async def _fake_query_calculation_detail(**kwargs):
+        assert kwargs["subgraph_id"] == "DIE-03"
+        return SimpleNamespace(
+            calculation_steps=[
+                {
+                    "category": "nc_z",
+                    "steps": [
+                        {
+                            "step": "Z面加工",
+                            "formula": "30 / 60",
+                            "total_minutes": 30,
+                            "nc_z_time": 0.5,
+                        }
+                    ],
+                },
+                {
+                    "category": "nc_total",
+                    "steps": [
+                        {
+                            "step": "汇总NC费用",
+                            "formula": "0.5 * 120",
+                            "total_hours": 0.5,
+                            "total_cost": 60,
+                        }
+                    ],
+                },
+            ],
+            processing_instructions=[{"code": "NC"}],
+        )
+
+    history_repository = _FakeChatHistoryRepository()
+    handler = module.QueryDetailsReviewActionHandler(
+        chat_history_repository=history_repository,
+        use_chat_history=True,
+    )
+    handler._query_calculation_detail = _fake_query_calculation_detail
+
+    result = await handler.handle(
+        intent_result=SimpleNamespace(parameters={"query_type": "nc"}, raw_message="那它怎么算的？"),
+        job_id="job-17",
+        context={},
+        db_session="db",
+    )
+
+    assert history_repository.calls == [("db", "job-17", 50)]
+    assert result.status == "ok"
+    assert result.data["subgraph_id"] == "DIE-03"
+    assert result.data["query_type"] == "nc"
+    assert "DIE-03 的NC相关计算详情" in result.message
+    assert "【NC Z面时间】" in result.message
+    assert "【NC总费用计算】" in result.message
+
+
+@pytest.mark.asyncio
+async def test_src_query_details_handler_formats_specific_material_category():
+    module = importlib.import_module("mold_cost.infrastructure.review.query_details_review_handler")
+
+    async def _fake_query_calculation_detail(**kwargs):
+        return SimpleNamespace(
+            calculation_steps=[
+                {
+                    "category": "material",
+                    "steps": [
+                        {
+                            "step": "匹配材料单价",
+                            "material": "S136",
+                            "matched_sub_category": "塑胶模仁钢",
+                            "material_cost": 88.5,
+                        }
+                    ],
+                }
+            ],
+            processing_instructions=None,
+        )
+
+    handler = module.QueryDetailsReviewActionHandler(use_chat_history=False)
+    handler._query_calculation_detail = _fake_query_calculation_detail
+
+    result = await handler.handle(
+        intent_result=SimpleNamespace(parameters={"subgraph_id": "UP-01", "query_type": "material"}, raw_message="UP-01 材料费怎么算"),
+        job_id="job-18",
+        context={},
+        db_session="db",
+    )
+
+    assert result.status == "ok"
+    assert "UP-01 的材料费计算详情" in result.message
+    assert "材料名称: S136" in result.message
+    assert "材料费(元): 88.5" in result.message
 
 
 @pytest.mark.asyncio

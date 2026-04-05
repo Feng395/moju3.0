@@ -11,6 +11,7 @@ from .review_action_handlers import (
     PriceCalculationReviewActionHandler,
     WeightPriceCalculationReviewActionHandler,
 )
+from .query_details_review_handler import QueryDetailsReviewActionHandler
 from .weight_price_query_handler import WeightPriceQueryReviewActionHandler
 
 logger = get_logger(__name__)
@@ -37,6 +38,7 @@ class SrcReviewActionHandlerRegistry:
                 "FEATURE_RECOGNITION": FeatureRecognitionReviewActionHandler(),
                 "GENERAL_CHAT": GeneralChatReviewActionHandler(),
                 "PRICE_CALCULATION": PriceCalculationReviewActionHandler(),
+                "QUERY_DETAILS": QueryDetailsReviewActionHandler(),
                 "WEIGHT_PRICE_CALCULATION": WeightPriceCalculationReviewActionHandler(),
                 "WEIGHT_PRICE_QUERY": WeightPriceQueryReviewActionHandler(),
             }
@@ -50,12 +52,10 @@ class SrcReviewActionHandlerRegistry:
     def _legacy_handler_fallbacks(cls) -> dict[str, Any]:
         if not hasattr(cls, "_cached_legacy_handlers"):
             from agents.action_handlers.data_modification_handler import DataModificationHandler
-            from agents.action_handlers.query_details_handler import QueryDetailsHandler
 
             # 中文注释：剩余复杂交互类 handler 先保留旧实现，但实例化与映射关系改由 src 控制。
             cls._cached_legacy_handlers = {
                 "DATA_MODIFICATION": DataModificationHandler(),
-                "QUERY_DETAILS": QueryDetailsHandler(),
             }
             logger.info(
                 "Initialized fallback review handlers: intents=%s",

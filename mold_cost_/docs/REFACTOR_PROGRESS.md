@@ -10,7 +10,7 @@
 - `application / domain / infrastructure / interfaces` 四层已经成为真实执行路径，而不是占位目录。
 - pricing 主链已完成从旧 agent 与 `scripts.search/*`、`scripts.calculate/*` 的迁移。
 - API、worker、兼容 agent 的主调用路径已基本转向 `src/mold_cost`。
-- review 的 data loader、notifier、默认装配、确认执行链、src-first intent recognizer 与五类已迁入 handlers 已继续向 `src` 收口。
+- review 的 data loader、notifier、默认装配、确认执行链、src-first intent recognizer 与六类已迁入 handlers 已继续向 `src` 收口。
 - feature 单文件分析与批处理编排入口已经迁入 `src/mold_cost`。
 
 仍未完成的核心工作集中在：
@@ -59,7 +59,8 @@
 - 新增 `src/mold_cost/infrastructure/review/intent_recognizer_runtime.py`
 - 新增 `src/mold_cost/infrastructure/review/weight_price_query_handler.py`
 - `src/mold_cost/infrastructure/db/repositories/chat_history_repository.py` 已补齐历史查询适配接口
-- `FEATURE_RECOGNITION`、`PRICE_CALCULATION`、`WEIGHT_PRICE_CALCULATION`、`GENERAL_CHAT`、`WEIGHT_PRICE_QUERY` 已切到 `src` 侧 review action handlers
+- 新增 `src/mold_cost/infrastructure/review/query_details_review_handler.py`
+- `FEATURE_RECOGNITION`、`PRICE_CALCULATION`、`QUERY_DETAILS`、`WEIGHT_PRICE_CALCULATION`、`GENERAL_CHAT`、`WEIGHT_PRICE_QUERY` 已切到 `src` 侧 review action handlers
 - review 默认 intent recognizer 已改为 `src-first + legacy fallback`
 - `legacy_review_handler_adapter.py` 现在只负责默认 change applier 组装
 
@@ -111,7 +112,6 @@
 - 默认 recognizer 已切为 `src-first + legacy fallback`
 - 仍未迁出的部分：
   - `agents.action_handlers.data_modification_handler`
-  - `agents.action_handlers.query_details_handler`
   - `agents.intent_recognizer` 中复杂 query / modification fallback 分支
 - 下一步应继续把剩余复杂 handlers 与 recognizer fallback 分支下沉到 `src` adapter 或新 runtime
 
@@ -136,4 +136,4 @@
 
 ## 当前回归基线
 - `pytest tests/unit tests/integration tests/golden -q`
-- 结果：`151 passed`
+- 结果：`153 passed`
