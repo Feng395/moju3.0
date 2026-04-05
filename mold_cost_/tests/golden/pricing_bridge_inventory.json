@@ -117,7 +117,7 @@
       "module": "mcp_services.cad_price_search_mcp.server",
       "source_path": "mcp_services/cad_price_search_mcp/server.py",
       "pattern": "async def handle_price_tool",
-      "reason": "The MCP price entrypoint still contains a large compatibility router and remains an actionable next extraction target."
+      "reason": "The MCP price entrypoint now uses registry-based dispatch, but it remains the residual external compatibility router for pricing tools."
     }
   ],
   "bridge_assertions": {
@@ -133,3 +133,4 @@
     }
   ]
 }
+
