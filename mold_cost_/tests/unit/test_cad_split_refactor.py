@@ -129,3 +129,11 @@ def test_legacy_cutting_detector_wrapper_points_to_src_runtime():
         content = file.read()
 
     assert "from mold_cost.infrastructure.cad.cutting_detector import RelaxedCuttingDetector" in content
+
+
+def test_legacy_block_analyzer_wrapper_points_to_src_runtime():
+    wrapper_path = "d:\\workspace\\project\\python\\mold3.0\\mold_cost_\\scripts\\cad_chaitu\\block_analyzer.py"
+    with open(wrapper_path, "r", encoding="utf-8") as file:
+        content = file.read()
+
+    assert "from mold_cost.infrastructure.cad.block_analyzer import OptimizedCADBlockAnalyzer" in content

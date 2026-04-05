@@ -66,6 +66,7 @@
 - 新增 `src/mold_cost/infrastructure/cad/cad_xt_export_runtime.py`
 - 新增 `src/mold_cost/infrastructure/cad/cad_upload_runtime.py`
 - 新增 `src/mold_cost/infrastructure/cad/cad_system.py`
+- 新增 `src/mold_cost/infrastructure/cad/block_analyzer.py`
 - 新增 `src/mold_cost/infrastructure/cad/number_extractor.py`
 - 新增 `src/mold_cost/infrastructure/cad/text_processor.py`
 - 新增 `src/mold_cost/infrastructure/cad/cutting_detector.py`
@@ -74,6 +75,7 @@
 - `scripts/cad_chaitu/main.py` 现在通过 `src` runtime 处理子图识别/导出编排、DWG/PRT 来源解析、DWG 获取与 DXF 转换准备、子图编号解析/导出计划、板料线后处理、`.x_t` 导出准备、PRT 组件匹配与 Parasolid 导出、上传与结果落库统计
 - `src/mold_cost/infrastructure/cad/material_line_integrator.py` 已承接板料线算法本体，`scripts/cad_chaitu/material_line_integrator.py` 已退化为兼容壳
 - `src/mold_cost/infrastructure/cad/cad_system.py` 已承接 `CADAnalysisSystem` 分析系统本体，`scripts/cad_chaitu/cad_system.py` 已退化为兼容壳
+- `src/mold_cost/infrastructure/cad/block_analyzer.py` 已承接 `OptimizedCADBlockAnalyzer` 分析器主体，`scripts/cad_chaitu/block_analyzer.py` 已退化为兼容壳
 - `src/mold_cost/infrastructure/cad/number_extractor.py` 已承接图纸编号提取本体，`scripts/cad_chaitu/number_extractor.py` 已退化为兼容壳
 - `src/mold_cost/infrastructure/cad/text_processor.py` 与 `cutting_detector.py` 已承接深层 analyzer helper，本地 `scripts/cad_chaitu/text_processor.py`、`cutting_detector.py` 已退化为兼容壳
 - `src/mold_cost/infrastructure/db/cad_pool.py` 已改为惰性桥接，避免模块导入阶段直接触发 `scripts.cad_chaitu.database`
@@ -152,7 +154,7 @@
 
 ### R6 CAD / Feature 算法本体迁移
 - CAD 剩余：
-  - `block_analyzer.py` 主体与其更深层 analyzer 编排实现
+  - 算法本体已基本迁完，剩余重点转向少量 CAD 兼容入口与 legacy glue 清理
 
 ### R7 Golden 样本扩展
 - 现有基线可用，但样本数量仍偏少
@@ -163,4 +165,4 @@
 
 ## 当前回归基线
 - `pytest tests/unit tests/integration tests/golden -q`
-- 结果：`205 passed`
+- 结果：`206 passed, 1 skipped`

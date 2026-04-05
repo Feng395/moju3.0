@@ -1,38 +1,18 @@
 """Src-owned CAD 分析系统实现。"""
 
-import importlib.util
 import re
 import ezdxf
 import logging
-from pathlib import Path
 from typing import Dict, List, Tuple
 from loguru import logger
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from mold_cost.infrastructure.cad.block_analyzer import OptimizedCADBlockAnalyzer
 from mold_cost.infrastructure.cad.number_extractor import ProfessionalDrawingNumberExtractor
 
 # 禁用 ezdxf 的日志输出
 logging.getLogger('ezdxf').setLevel(logging.WARNING)
-
-
-def _load_legacy_symbol(module_name: str, relative_path: str, symbol_name: str):
-    # 中文说明：legacy 包初始化会连带拉起 scripts.cad_chaitu.__init__，
-    # 这里改走按文件路径惰性加载，避免导入阶段触发循环依赖和重型副作用。
-    module_path = Path(__file__).resolve().parents[4] / relative_path
-    spec = importlib.util.spec_from_file_location(module_name, module_path)
-    if spec is None or spec.loader is None:
-        raise ImportError(f"无法加载 legacy 模块: {module_path}")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return getattr(module, symbol_name)
-
-
-OptimizedCADBlockAnalyzer = _load_legacy_symbol(
-    "legacy_cad_block_analyzer",
-    "scripts/cad_chaitu/block_analyzer.py",
-    "OptimizedCADBlockAnalyzer",
-)
 class CADAnalysisSystem:
     """CAD分析系统主类"""
 
@@ -492,7 +472,7 @@ class CADAnalysisSystem:
                             
                             if block_def:
                                 # 计算块的实际边界
-                                from scripts.cad_chaitu.block_analyzer import OptimizedCADBlockAnalyzer
+                                from mold_cost.infrastructure.cad.block_analyzer import OptimizedCADBlockAnalyzer
                                 analyzer = OptimizedCADBlockAnalyzer()
                                 block_bounds = analyzer._calculate_block_bounds(block_def, insert_entity)
                                 
