@@ -94,19 +94,22 @@
   },
   "next_extract_candidates": [
     {
-      "module": "mold_cost.domain.pricing.calculators.price_water_mill_plate",
-      "legacy_module": "scripts.calculate.price_water_mill_plate",
-      "reason": "Water mill plate still carries the remaining DB-backed extraction surface and is a useful tail cleanup target."
+      "module": "mold_cost.domain.pricing.services.pricing_service",
+      "source_path": "src/mold_cost/domain/pricing/services/pricing_service.py",
+      "pattern": "get_pricing_agent",
+      "reason": "pricing_service.calculate still bridges into PricingAgent and is now the highest-level residual pricing compatibility point."
     },
     {
-      "module": "mold_cost.domain.pricing.calculators.price_water_mill_hanging_table",
-      "legacy_module": "scripts.calculate.price_water_mill_hanging_table",
-      "reason": "Water mill hanging table still uses the legacy DB-backed extraction shape and stays adjacent to the remaining tail work."
+      "module": "agents.pricing_agent_local",
+      "source_path": "agents/pricing_agent_local.py",
+      "pattern": "class PricingAgentLocal",
+      "reason": "The local pricing agent still holds a compatibility orchestration shell around the domain pricing modules."
     },
     {
-      "module": "mold_cost.domain.pricing.calculators.price_water_mill_oil_tank",
-      "legacy_module": "scripts.calculate.price_water_mill_oil_tank",
-      "reason": "Water mill oil tank remains part of the DB-backed water mill tail and is adjacent to the remaining extraction work."
+      "module": "mcp_services.cad_price_search_mcp.server",
+      "source_path": "mcp_services/cad_price_search_mcp/server.py",
+      "pattern": "async def handle_price_tool",
+      "reason": "The MCP price entrypoint still contains a large compatibility router and remains an actionable next extraction target."
     }
   ],
   "bridge_assertions": {

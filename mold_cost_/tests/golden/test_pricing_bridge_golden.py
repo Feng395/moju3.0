@@ -119,7 +119,7 @@ def test_pricing_bridge_residual_api_gateway_inventory_matches_code():
 
 
 def test_pricing_bridge_next_extract_candidates_remain_actionable():
-    """验证下一批迁移候选仍然存在、可导入，并且仍落在 legacy 脚本实现里。"""
+    """Validate the next extraction candidates still point at actionable bridge residue."""
     golden = _load_inventory()
     candidates = golden["next_extract_candidates"]
     search_targets = golden["legacy_targets"]["search"]
@@ -135,21 +135,25 @@ def test_pricing_bridge_next_extract_candidates_remain_actionable():
 
     for candidate in candidates:
         module_path = candidate["module"]
-        legacy_module = candidate["legacy_module"]
         reason = candidate["reason"]
-        module_name = module_path.rsplit(".", 1)[-1]
-        legacy_code = (ROOT / Path(*legacy_module.split("."))).with_suffix(".py").read_text(encoding="utf-8-sig")
-
-        imported = importlib.import_module(module_path)
-        assert imported is not None
         assert reason.strip()
-        assert any(marker in legacy_code for marker in legacy_db_markers)
+        legacy_module = candidate.get("legacy_module")
+        if legacy_module:
+            imported = importlib.import_module(module_path)
+            assert imported is not None
+            module_name = module_path.rsplit(".", 1)[-1]
+            legacy_code = (ROOT / Path(*legacy_module.split("."))).with_suffix(".py").read_text(encoding="utf-8-sig")
+            assert any(marker in legacy_code for marker in legacy_db_markers)
 
-        if ".search." in module_path:
-            assert legacy_module == search_targets[module_name]
-            assert hasattr(imported, "_legacy_module")
-        else:
-            assert legacy_module == calculator_targets[module_name]
+            if ".search." in module_path:
+                assert legacy_module == search_targets[module_name]
+                assert hasattr(imported, "_legacy_module")
+            else:
+                assert legacy_module == calculator_targets[module_name]
+            continue
+
+        source_text = _read_repo_text(candidate["source_path"])
+        assert candidate["pattern"] in source_text
 
 
 def test_pricing_workflow_samples_have_valid_contracts():
