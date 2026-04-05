@@ -55,9 +55,12 @@
 
 ### 3. CAD split gateway 建立 src-owned runtime 边界
 - 新增 `src/mold_cost/infrastructure/cad/cad_split_runtime.py`
+- 新增 `src/mold_cost/infrastructure/cad/cad_split_persistence_runtime.py`
+- 新增 `src/mold_cost/infrastructure/cad/cad_xt_export_runtime.py`
 - `LegacyCadSplitGateway.split()` 现在通过 `run_cad_split()` 调度 legacy entrypoints
+- `scripts/cad_chaitu/main.py` 现在通过 `src` runtime 处理 `.x_t` 导出准备与上传结果落库统计
 - `src/mold_cost/infrastructure/db/cad_pool.py` 已改为惰性桥接，避免模块导入阶段直接触发 `scripts.cad_chaitu.database`
-- 已补 `tests/unit/test_cad_split_refactor.py` 锁定 CAD split runtime/gateway 边界
+- 已补 `tests/unit/test_cad_split_refactor.py`、`test_cad_split_persistence_runtime.py`、`test_cad_xt_export_runtime.py` 锁定 CAD split runtime/gateway 与持久化边界
 
 ### 4. Review 默认装配继续收口
 - `review_change_applier` 不再主动 import infrastructure fallback
@@ -134,7 +137,7 @@
   - `slider_red_face_updater`
 - CAD 剩余：
   - `scripts.cad_chaitu.main.chaitu_process`
-  - 相关 DB / storage / converter 运行时桥接
+  - 相关 storage / converter / analyzer 主流程编排
 
 ### R7 Golden 样本扩展
 - 现有基线可用，但样本数量仍偏少
@@ -145,4 +148,4 @@
 
 ## 当前回归基线
 - `pytest tests/unit tests/integration tests/golden -q`
-- 结果：`164 passed`
+- 结果：`168 passed`

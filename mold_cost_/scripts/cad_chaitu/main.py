@@ -16,6 +16,7 @@ from concurrent.futures import ThreadPoolExecutor
 from loguru import logger
 import sys
 import ezdxf
+from mold_cost.infrastructure.cad.cad_split_persistence_runtime import persist_split_results
 
 # 导入板料线集成器
 try:
@@ -121,6 +122,8 @@ except ImportError:
     from database import DatabaseManager
     from storage import FileStorageManager
     from utils import extract_model_code_from_source
+
+from mold_cost.infrastructure.cad.cad_xt_export_runtime import export_xt_files
 
 
 # 全局实例
@@ -692,88 +695,35 @@ async def chaitu_process(dwg_url: Optional[str], job_id: str, minio_client=None)
             # 步骤5: 保存成功上传的文件到数据库
             logger.info("步骤5: 保存数据到数据库...")
             db_start = datetime.now()
-            db_success_count = 0
-            failed_upload_count = 0
-            failed_db_count = 0
 
-            # 步骤6: 导出 .x_t 并上传 MinIO（NX 环境可用时执行）
-            # PRT 来源：优先用传入的 prt_url，否则从数据库查 jobs.prt_file_path
-            # MinIO 路径规则与 DXF 保持一致：xt/{year}/{month}/{job_id}/{part_code}.x_t
-            xt_minio_base = f"xt/{year}/{month}/{job_id}"
-            xt_url_map = {}  # {sub_code: minio_xt_path}
+            # 中文说明：.x_t 导出准备逻辑已迁到 src runtime，这里只复用 legacy exporter 本体。
             try:
-                import NXOpen as _NXOpen
-
-                # 确定 PRT 来源
-                _prt_source = prt_url
-                _prt_use_minio = False
-                if not _prt_source:
-                    _prt_source = db_manager.get_prt_file_path(job_id)
-                    _prt_use_minio = bool(_prt_source)
-                if not _prt_source:
-                    logger.info("步骤6: 未提供 PRT 文件，跳过 .x_t 导出")
-                else:
-                    logger.info(f"步骤6: 检测到 NX 环境，开始从 PRT 导出 .x_t 文件: {_prt_source}")
-                    _prt_local = os.path.join(temp_dir, "source.prt")
-                    _prt_ok = await storage_manager.get_file(_prt_source, _prt_local, use_minio=_prt_use_minio)
-                    if not _prt_ok:
-                        logger.warning(f"步骤6: 下载 PRT 文件失败: {_prt_source}，跳过 .x_t 导出")
-                    else:
-                        xt_url_map = _export_xt_from_prt(
-                            prt_local=_prt_local,
-                            export_files=export_files,
-                            temp_dir=temp_dir,
-                            xt_minio_base=xt_minio_base,
-                            minio_client=_minio_client,
-                        )
-            except ImportError:
-                logger.info("步骤6: 非 NX 环境，跳过 .x_t 导出")
+                xt_url_map = await export_xt_files(
+                    job_id=job_id,
+                    temp_dir=temp_dir,
+                    export_files=export_files,
+                    storage_manager=storage_manager,
+                    db_manager=db_manager,
+                    minio_client=_minio_client,
+                    export_xt_from_prt=_export_xt_from_prt,
+                    is_probable_minio_object_path=_is_probable_minio_object_path,
+                )
             except Exception as _nxe:
                 logger.warning(f"步骤6 .x_t 导出异常（不影响主流程）: {_nxe}")
+                xt_url_map = {}
 
-            for file_info in export_files:
-                sub_code = file_info['sub_code']
-                
-                # 检查上传是否成功
-                if sub_code not in upload_results or not upload_results[sub_code].get('success'):
-                    failed_upload_count += 1
-                    upload_error = upload_results.get(sub_code, {}).get('error', '未知错误')
-                    logger.warning(f"⚠️ 上传失败 [{failed_upload_count}]: {sub_code} - {upload_error}")
-                    continue
-                
-                try:
-                    save_success = db_manager.save_subgraph(
-                        sub_code,
-                        file_info['minio_path'],
-                        source_filename,
-                        job_id,
-                        file_info['part_name'],
-                        file_info.get('part_code'),
-                        xt_url_map.get(sub_code)  # .x_t MinIO 路径，无则 None
-                    )
-                    
-                    if not save_success:
-                        failed_db_count += 1
-                        logger.error(f"❌ 保存数据库失败[{failed_db_count}]: {sub_code}")
-                        continue
-
-                    result_files.append({
-                        "path": file_info['minio_path'],
-                        "filename": f"{sub_code}.dxf",
-                        "sub_code": sub_code,
-                        "source_file": source_filename,
-                        "part_name": file_info['part_name'],
-                        "part_code": file_info.get('part_code')
-                    })
-                    
-                    db_success_count += 1
-                    
-                except Exception as e:
-                    failed_db_count += 1
-                    logger.error(f"❌ 保存数据库失败 [{failed_db_count}]: {sub_code} - {e}")
-                    import traceback
-                    logger.error(traceback.format_exc())
-                    continue
+            persistence_result = persist_split_results(
+                export_files=export_files,
+                upload_results=upload_results,
+                db_manager=db_manager,
+                source_filename=source_filename,
+                job_id=job_id,
+                xt_url_map=xt_url_map,
+            )
+            result_files = persistence_result["result_files"]
+            db_success_count = persistence_result["db_success_count"]
+            failed_upload_count = persistence_result["failed_upload_count"]
+            failed_db_count = persistence_result["failed_db_count"]
             
             db_time = (datetime.now() - db_start).total_seconds()
             logger.info(
