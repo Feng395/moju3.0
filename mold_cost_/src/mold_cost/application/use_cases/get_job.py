@@ -7,8 +7,8 @@ from typing import Any
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api_gateway.repositories.job_repository import JobRepository
-from api_gateway.repositories.snapshot_repository import SnapshotRepository
+from ...infrastructure.db.repositories.job_repository import JobRepository
+from ...infrastructure.db.repositories.snapshot_repository import SnapshotRepository
 
 
 class GetJobStatusUseCase:

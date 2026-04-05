@@ -10,13 +10,12 @@ from typing import Any, Optional
 from fastapi import HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api_gateway.repositories.audit_repository import AuditRepository
-from api_gateway.repositories.chat_history_repository import ChatHistoryRepository
-from api_gateway.repositories.job_repository import JobRepository
-from api_gateway.repositories.snapshot_repository import SnapshotRepository
-from api_gateway.utils.encryption import process_file_encryption
-from api_gateway.utils.validators import validate_dwg_file, validate_prt_file
 from ...core.logging import get_logger
+from ...infrastructure.db.repositories.audit_repository import AuditRepository
+from ...infrastructure.db.repositories.chat_history_repository import ChatHistoryRepository
+from ...infrastructure.db.repositories.job_repository import JobRepository
+from ...infrastructure.db.repositories.snapshot_repository import SnapshotRepository
+from ...infrastructure.services.file_security import process_file_encryption, validate_dwg_file, validate_prt_file
 
 logger = get_logger(__name__)
 

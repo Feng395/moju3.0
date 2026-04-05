@@ -7,8 +7,8 @@ from datetime import timedelta
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api_gateway.repositories.job_repository import JobRepository
 from ...core.logging import get_logger
+from ...infrastructure.db.repositories.job_repository import JobRepository
 
 logger = get_logger(__name__)
 
