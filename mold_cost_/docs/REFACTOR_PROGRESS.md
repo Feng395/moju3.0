@@ -69,7 +69,7 @@
 - `scripts/cad_chaitu/main.py` 现在直接委托 `cad_process_runtime.execute_cad_split_process()`
 - `scripts/cad_chaitu/main.py` 现在通过 `src` runtime 处理子图识别/导出编排、DWG/PRT 来源解析、DWG 获取与 DXF 转换准备、子图编号解析/导出计划、板料线后处理、`.x_t` 导出准备、PRT 组件匹配与 Parasolid 导出、上传与结果落库统计
 - `src/mold_cost/infrastructure/db/cad_pool.py` 已改为惰性桥接，避免模块导入阶段直接触发 `scripts.cad_chaitu.database`
-- 已补 `tests/unit/test_cad_split_refactor.py`、`test_cad_analysis_runtime.py`、`test_cad_source_runtime.py`、`test_cad_prepare_runtime.py`、`test_cad_region_runtime.py`、`test_cad_material_line_runtime.py`、`test_cad_upload_runtime.py`、`test_cad_split_persistence_runtime.py`、`test_cad_xt_export_runtime.py` 锁定 CAD split runtime/gateway、子图识别/导出编排、来源解析、输入准备、子图编号编排、板料线后处理、上传与持久化边界
+- 已补 `tests/unit/test_cad_split_refactor.py`、`test_cad_analysis_runtime.py`、`test_cad_source_runtime.py`、`test_cad_prepare_runtime.py`、`test_cad_region_runtime.py`、`test_cad_material_line_runtime.py`、`test_cad_process_runtime.py`、`test_cad_upload_runtime.py`、`test_cad_split_persistence_runtime.py`、`test_cad_xt_export_runtime.py` 锁定 CAD split runtime/gateway、子图识别/导出编排、来源解析、输入准备、子图编号编排、板料线后处理、主流程编排、上传与持久化边界
 
 ### 4. Review 默认装配继续收口
 - `review_change_applier` 不再主动 import infrastructure fallback
