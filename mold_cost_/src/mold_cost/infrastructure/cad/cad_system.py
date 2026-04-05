@@ -10,6 +10,8 @@ from loguru import logger
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from mold_cost.infrastructure.cad.number_extractor import ProfessionalDrawingNumberExtractor
+
 # 禁用 ezdxf 的日志输出
 logging.getLogger('ezdxf').setLevel(logging.WARNING)
 
@@ -31,13 +33,6 @@ OptimizedCADBlockAnalyzer = _load_legacy_symbol(
     "scripts/cad_chaitu/block_analyzer.py",
     "OptimizedCADBlockAnalyzer",
 )
-ProfessionalDrawingNumberExtractor = _load_legacy_symbol(
-    "legacy_cad_number_extractor",
-    "scripts/cad_chaitu/number_extractor.py",
-    "ProfessionalDrawingNumberExtractor",
-)
-
-
 class CADAnalysisSystem:
     """CAD分析系统主类"""
 
