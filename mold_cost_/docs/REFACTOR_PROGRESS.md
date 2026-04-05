@@ -823,14 +823,15 @@ LangGraph 节点只做状态推进，不重写你现有 CAD/计价算法。
 
 - `job_graph` 与 `review_graph` 已经都运行在真实 LangGraph runtime 上；job 侧已经具备本地 durable fallback，review 侧默认装配已不再直接实例化 `InteractionAgent`
 - `domain.pricing.search` 已完成三批真实模块迁移，`search.py`、`total_search.py`、`wire_total_search.py` 已落地为真实 domain 实现；`process_rule_matcher` 也已从脚本桥接迁到 `src/mold_cost`
+- `domain.pricing.calculators` 已完成首批真实迁移，`price_material.py`、`price_wire_total.py`、`price_total.py` 不再直接桥接 `scripts.calculate.*`，workflow golden baseline 也已切到新的 domain calculator 自证
 - `domain.cad` 与 `domain.features` 已形成更稳定的服务契约，API / workflow / worker 已开始统一面向服务结果；算法本体仍主要位于 `scripts/*`
-- pricing / process matcher 主链和 monitor 脚本上的显式 `scripts/* -> api_gateway.*` 反向依赖已基本清理；剩余 legacy 耦合进一步收敛到 review handler 与 pricing calculators
-- 当前回归基线更新为：`pytest tests/unit tests/integration tests/golden -q` => `45 passed`
+- pricing / process matcher 主链和 monitor 脚本上的显式 `scripts/* -> api_gateway.*` 反向依赖已基本清理；剩余 legacy 耦合进一步收敛到 review handler、`pricing_service` 以及 residual pricing calculators
+- 当前回归基线更新为：`pytest tests/unit tests/integration tests/golden -q` => `54 passed`
 
 ## 下一轮建议
 
 - 优先把 `job_graph` / `review_graph` 的 checkpoint backend 从本地 fallback 推进到真正可共享的 durable 存储
-- pricing 下一轮迁移聚焦 calculator 主链，优先处理 `price_material.py`、`price_wire_total.py`、`price_total.py`，再向其余 calculator 扩展
+- pricing 下一轮迁移聚焦剩余 calculator 主链，优先处理 `price_heat.py`、`price_weight.py`、`price_nc_total.py`，再向其余 calculator 扩展
 - 继续把 review 里的 action handler 依赖从 legacy 目录抽成应用层或基础设施适配层
 - 扩展数值级 golden，增加至少 2 到 3 组不同零件与价格分支样本，避免单样本基线失真
 - 继续迁 CAD / feature 算法本体前，先把剩余 legacy 兼容入口和诊断脚本清单再收一轮

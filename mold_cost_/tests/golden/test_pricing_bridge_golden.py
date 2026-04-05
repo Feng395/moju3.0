@@ -84,9 +84,13 @@ def test_pricing_bridge_inventory_matches_golden():
     for module_name in golden["calculator_modules"]:
         module = importlib.import_module(f"mold_cost.domain.pricing.calculators.{module_name}")
         assert getattr(calculator_package, module_name) is module
-        assert module._legacy_module.__name__ == golden["legacy_targets"]["calculators"][module_name]
         assert callable(module.calculate)
         assert isinstance(module.MCP_TOOL_META, dict)
+        if hasattr(module, "_legacy_module"):
+            assert module._legacy_module.__name__ == golden["legacy_targets"]["calculators"][module_name]
+        else:
+            module_source = Path(module.__file__).read_text(encoding="utf-8-sig")
+            assert "scripts.calculate." not in module_source
 
 
 def test_pricing_bridge_entrypoints_do_not_import_legacy_scripts_directly():
@@ -171,7 +175,7 @@ def test_pricing_workflow_samples_have_valid_contracts():
         )
 
 
-def test_pricing_workflow_sample_baseline_matches_legacy_cost_calculators(monkeypatch):
+def test_pricing_workflow_sample_baseline_matches_domain_cost_calculators(monkeypatch):
     """验证真实 DIE-06 样本在当前 baseline pricing 输入下，关键费用字段保持数值稳定。"""
     bundle = _load_workflow_sample_bundle()
     expected_baseline = bundle["expected_summary"]["business_outcome"]["pricing_baseline"]
@@ -184,8 +188,8 @@ def test_pricing_workflow_sample_baseline_matches_legacy_cost_calculators(monkey
     assert real_part["width_mm"] == expected_baseline["dimensions_mm"]["width"]
     assert real_part["thickness_mm"] == expected_baseline["dimensions_mm"]["thickness"]
 
-    price_wire_total_module = importlib.import_module("scripts.calculate.price_wire_total")
-    price_total_module = importlib.import_module("scripts.calculate.price_total")
+    price_wire_total_module = importlib.import_module("mold_cost.domain.pricing.calculators.price_wire_total")
+    price_total_module = importlib.import_module("mold_cost.domain.pricing.calculators.price_total")
 
     async def fake_batch_update_subgraphs(*args, **kwargs):
         # 中文注释：golden 只验证计算结果，不触碰数据库落盘。
