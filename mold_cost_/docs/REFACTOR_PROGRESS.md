@@ -37,9 +37,10 @@
   - upsert `features`
   - 初始化 `processing_cost_calculation_details`
   - 回写 `subgraphs.wire_process_note / wire_process`
+- 新增 `src/mold_cost/infrastructure/cad/slider_red_face_lookup_runtime.py`
+- `LegacyFeatureRecognitionGateway.save_features()` 与 `upload_feature_database()` 现在默认走 `src` 侧红面查表 runtime
 - 旧脚本目前仅保留：
   - `slider_red_face_updater`
-  - `slider_red_face_lookup`
 
 ### 2. Review 确认执行器从 `ConfirmHandler` 摘除
 - 新增 `src/mold_cost/infrastructure/review/pending_action_store.py`
@@ -110,6 +111,7 @@
 ### 7. Feature 分析与持久化入口迁移
 - `feature_analysis_runtime.py` 已接管 DXF 单文件分析 orchestration
 - `feature_persistence_runtime.py` 已接管 feature DB 查询与落库 helper
+- `slider_red_face_lookup_runtime.py` 已接管滑块红色面查表与缓存失效逻辑
 - `scripts/feature_recognition/__init__.py` 已改为惰性导出，避免重型导入副作用
 
 ## 当前剩余高优先级
@@ -130,7 +132,6 @@
 ### R6 CAD / Feature 算法本体迁移
 - feature 剩余：
   - `slider_red_face_updater`
-  - `slider_red_face_lookup`
 - CAD 剩余：
   - `scripts.cad_chaitu.main.chaitu_process`
   - 相关 DB / storage / converter 运行时桥接
@@ -144,4 +145,4 @@
 
 ## 当前回归基线
 - `pytest tests/unit tests/integration tests/golden -q`
-- 结果：`162 passed`
+- 结果：`164 passed`

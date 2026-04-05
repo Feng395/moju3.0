@@ -205,9 +205,6 @@ def test_feature_persistence_runtime_save_features_persists_payload(monkeypatch)
 
 
 def test_feature_gateway_get_subgraphs_and_save_features_use_src_runtime(monkeypatch):
-    import sys
-    import types
-
     from mold_cost.infrastructure.cad.legacy_feature_recognition_gateway import LegacyFeatureRecognitionGateway
 
     get_calls = []
@@ -229,15 +226,13 @@ def test_feature_gateway_get_subgraphs_and_save_features_use_src_runtime(monkeyp
         )
         or True,
     )
-    monkeypatch.setitem(
-        sys.modules,
-        "scripts.minio_client",
-        types.SimpleNamespace(minio_client="legacy-minio"),
+    monkeypatch.setattr(
+        "mold_cost.infrastructure.cad.legacy_feature_recognition_gateway.storage_minio_client",
+        "src-minio",
     )
-    monkeypatch.setitem(
-        sys.modules,
-        "scripts.feature_recognition.slider_red_face_lookup",
-        types.SimpleNamespace(apply_red_face_lookup="lookup-fn"),
+    monkeypatch.setattr(
+        "mold_cost.infrastructure.cad.legacy_feature_recognition_gateway.apply_red_face_lookup",
+        "lookup-fn",
     )
 
     gateway = LegacyFeatureRecognitionGateway()
@@ -253,7 +248,7 @@ def test_feature_gateway_get_subgraphs_and_save_features_use_src_runtime(monkeyp
             "job_id": "job-2",
             "features": {"part_code": "P-009"},
             "kwargs": {
-                "minio_client": "legacy-minio",
+                "minio_client": "src-minio",
                 "red_face_lookup": "lookup-fn",
             },
         }

@@ -8,9 +8,11 @@ import tempfile
 from typing import Any
 
 from ...core.settings import settings
+from ..storage.minio_client import minio_client as storage_minio_client
 from .feature_analysis_runtime import analyze_dxf_features
 from .feature_batch_runtime import batch_feature_recognition
 from .feature_persistence_runtime import get_subgraphs_from_db, save_features_to_db
+from .slider_red_face_lookup_runtime import apply_red_face_lookup, invalidate_cache
 
 
 class LegacyFeatureRecognitionGateway:
@@ -51,22 +53,16 @@ class LegacyFeatureRecognitionGateway:
         return get_subgraphs_from_db(job_id, subgraph_id)
 
     def save_features(self, subgraph_id: str, job_id: str, features: dict[str, Any]) -> bool:
-        from scripts.feature_recognition.slider_red_face_lookup import apply_red_face_lookup
-        from scripts.minio_client import minio_client as legacy_minio_client
-
-        # 中文说明：落库逻辑已迁到 src runtime，仅保留 legacy 红色面查表能力作为注入依赖。
+        # 中文说明：红色面查表也已迁到 src runtime，gateway 不再回到 legacy lookup 脚本。
         return save_features_to_db(
             subgraph_id,
             job_id,
             features,
-            minio_client=legacy_minio_client,
+            minio_client=storage_minio_client,
             red_face_lookup=apply_red_face_lookup,
         )
 
     def upload_feature_database(self, database: dict[str, Any], minio_path: str) -> None:
-        from mold_cost.infrastructure.storage.minio_client import minio_client
-        from scripts.feature_recognition.slider_red_face_lookup import invalidate_cache
-
         temp_file = tempfile.NamedTemporaryFile(
             suffix=".json",
             delete=False,
@@ -77,7 +73,7 @@ class LegacyFeatureRecognitionGateway:
             json.dump(database, temp_file, ensure_ascii=False, indent=2)
             temp_file.close()
 
-            uploaded = minio_client.upload_file_from_path(
+            uploaded = storage_minio_client.upload_file_from_path(
                 minio_path,
                 temp_file.name,
                 content_type="application/json",
