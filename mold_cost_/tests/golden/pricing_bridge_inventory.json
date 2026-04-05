@@ -94,11 +94,6 @@
   },
   "next_extract_candidates": [
     {
-      "module": "mold_cost.domain.pricing.calculators.price_water_mill_chamfer_cost",
-      "legacy_module": "scripts.calculate.price_water_mill_chamfer_cost",
-      "reason": "Water mill chamfer cost is still a bridge module and remains part of the remaining water-mill cleanup cluster."
-    },
-    {
       "module": "mold_cost.domain.pricing.calculators.price_water_mill_component",
       "legacy_module": "scripts.calculate.price_water_mill_component",
       "reason": "Water mill component cost is still a bridge module and remains part of the calculator tail cleanup."
@@ -107,6 +102,11 @@
       "module": "mold_cost.domain.pricing.calculators.price_water_mill_hanging_table",
       "legacy_module": "scripts.calculate.price_water_mill_hanging_table",
       "reason": "Water mill hanging table cost is still a bridge module and remains part of the calculator tail cleanup."
+    },
+    {
+      "module": "mold_cost.domain.pricing.calculators.price_water_mill_high_cost",
+      "legacy_module": "scripts.calculate.price_water_mill_high_cost",
+      "reason": "Water mill high cost is still a bridge module and is one of the remaining water-mill calculator tails."
     }
   ],
   "bridge_assertions": {
