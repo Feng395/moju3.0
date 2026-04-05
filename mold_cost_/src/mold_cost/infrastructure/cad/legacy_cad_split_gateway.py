@@ -1,4 +1,4 @@
-"""legacy CAD 拆图 gateway。"""
+"""Legacy CAD split gateway."""
 
 from __future__ import annotations
 
@@ -7,10 +7,11 @@ from functools import lru_cache
 from typing import Any
 
 from ...domain.cad.ports import CadSplitSubgraphRecord
+from .cad_split_runtime import run_cad_split
 
 
 class LegacyCadSplitGateway:
-    """适配历史 ``scripts.cad_chaitu`` 入口。"""
+    """Adapt the existing `scripts.cad_chaitu` entrypoints behind a stable gateway."""
 
     async def split(
         self,
@@ -18,17 +19,17 @@ class LegacyCadSplitGateway:
         job_id: str,
         minio_client: Any | None = None,
     ) -> dict[str, Any]:
-        # 中文说明：脚本 import 和 manager 初始化都收敛在 infrastructure 层。
-        chaitu_process, init_managers = self._load_legacy_entrypoints()
-        init_managers(minio_client=minio_client)
-        return await chaitu_process(
+        # 中文说明：gateway 本身不再拼装 legacy 细节，统一交给 src runtime 驱动。
+        return await run_cad_split(
             dwg_url=dwg_url,
             job_id=job_id,
             minio_client=minio_client,
+            load_entrypoints=self._load_legacy_entrypoints,
         )
 
     async def list_subgraphs(self, job_id: str) -> list[CadSplitSubgraphRecord]:
-        """回查拆图结果，补足稳定 artifact 引用。"""
+        """Load persisted split results for artifact reconstruction."""
+
         if not self._looks_like_uuid(job_id):
             return []
 
@@ -73,7 +74,7 @@ class LegacyCadSplitGateway:
     @staticmethod
     @lru_cache(maxsize=1)
     def _load_legacy_entrypoints():
-        # 中文说明：懒加载避免在模块导入阶段拉起旧脚本的重型依赖。
+        # 中文说明：惰性导入可避免 CAD 重型依赖在应用启动阶段提前初始化。
         from scripts.cad_chaitu.main import chaitu_process, init_managers
 
         return chaitu_process, init_managers
