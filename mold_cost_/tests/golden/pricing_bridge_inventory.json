@@ -94,19 +94,19 @@
   },
   "next_extract_candidates": [
     {
-      "module": "mold_cost.domain.pricing.calculators.price_water_mill_high_cost",
-      "legacy_module": "scripts.calculate.price_water_mill_high_cost",
-      "reason": "Water mill high cost is still a bridge module and is one of the remaining water-mill calculator tails."
-    },
-    {
-      "module": "mold_cost.domain.pricing.calculators.price_water_mill_long_strip",
-      "legacy_module": "scripts.calculate.price_water_mill_long_strip",
-      "reason": "Water mill long-strip cost is still a bridge module and remains one of the next high-signal tail extractions."
-    },
-    {
       "module": "mold_cost.domain.pricing.calculators.price_water_mill_oil_tank",
       "legacy_module": "scripts.calculate.price_water_mill_oil_tank",
       "reason": "Water mill oil tank cost is still a bridge module and remains part of the remaining water-mill tail cleanup."
+    },
+    {
+      "module": "mold_cost.domain.pricing.calculators.price_water_mill_plate",
+      "legacy_module": "scripts.calculate.price_water_mill_plate",
+      "reason": "Water mill plate cost is still a bridge module and remains part of the calculator tail cleanup."
+    },
+    {
+      "module": "mold_cost.domain.pricing.calculators.price_water_mill_thread_ends",
+      "legacy_module": "scripts.calculate.price_water_mill_thread_ends",
+      "reason": "Water mill thread ends cost is still a bridge module and remains part of the calculator tail cleanup."
     }
   ],
   "bridge_assertions": {
