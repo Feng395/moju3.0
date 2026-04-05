@@ -111,6 +111,7 @@
 - 默认确认执行器已迁出 `ConfirmHandler`
 - handler registry 已迁出 `ActionHandlerFactory`
 - 默认 recognizer 已切为 `src-first + legacy fallback`
+- 常见 `QUERY_DETAILS / DATA_MODIFICATION / WEIGHT_PRICE_QUERY` 规则识别已迁入 `src`，不再默认回落 legacy recognizer
 - 仍未迁出的部分：
   - `agents.intent_recognizer` 中复杂 query / modification fallback 分支
 - 下一步应继续把复杂 recognizer fallback 分支下沉到 `src` adapter 或新 runtime
@@ -136,4 +137,4 @@
 
 ## 当前回归基线
 - `pytest tests/unit tests/integration tests/golden -q`
-- 结果：`155 passed`
+- 结果：`159 passed`

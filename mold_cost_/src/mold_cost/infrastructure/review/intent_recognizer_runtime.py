@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import os
+import re
 from typing import Any
 
-from agents.intent_types import IntentResult, IntentType
+from agents.intent_types import INTENT_KEYWORDS, IntentResult, IntentType
 
 from ...core.logging import get_logger
 
@@ -22,11 +23,16 @@ def _env_flag(name: str, *, default: bool) -> bool:
 class SrcReviewIntentRecognizer:
     """Recognize straightforward review intents locally, then fall back to legacy."""
 
+    _VERIFICATION_KEYWORDS = ("对吗", "正确吗", "是否正确", "有问题吗", "是不是", "对不对")
+    _DATA_MODIFICATION_KEYWORDS = ("改为", "修改为", "设置为", "改成", "换成", "变成", "调整为")
     _FEATURE_KEYWORDS = ("特征识别", "识别特征", "重新识别", "跑特征", "重跑特征", "识别一下", "再识别", "识别")
     _PRICE_KEYWORDS = ("重新计算", "重算", "更新价格", "计价", "算一下", "calculate", "price")
+    _QUERY_KEYWORDS = tuple(INTENT_KEYWORDS[IntentType.QUERY_DETAILS])
     _WEIGHT_PRICE_KEYWORDS = ("按重量计算", "重量计算", "模架按重量", "按重量算价格", "重量价格", "weight price", "weight calculation")
+    _WEIGHT_PRICE_QUERY_KEYWORDS = tuple(INTENT_KEYWORDS[IntentType.WEIGHT_PRICE_QUERY])
     _GENERAL_CHAT_KEYWORDS = ("你好", "您好", "hello", "hi", "帮助", "帮我", "怎么用", "能做什么", "你是谁")
     _CONCEPT_KEYWORDS = ("模架", "冲头", "刀口入块")
+    _SINGLE_CODE_PATTERN = r"(?<![A-Z0-9])([LWMGKZ])(?![A-Z0-9])"
 
     def __init__(self, *, fallback_recognizer=None):
         self._fallback_recognizer = fallback_recognizer
@@ -55,6 +61,19 @@ class SrcReviewIntentRecognizer:
         normalized = message.strip()
         lowered = normalized.lower()
 
+        if any(keyword in normalized for keyword in self._VERIFICATION_KEYWORDS):
+            return self._build_query_intent(message=normalized, context=context, confidence=0.9)
+
+        if self._looks_like_weight_price_query(normalized, lowered):
+            subgraph_id = self._extract_single_subgraph_id(message=normalized, context=context)
+            return IntentResult(
+                intent_type=IntentType.WEIGHT_PRICE_QUERY.value,
+                confidence=0.88,
+                parameters={"subgraph_id": subgraph_id} if subgraph_id else {},
+                raw_message=normalized,
+                reasoning="recognized by src weight-price-query rule",
+            )
+
         if any(keyword in normalized for keyword in self._WEIGHT_PRICE_KEYWORDS) or any(
             keyword in lowered for keyword in ("weight price", "weight calculation")
         ):
@@ -64,6 +83,9 @@ class SrcReviewIntentRecognizer:
                 intent_type=IntentType.WEIGHT_PRICE_CALCULATION.value,
                 confidence=0.9,
             )
+
+        if self._looks_like_query_details(normalized, lowered):
+            return self._build_query_intent(message=normalized, context=context, confidence=0.82)
 
         if any(keyword in normalized for keyword in self._FEATURE_KEYWORDS):
             return self._build_execution_intent(
@@ -81,6 +103,15 @@ class SrcReviewIntentRecognizer:
                 context=context,
                 intent_type=IntentType.PRICE_CALCULATION.value,
                 confidence=0.8,
+            )
+
+        if self._looks_like_data_modification(normalized):
+            return IntentResult(
+                intent_type=IntentType.DATA_MODIFICATION.value,
+                confidence=0.76,
+                parameters={},
+                raw_message=normalized,
+                reasoning="recognized by src data-modification rule",
             )
 
         if self._looks_like_general_chat(normalized):
@@ -121,6 +152,22 @@ class SrcReviewIntentRecognizer:
                 return {"keyword": keyword}
         return {"subgraph_ids": []}
 
+    def _build_query_intent(self, *, message: str, context: dict[str, Any], confidence: float) -> IntentResult:
+        subgraph_id = self._extract_single_subgraph_id(message=message, context=context)
+        query_type = self._extract_query_type(message)
+        parameters: dict[str, Any] = {}
+        if subgraph_id:
+            parameters["subgraph_id"] = subgraph_id
+        if query_type:
+            parameters["query_type"] = query_type
+        return IntentResult(
+            intent_type=IntentType.QUERY_DETAILS.value,
+            confidence=confidence,
+            parameters=parameters,
+            raw_message=message,
+            reasoning="recognized by src query-details rule",
+        )
+
     @staticmethod
     def _get_raw_data(context: dict[str, Any]) -> dict[str, Any]:
         return context.get("raw_data") or context
@@ -136,6 +183,70 @@ class SrcReviewIntentRecognizer:
             if subgraph_id in message or short_name in message:
                 found.append(short_name)
         return found
+
+    def _extract_single_subgraph_id(self, *, message: str, context: dict[str, Any]) -> str | None:
+        # 中文注释：单个工艺代码（如 L/W/M）不是子图 ID，必须交给后续 handler 通过历史消息推断。
+        if self._mentions_single_machining_code(message, context):
+            return None
+
+        explicit_ids = self._extract_subgraph_ids(message=message, context=context)
+        if explicit_ids:
+            return explicit_ids[0]
+        return None
+
+    def _looks_like_query_details(self, message: str, lowered: str) -> bool:
+        if any(keyword in message for keyword in self._QUERY_KEYWORDS):
+            return True
+        if any(keyword in lowered for keyword in ("why", "detail", "details", "breakdown")):
+            return True
+        return False
+
+    def _looks_like_weight_price_query(self, message: str, lowered: str) -> bool:
+        if any(keyword in message for keyword in self._WEIGHT_PRICE_QUERY_KEYWORDS):
+            return True
+        return any(keyword in lowered for keyword in ("weight price details", "weight calculation details"))
+
+    def _looks_like_data_modification(self, message: str) -> bool:
+        if any(keyword in message for keyword in self._DATA_MODIFICATION_KEYWORDS):
+            return True
+        return "修改" in message and any(token in message for token in ("为", "成", "到"))
+
+    def _extract_query_type(self, message: str) -> str | None:
+        if any(keyword in message for keyword in ("线割总价", "线割总费用")):
+            return "wire_total"
+        if "线割标准" in message:
+            return "wire_standard"
+        if "牙孔" in message:
+            return "tooth_hole_time"
+        if any(keyword in message for keyword in ("NC开粗",)):
+            return "nc_roughing"
+        if any(keyword in message for keyword in ("NC精铣",)):
+            return "nc_milling"
+        if any(keyword in message for keyword in ("NC钻床", "钻床")):
+            return "nc_drilling"
+        if any(keyword in message for keyword in ("NC", "主视图", "背面", "侧面", "侧背", "正面的背面", "正面")):
+            return "nc"
+        if "水磨" in message:
+            return "water_mill"
+        if "线长" in message:
+            return "wire"
+        if "线割" in message:
+            return "wire"
+        if "材料费" in message:
+            return "material"
+        if "热处理" in message:
+            return "heat"
+        if "重量" in message and "按重量" not in message:
+            return "weight"
+        if any(keyword in message for keyword in ("总价", "总费用")):
+            return "total"
+        return None
+
+    def _mentions_single_machining_code(self, message: str, context: dict[str, Any]) -> bool:
+        if not re.search(self._SINGLE_CODE_PATTERN, message):
+            return False
+        explicit_ids = self._extract_subgraph_ids(message=message, context=context)
+        return not explicit_ids
 
     def _looks_like_general_chat(self, message: str) -> bool:
         if any(keyword in message for keyword in self._GENERAL_CHAT_KEYWORDS):

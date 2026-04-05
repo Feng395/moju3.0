@@ -318,14 +318,14 @@ async def test_src_review_intent_recognizer_falls_back_for_complex_intents():
     recognizer = module.SrcReviewIntentRecognizer(fallback_recognizer=fallback)
 
     result = await recognizer.recognize(
-        "为什么这个零件这么贵？",
+        "继续按刚才那套判断逻辑处理这个零件",
         {"raw_data": {"subgraphs": [{"subgraph_id": "sg-1"}]}},
         job_id="job-14",
         db_session="db",
     )
 
     assert result.intent_type == "QUERY_DETAILS"
-    assert fallback.calls == [("为什么这个零件这么贵？", "job-14", "db")]
+    assert fallback.calls == [("继续按刚才那套判断逻辑处理这个零件", "job-14", "db")]
 
 
 @pytest.mark.asyncio
@@ -344,6 +344,98 @@ async def test_src_review_intent_recognizer_factory_wraps_legacy_fallback():
 
     assert recognizer.__class__.__name__ == "SrcReviewIntentRecognizer"
     assert recognizer._fallback_recognizer is not None
+
+
+@pytest.mark.asyncio
+async def test_src_review_intent_recognizer_handles_query_details_without_legacy():
+    module = importlib.import_module("mold_cost.infrastructure.review.intent_recognizer_runtime")
+
+    class _ExplodingFallbackRecognizer:
+        async def recognize(self, *args, **kwargs):
+            raise AssertionError("fallback should not be used for query-details rule")
+
+        async def close(self):
+            return None
+
+    recognizer = module.SrcReviewIntentRecognizer(fallback_recognizer=_ExplodingFallbackRecognizer())
+    result = await recognizer.recognize(
+        "DIE-03 的材料费怎么算的？",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_DIE-03"}]}},
+        job_id="job-14a",
+        db_session="db",
+    )
+
+    assert result.intent_type == "QUERY_DETAILS"
+    assert result.parameters == {"subgraph_id": "DIE-03", "query_type": "material"}
+
+
+@pytest.mark.asyncio
+async def test_src_review_intent_recognizer_handles_verification_query_without_legacy():
+    module = importlib.import_module("mold_cost.infrastructure.review.intent_recognizer_runtime")
+
+    class _ExplodingFallbackRecognizer:
+        async def recognize(self, *args, **kwargs):
+            raise AssertionError("fallback should not be used for verification query")
+
+        async def close(self):
+            return None
+
+    recognizer = module.SrcReviewIntentRecognizer(fallback_recognizer=_ExplodingFallbackRecognizer())
+    result = await recognizer.recognize(
+        "B2-03 大水磨长条费用这样对吗？",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_B2-03"}]}},
+        job_id="job-14b",
+        db_session="db",
+    )
+
+    assert result.intent_type == "QUERY_DETAILS"
+    assert result.parameters == {"subgraph_id": "B2-03", "query_type": "water_mill"}
+
+
+@pytest.mark.asyncio
+async def test_src_review_intent_recognizer_handles_data_modification_without_legacy():
+    module = importlib.import_module("mold_cost.infrastructure.review.intent_recognizer_runtime")
+
+    class _ExplodingFallbackRecognizer:
+        async def recognize(self, *args, **kwargs):
+            raise AssertionError("fallback should not be used for data modification rule")
+
+        async def close(self):
+            return None
+
+    recognizer = module.SrcReviewIntentRecognizer(fallback_recognizer=_ExplodingFallbackRecognizer())
+    result = await recognizer.recognize(
+        "把 DIE-03 的材质改为 S136",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_DIE-03"}]}},
+        job_id="job-14c",
+        db_session="db",
+    )
+
+    assert result.intent_type == "DATA_MODIFICATION"
+    assert result.parameters == {}
+
+
+@pytest.mark.asyncio
+async def test_src_review_intent_recognizer_treats_single_letter_code_as_history_based_query():
+    module = importlib.import_module("mold_cost.infrastructure.review.intent_recognizer_runtime")
+
+    class _ExplodingFallbackRecognizer:
+        async def recognize(self, *args, **kwargs):
+            raise AssertionError("fallback should not be used for machining-code query")
+
+        async def close(self):
+            return None
+
+    recognizer = module.SrcReviewIntentRecognizer(fallback_recognizer=_ExplodingFallbackRecognizer())
+    result = await recognizer.recognize(
+        "L的线长是多少？",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_DIE-03"}]}},
+        job_id="job-14d",
+        db_session="db",
+    )
+
+    assert result.intent_type == "QUERY_DETAILS"
+    assert result.parameters == {"query_type": "wire"}
 
 
 def test_src_review_action_handler_registry_keeps_simple_handlers_in_src():
