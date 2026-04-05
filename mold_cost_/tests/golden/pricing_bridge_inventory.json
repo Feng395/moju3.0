@@ -94,19 +94,19 @@
   },
   "next_extract_candidates": [
     {
-      "module": "mold_cost.domain.pricing.calculators.price_heat",
-      "legacy_module": "scripts.calculate.price_heat",
-      "reason": "Heat treatment calculator is still a legacy bridge and remains a high-value cost component after the first calculator wave is migrated."
+      "module": "mold_cost.domain.pricing.calculators.price_nc_base",
+      "legacy_module": "scripts.calculate.price_nc_base",
+      "reason": "NC base remains one of the core remaining pricing calculators and feeds the downstream NC aggregation path."
     },
     {
-      "module": "mold_cost.domain.pricing.calculators.price_weight",
-      "legacy_module": "scripts.calculate.price_weight",
-      "reason": "Weight calculator is still a legacy bridge and is a foundational dependency for several downstream pricing paths."
+      "module": "mold_cost.domain.pricing.calculators.price_tooth_hole",
+      "legacy_module": "scripts.calculate.price_tooth_hole",
+      "reason": "Tooth-hole cost is still bridged to legacy logic and remains a direct contributor to the pricing main path."
     },
     {
-      "module": "mold_cost.domain.pricing.calculators.price_nc_total",
-      "legacy_module": "scripts.calculate.price_nc_total",
-      "reason": "NC total calculator is still bridged to the legacy script and is one of the remaining aggregate calculators on the pricing main path."
+      "module": "mold_cost.domain.pricing.calculators.price_water_mill_total",
+      "legacy_module": "scripts.calculate.price_water_mill_total",
+      "reason": "Water-mill total is still a major legacy aggregate calculator and is a natural next extraction target after the current NC / heat / weight wave."
     }
   ],
   "bridge_assertions": {
