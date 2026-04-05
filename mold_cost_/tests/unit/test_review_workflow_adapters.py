@@ -619,6 +619,78 @@ async def test_src_review_intent_recognizer_handles_nc_base_and_standard_without
     assert standard_result.parameters == {"subgraph_id": "DIE-03", "query_type": "standard"}
 
 
+@pytest.mark.asyncio
+async def test_src_review_intent_recognizer_handles_specific_nc_faces_without_legacy():
+    module = importlib.import_module("mold_cost.infrastructure.review.intent_recognizer_runtime")
+
+    class _ExplodingFallbackRecognizer:
+        async def recognize(self, *args, **kwargs):
+            raise AssertionError("fallback should not be used for specific nc face rules")
+
+        async def close(self):
+            return None
+
+    recognizer = module.SrcReviewIntentRecognizer(fallback_recognizer=_ExplodingFallbackRecognizer())
+
+    z_result = await recognizer.recognize(
+        "DIE-03 的主视图时间是多少？",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_DIE-03"}]}},
+        job_id="job-14i",
+        db_session="db",
+    )
+    b_view_result = await recognizer.recognize(
+        "DIE-03 的正面的背面费用怎么算？",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_DIE-03"}]}},
+        job_id="job-14j",
+        db_session="db",
+    )
+    c_b_result = await recognizer.recognize(
+        "DIE-03 的侧背时间是多少？",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_DIE-03"}]}},
+        job_id="job-14k",
+        db_session="db",
+    )
+
+    assert z_result.intent_type == "QUERY_DETAILS"
+    assert z_result.parameters == {"subgraph_id": "DIE-03", "query_type": "nc_z"}
+    assert b_view_result.intent_type == "QUERY_DETAILS"
+    assert b_view_result.parameters == {"subgraph_id": "DIE-03", "query_type": "nc_b_view"}
+    assert c_b_result.intent_type == "QUERY_DETAILS"
+    assert c_b_result.parameters == {"subgraph_id": "DIE-03", "query_type": "nc_c_b"}
+
+
+@pytest.mark.asyncio
+async def test_src_review_intent_recognizer_handles_wire_total_and_tooth_hole_without_legacy():
+    module = importlib.import_module("mold_cost.infrastructure.review.intent_recognizer_runtime")
+
+    class _ExplodingFallbackRecognizer:
+        async def recognize(self, *args, **kwargs):
+            raise AssertionError("fallback should not be used for wire-total/tooth-hole rules")
+
+        async def close(self):
+            return None
+
+    recognizer = module.SrcReviewIntentRecognizer(fallback_recognizer=_ExplodingFallbackRecognizer())
+
+    wire_total_result = await recognizer.recognize(
+        "DIE-03 的线割总价是多少？",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_DIE-03"}]}},
+        job_id="job-14l",
+        db_session="db",
+    )
+    tooth_hole_result = await recognizer.recognize(
+        "DIE-03 的牙孔费用怎么算的？",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_DIE-03"}]}},
+        job_id="job-14m",
+        db_session="db",
+    )
+
+    assert wire_total_result.intent_type == "QUERY_DETAILS"
+    assert wire_total_result.parameters == {"subgraph_id": "DIE-03", "query_type": "wire_total"}
+    assert tooth_hole_result.intent_type == "QUERY_DETAILS"
+    assert tooth_hole_result.parameters == {"subgraph_id": "DIE-03", "query_type": "tooth_hole_time"}
+
+
 def test_src_review_action_handler_registry_keeps_simple_handlers_in_src():
     module = importlib.import_module("mold_cost.infrastructure.review.action_handler_runtime")
 

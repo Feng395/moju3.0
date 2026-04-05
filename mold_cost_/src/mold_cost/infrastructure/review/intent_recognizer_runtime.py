@@ -37,6 +37,7 @@ class SrcReviewIntentRecognizer:
     _CONTEXT_REFERENCE_KEYWORDS = ("刚才", "刚刚", "上次", "之前", "刚才那个", "按刚才", "按上次", "延续", "继续")
     _CONTEXT_TARGET_KEYWORDS = ("这个零件", "那个零件", "该零件", "这个", "那个", "它", "这条", "那条")
     _CONTEXT_QUERY_KEYWORDS = ("判断逻辑", "逻辑", "规则", "依据", "怎么判", "怎么判断", "为什么", "按哪套")
+    _STRUCTURED_QUERY_KEYWORDS = ("多少", "几", "吗", "？", "?", "怎么算", "怎么来的", "费用", "价格", "时间", "线长", "数据")
     _SINGLE_CODE_PATTERN = r"(?<![A-Z0-9])([LWMGKZ])(?![A-Z0-9])"
 
     def __init__(self, *, fallback_recognizer=None):
@@ -222,6 +223,9 @@ class SrcReviewIntentRecognizer:
             return True
         if any(keyword in lowered for keyword in ("why", "detail", "details", "breakdown")):
             return True
+        query_type = self._extract_query_type(message)
+        if query_type and any(keyword in message for keyword in self._STRUCTURED_QUERY_KEYWORDS):
+            return True
         return False
 
     def _looks_like_weight_price_query(self, message: str, lowered: str) -> bool:
@@ -251,6 +255,18 @@ class SrcReviewIntentRecognizer:
             return "tooth_hole_time"
         if any(keyword in message for keyword in ("NC基本", "NC基础", "NC基准")):
             return "nc_base"
+        if any(keyword in message for keyword in ("正面的背面", "正面的背面加工", "正面的背面时间", "正面的背面费用")):
+            return "nc_b_view"
+        if any(keyword in message for keyword in ("正面", "正面加工", "正面时间", "正面费用")):
+            return "nc_z_view"
+        if any(keyword in message for keyword in ("侧背", "侧背加工", "侧背时间", "侧背费用")):
+            return "nc_c_b"
+        if any(keyword in message for keyword in ("主视图", "主视图加工", "主视图时间", "主视图费用")):
+            return "nc_z"
+        if any(keyword in message for keyword in ("背面", "背面加工", "背面时间", "背面费用")):
+            return "nc_b"
+        if any(keyword in message for keyword in ("侧面", "侧面加工", "侧面时间", "侧面费用")):
+            return "nc_c"
         if any(keyword in message for keyword in ("NC开粗",)):
             return "nc_roughing"
         if any(keyword in message for keyword in ("NC精铣",)):
