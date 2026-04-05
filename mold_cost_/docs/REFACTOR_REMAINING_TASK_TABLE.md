@@ -1,6 +1,6 @@
 # 剩余阶段任务对照表
 
-更新时间：2026-04-05（Wave B 持续推进）
+更新时间：2026-04-05（Wave B 第三波 calculator 已完成）
 
 基线提交：`ec149e5 feat(refactor): 落地 durable checkpoint、review 去 agent 化与第二批 pricing search 迁移`
 
@@ -14,7 +14,7 @@
 | R1 应用层去 `api_gateway` 依赖 | P0 | 让 `application/use_cases` 只依赖 `src/mold_cost` 内部仓储/服务 | 已落地 | 仍需观察旧 service 外壳是否还有隐性回流 | 继续在新增 use case 中保持新依赖方向 | `src/mold_cost/application/*` 不再直接 import `api_gateway.*` |
 | R2 接口层真实翻面 | P0 | 让 `interfaces/api` 成为主入口，而不是旧路由包装层 | 已落地 | 仍有部分非 jobs/files 路由继续复用 legacy router 模块 | 逐步把剩余 API 路由向 `src/mold_cost/interfaces/api` 收口 | `src/mold_cost/interfaces/api/*` 成为主入口，旧 `api_gateway` 仅作兼容导出 |
 | R3 Review 数据访问去 legacy 化 | P0 | 把 review 数据加载、修改应用、状态管理完整收口到新层 | 桥接中 | `review_change_applier` 已通过 infrastructure adapter 去掉对 `agents.action_handlers`、`agents.confirm_handler` 的直连，但 `review_data_loader` / `review_notifier` 仍复用部分 legacy helper，默认 state/session 仍是 Redis 适配器 | 继续把 `review_data_loader`、`review_notifier` 剩余 legacy helper 收口到新适配层，并评估 Redis 默认装配的替代方案 | `review_graph` 默认装配只依赖 `src/mold_cost` 内部对象 |
-| R4 Pricing 主链迁移收尾 | P1 | 完成 search、process matcher 与 calculator 的迁移 | 桥接中 | 第三批 search、`process_rule_matcher` 与前两批 calculator `price_material / price_wire_total / price_total / price_weight / price_heat / price_nc_total` 已迁完，但 `pricing_service.calculate` 仍桥接 `PricingAgent`，其余 calculator 仍大量脚本透传 | 继续替换 `price_nc_base`、`price_tooth_hole`、`price_water_mill_total` 等剩余 calculator，并继续缩小 `pricing_service` 对 agent 的依赖 | `domain/pricing` 主链不再直接 import `scripts.calculate/*` 或旧 pricing agent |
+| R4 Pricing 主链迁移收尾 | P1 | 完成 search、process matcher 与 calculator 的迁移 | 桥接中 | 第三批 search、`process_rule_matcher` 与前三波 calculator `price_material / price_wire_total / price_total / price_weight / price_heat / price_nc_total / price_nc_base / price_tooth_hole / price_water_mill_total / price_add_auto_material / price_wire_base` 已迁完，但 `pricing_service.calculate` 仍桥接 `PricingAgent`，`price_wire_special / price_wire_standard / price_nc_time / judgment` 及水磨细分项仍有脚本透传 | 继续替换 `price_wire_special`、`price_wire_standard`、`price_nc_time`，随后收口 `judgment` 与水磨细分 calculator，并继续缩小 `pricing_service` 对 agent 的依赖 | `domain/pricing` 主链不再直接 import `scripts.calculate/*` 或旧 pricing agent |
 | R5 Workflow durable backend 共享化 | P1 | 将 job/review 的 checkpoint 从本地 fallback 推进到可共享持久化后端 | 桥接中 | `job_graph` 目前是本地文件 fallback；`review_graph` 默认仍是内存 checkpointer | 引入共享 durable store 适配层，统一 job/review checkpoint backend 配置 | 多实例或 worker 重启后，job/review 都可恢复同一 thread |
 | R6 CAD / Feature 算法本体迁移 | P2 | 让 CAD 拆图与特征识别算法从 `scripts/*` 迁到稳定 domain/infrastructure 结构 | 桥接中 | `LegacyCadSplitGateway`、`LegacyFeatureRecognitionGateway` 仍直接调用 `scripts.cad_chaitu` 与 `scripts.feature_recognition` | 先梳理算法模块边界，再逐步迁核心入口和公用依赖 | `domain.cad`、`domain.features` 主链不再直接 import `scripts.*` |
 | R7 Golden 样本扩展 | P2 | 增强 workflow/pricing 回归覆盖面 | 已落地但不足 | 目前 golden 样本仍偏少，定价分支覆盖不足 | 增加 2 到 3 组不同零件类型、工艺组合、价格分支样本 | `tests/golden` 能覆盖多零件、多分支，不再依赖单样本基线 |
