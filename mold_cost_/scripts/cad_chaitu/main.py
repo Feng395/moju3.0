@@ -16,6 +16,7 @@ from concurrent.futures import ThreadPoolExecutor
 from loguru import logger
 import sys
 import ezdxf
+from mold_cost.infrastructure.cad.cad_prepare_runtime import prepare_dxf_input
 from mold_cost.infrastructure.cad.cad_source_runtime import resolve_dwg_source
 from mold_cost.infrastructure.cad.cad_split_persistence_runtime import persist_split_results
 
@@ -394,19 +395,18 @@ async def chaitu_process(dwg_url: Optional[str], job_id: str, minio_client=None)
 
         # 1. 创建临时目录
         temp_dir = tempfile.mkdtemp(prefix="chaidan_cad_")
-        temp_dwg = os.path.join(temp_dir, "input.dwg")
-        temp_dxf = os.path.join(temp_dir, "input.dxf")
+        prepare_result = await prepare_dxf_input(
+            dwg_source=dwg_source,
+            use_minio=use_minio,
+            temp_dir=temp_dir,
+            storage_manager=storage_manager,
+            converter_factory=DWGConverter,
+            oda_converter_path=ODA_FILE_CONVERTER_PATH,
+        )
+        if not prepare_result["success"]:
+            return {"status": "error", "message": prepare_result["message"]}
 
-        # 2. 获取 DWG 文件
-        if not await storage_manager.get_file(dwg_source, temp_dwg, use_minio=use_minio):
-            return {"status": "error", "message": "获取 DWG 文件失败"}
-
-        # 3. 转换 DWG -> DXF
-        converter = DWGConverter(ODA_FILE_CONVERTER_PATH)
-        
-        if not converter.convert_dwg_to_dxf(temp_dwg, temp_dxf):
-            return {"status": "error", "message": "DWG -> DXF 转换失败"}
-
+        temp_dxf = prepare_result["temp_dxf"]
         logger.info(f"✅ DXF 转换成功: {temp_dxf}")
 
         # 4. 准备流式处理
