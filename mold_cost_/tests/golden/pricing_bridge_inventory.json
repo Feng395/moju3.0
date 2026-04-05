@@ -85,6 +85,8 @@
     }
   },
   "bridge_entrypoints": [
+    "agents/__init__.py",
+    "agents/pricing_agent.py",
     "agents/pricing_agent_local.py",
     "mcp_services/cad_price_search_mcp/server.py"
   ],
@@ -94,16 +96,22 @@
   },
   "next_extract_candidates": [
     {
-      "module": "mold_cost.domain.pricing.services.pricing_service",
-      "source_path": "src/mold_cost/domain/pricing/services/pricing_service.py",
-      "pattern": "get_pricing_agent",
-      "reason": "pricing_service.calculate still bridges into PricingAgent and is now the highest-level residual pricing compatibility point."
+      "module": "agents",
+      "source_path": "agents/__init__.py",
+      "pattern": "def get_pricing_agent",
+      "reason": "The agent factory still owns the runtime mode switch between the MCP agent and the local compatibility wrapper."
     },
     {
       "module": "agents.pricing_agent_local",
       "source_path": "agents/pricing_agent_local.py",
       "pattern": "class PricingAgentLocal",
-      "reason": "The local pricing agent still holds a compatibility orchestration shell around the domain pricing modules."
+      "reason": "The local pricing agent is now a thin compatibility wrapper, but it remains a residual entrypoint that can be removed once callers move to the domain service."
+    },
+    {
+      "module": "agents.pricing_agent",
+      "source_path": "agents/pricing_agent.py",
+      "pattern": "class PricingAgent",
+      "reason": "The MCP-facing pricing agent is also a thin wrapper now and remains a compatibility entrypoint pending full caller migration."
     },
     {
       "module": "mcp_services.cad_price_search_mcp.server",

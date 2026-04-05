@@ -826,13 +826,33 @@ LangGraph 节点只做状态推进，不重写你现有 CAD/计价算法。
 - `domain.pricing.calculators` 已完成六批真实迁移，当前 `domain.pricing.calculators` 目录下已不再残留 `scripts.calculate.*` 直连；`price_material.py`、`price_wire_total.py`、`price_total.py`、`price_weight.py`、`price_heat.py`、`price_nc_total.py`、`price_nc_base.py`、`price_tooth_hole.py`、`price_water_mill_total.py`、`price_add_auto_material.py`、`price_wire_base.py`、`price_wire_special.py`、`price_wire_standard.py`、`price_nc_time.py`、`judgment.py` 及全部 water-mill 细分 calculator 都已切到真实 domain 实现，workflow golden baseline 也已切到新的 domain calculator 自证
 - `domain.review.services.review_change_applier` 已通过 infrastructure adapter 去掉对 `agents.action_handlers`、`agents.confirm_handler` 的直连；review 侧剩余 legacy helper 进一步收敛到 `review_data_loader`、`review_notifier` 与共享 `OpResult` 契约
 - `domain.cad` 与 `domain.features` 已形成更稳定的服务契约，API / workflow / worker 已开始统一面向服务结果；算法本体仍主要位于 `scripts/*`
-- pricing / process matcher 主链和 monitor 脚本上的显式 `scripts/* -> api_gateway.*` 反向依赖已基本清理；`pricing_service.update_job_total_cost` 也已下沉到 `script_db`，剩余 legacy 耦合进一步收敛到 review loader/notifier helper、`pricing_service.calculate -> PricingAgent` 以及 MCP / local agent 兼容编排外壳
+- pricing / process matcher 主链和 monitor 脚本上的显式 `scripts/* -> api_gateway.*` 反向依赖已基本清理；`pricing_service.calculate` 与 `pricing_service.update_job_total_cost` 都已下沉到 `src/mold_cost`，剩余 legacy 耦合进一步收敛到 review loader/notifier helper、`agents/__init__.py` 的 pricing agent 工厂选择以及 MCP / agent 兼容外壳
 - 当前回归基线更新为：`pytest tests/unit tests/integration tests/golden -q` => `118 passed`
 
 ## 下一轮建议
 
 - 优先把 `job_graph` / `review_graph` 的 checkpoint backend 从本地 fallback 推进到真正可共享的 durable 存储
-- pricing 下一轮迁移应从 calculator 尾项转向 service / entrypoint 收口，优先处理 `pricing_service.calculate` 去 `PricingAgent` 化，再评估 `agents/pricing_agent_local.py` 与 `mcp_services/cad_price_search_mcp/server.py` 的兼容路由缩减
+- pricing 下一轮迁移应从 service / entrypoint 收口继续推进，优先缩减 `agents/__init__.py` 的 pricing agent 选择逻辑，再评估 `agents/pricing_agent.py`、`agents/pricing_agent_local.py` 与 `mcp_services/cad_price_search_mcp/server.py` 的兼容路由收口
 - 继续把 review 里的 `review_data_loader`、`review_notifier` 剩余 legacy helper 从 domain 抽到基础设施适配层
 - 扩展数值级 golden，增加至少 2 到 3 组不同零件与价格分支样本，避免单样本基线失真
 - 继续迁 CAD / feature 算法本体前，先把剩余 legacy 兼容入口和诊断脚本清单再收一轮
+## 阶段 27：Pricing Service 下沉并收口 Local Agent 兼容层
+
+目标：
+- 去掉 `pricing_service.calculate -> get_pricing_agent()` 的反向桥接。
+- 让 `src/mold_cost/domain/pricing/services/pricing_service.py` 成为本地 pricing 主编排入口。
+- 将 `agents/pricing_agent_local.py` 收缩为兼容包装层，便于后续删除。
+
+本轮完成：
+- 新增 [pricing_service.py](/d:/workspace/project/python/mold3.0/mold_cost_/src/mold_cost/domain/pricing/services/pricing_service.py)，把搜索、计算、汇总、批处理与进度发布下沉到 `src/mold_cost`。
+- 重写 [pricing_agent_local.py](/d:/workspace/project/python/mold3.0/mold_cost_/agents/pricing_agent_local.py)，现在仅负责注入 `progress_publisher` 并委托给 `pricing_service.calculate(...)`。
+- 同步 [pricing_bridge_inventory.json](/d:/workspace/project/python/mold3.0/mold_cost_/tests/golden/pricing_bridge_inventory.json)，将下一批候选聚焦到 `agents/__init__.py`、`agents/pricing_agent.py`、`agents/pricing_agent_local.py` 与 MCP pricing 路由。
+- 补充 [test_pricing_service.py](/d:/workspace/project/python/mold3.0/mold_cost_/tests/unit/test_pricing_service.py)，覆盖 `pricing_service` 的批处理分流和 `PricingAgentLocal` 的委托行为。
+
+阶段结果：
+- `pricing_service` 已不再依赖 `PricingAgent` 作为运行时桥接。
+- `PricingAgentLocal` 已从“兼容编排壳”缩减为“薄包装器”。
+- MCP pricing 路由仍是剩余最大的兼容层，但 `update_job_total_cost_only` 这条路径已经完全改走 `src/mold_cost`。
+
+当前回归基线：
+- `pytest tests/unit tests/integration tests/golden -q` => `123 passed`

@@ -682,27 +682,6 @@ async def handle_price_tool(name: str, arguments: dict) -> list[TextContent]:
         result = {"status": "ok", "job_id": job_id, "total_cost": total_cost}
         logger.info(f"[MCP] update_job_total_cost_only completed: {total_cost:.2f}")
         return [TextContent(type="text", text=json.dumps(result, ensure_ascii=False, cls=DecimalEncoder))]
-        # 鍙洿鏂?jobs.total_cost锛屼粠鎵€鏈夊瓙鍥炬眹鎬?        logger.info(f"[MCP] update_job_total_cost_only: job_id={job_id}")
-        # 鏌ヨ鎵€鏈夊瓙鍥剧殑 total_cost 骞舵眹鎬?        from api_gateway.database import db
-        query_sql = """
-            SELECT COALESCE(SUM(total_cost), 0) as total_cost
-            FROM subgraphs
-            WHERE job_id = $1::uuid
-        """
-        row = await db.fetch_one(query_sql, job_id)
-        total_cost = float(row["total_cost"]) if row else 0.0
-        
-        # 鏇存柊 jobs 琛?        update_sql = """
-            UPDATE jobs
-            SET 
-                total_cost = $2,
-                updated_at = NOW()
-            WHERE job_id = $1::uuid
-        """
-        await db.execute(update_sql, job_id, total_cost)
-        
-        result = {"status": "ok", "job_id": job_id, "total_cost": total_cost}
-        logger.info(f"[MCP] update_job_total_cost_only completed: {total_cost:.2f}")
         
     else:
         return [TextContent(

@@ -15,8 +15,8 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 ensure_src_path()
 
-from agents import get_pricing_agent
 from mold_cost.application.workflows.job_graph import job_graph
+from mold_cost.domain.pricing.services.pricing_service import pricing_service
 
 init_logging()
 logger = get_logger("workers.all_tasks_worker")
@@ -30,7 +30,6 @@ class AllTasksWorker:
 
     def __init__(self, job_workflow=None):
         self.mq = MessageQueue()
-        self.pricing_agent = None
         self.job_workflow = job_workflow or job_graph
         logger.info("AllTasksWorker initialized")
 
@@ -38,7 +37,6 @@ class AllTasksWorker:
         """Start all queue consumers."""
         logger.info("Starting AllTasksWorker")
         await self.mq.connect()
-        self.pricing_agent = get_pricing_agent()
 
         tasks = [
             asyncio.create_task(self._consume_job_processing_queue()),
@@ -94,8 +92,7 @@ class AllTasksWorker:
         logger.info("Received pricing message: job_id=%s, subgraph_count=%s", job_id, len(subgraph_ids))
 
         try:
-            self.pricing_agent = get_pricing_agent()
-            result = await self.pricing_agent.process(
+            result = await pricing_service.calculate(
                 {"job_id": job_id, "subgraph_ids": subgraph_ids, "user_params": user_params}
             )
             if result.get("status") in ["ok", "partial"]:
