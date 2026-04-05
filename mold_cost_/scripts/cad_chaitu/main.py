@@ -16,11 +16,12 @@ from mold_cost.infrastructure.cad.cad_process_runtime import execute_cad_split_p
 
 # 导入板料线集成器
 try:
-    from .material_line_integrator import MaterialLineIntegrator
+    # 中文说明：板料线算法本体已迁入 src，legacy 入口只保留兼容壳。
+    from mold_cost.infrastructure.cad.material_line_integrator import MaterialLineIntegrator
     MATERIAL_LINE_AVAILABLE = True
 except ImportError:
     try:
-        from material_line_integrator import MaterialLineIntegrator
+        from mold_cost.infrastructure.cad.material_line_integrator import MaterialLineIntegrator
         MATERIAL_LINE_AVAILABLE = True
     except ImportError:
         MATERIAL_LINE_AVAILABLE = False

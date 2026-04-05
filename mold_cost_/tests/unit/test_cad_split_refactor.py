@@ -86,3 +86,11 @@ def test_cad_pool_database_manager_bridge_is_lazy(monkeypatch):
 
     assert isinstance(manager, _FakeDatabaseManager)
     assert manager.args == ("host", 5432, "db", "user", "pwd")
+
+
+def test_legacy_material_line_integrator_wrapper_points_to_src_runtime():
+    wrapper_path = "d:\\workspace\\project\\python\\mold3.0\\mold_cost_\\scripts\\cad_chaitu\\material_line_integrator.py"
+    with open(wrapper_path, "r", encoding="utf-8") as file:
+        content = file.read()
+
+    assert "from mold_cost.infrastructure.cad.material_line_integrator import MaterialLineIntegrator" in content
