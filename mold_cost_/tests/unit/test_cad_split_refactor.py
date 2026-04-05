@@ -94,3 +94,11 @@ def test_legacy_material_line_integrator_wrapper_points_to_src_runtime():
         content = file.read()
 
     assert "from mold_cost.infrastructure.cad.material_line_integrator import MaterialLineIntegrator" in content
+
+
+def test_legacy_cad_system_wrapper_points_to_src_runtime():
+    wrapper_path = "d:\\workspace\\project\\python\\mold3.0\\mold_cost_\\scripts\\cad_chaitu\\cad_system.py"
+    with open(wrapper_path, "r", encoding="utf-8") as file:
+        content = file.read()
+
+    assert "from mold_cost.infrastructure.cad.cad_system import CADAnalysisSystem" in content

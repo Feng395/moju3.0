@@ -108,17 +108,17 @@ logger.info(f"✅ 配置加载完成: ODA={ODA_FILE_CONVERTER_PATH}, DB={DB_HOST
 try:
     # 尝试相对导入（作为包使用时）
     from .converter import DWGConverter
-    from .cad_system import CADAnalysisSystem
     from .database import DatabaseManager
     from .storage import FileStorageManager
     from .utils import extract_model_code_from_source
 except ImportError:
     # 绝对导入（直接运行时）
     from converter import DWGConverter
-    from cad_system import CADAnalysisSystem
     from database import DatabaseManager
     from storage import FileStorageManager
     from utils import extract_model_code_from_source
+
+from mold_cost.infrastructure.cad.cad_system import CADAnalysisSystem
 
 from mold_cost.infrastructure.cad.cad_xt_export_runtime import export_xt_from_prt_with_nxopen
 
