@@ -96,6 +96,8 @@
 
 ### 5. Workflow durable store 已抽为共享文件型基础实现
 - `job` 与 `review` 共用 `FileCheckpointStore`
+- 新增 `src/mold_cost/infrastructure/workflows/sqlite_checkpoint_store.py`
+- `JobFileCheckpointStore` / `ReviewFileCheckpointStore` 现在支持通过环境变量切换到共享 SQLite backend，并通过 namespace 共用同一份 checkpoint 数据库文件
 - review durable snapshot 重启恢复链路已有集成测试覆盖
 
 ## 已完成里程碑
@@ -149,8 +151,8 @@
 - 下一步应继续把复杂 recognizer fallback 分支下沉到 `src` adapter 或新 runtime
 
 ### R5 Shared Durable Backend
-- 当前是共享接口 + 文件型实现
-- 下一步应升级为可跨实例恢复的 backend
+- 当前已经具备共享接口 + 文件型实现，并新增可按配置启用的 SQLite 共享 backend
+- 下一步应根据部署方式评估是否把 SQLite backend 设为默认，或继续外接更强的共享存储
 
 ### R6 CAD / Feature 算法本体迁移
 - CAD 剩余：
@@ -165,4 +167,4 @@
 
 ## 当前回归基线
 - `pytest tests/unit tests/integration tests/golden -q`
-- 结果：`208 passed, 1 skipped`
+- 结果：`210 passed, 1 skipped`
