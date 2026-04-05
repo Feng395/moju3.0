@@ -66,6 +66,24 @@ class ReviewDataLoader(Protocol):
     ) -> str: ...
 
 
+class ReviewDisplayViewBuilder(Protocol):
+    """Build workflow-facing display views from raw review data."""
+
+    def build_display_view(self, raw_data: dict[str, list[dict[str, Any]]]) -> list[dict[str, Any]]: ...
+
+
+class ReviewCompletenessValidator(Protocol):
+    """Validate raw review data completeness and derive completion prompts."""
+
+    def check_data_completeness(self, raw_data: dict[str, Any]) -> dict[str, Any]: ...
+
+    def generate_completion_prompt(
+        self,
+        missing_fields: list[dict[str, Any]],
+        raw_data: dict[str, Any],
+    ) -> str: ...
+
+
 class ReviewChatExecutionAdapter(Protocol):
     """Handle LLM-backed review chat and prompt generation."""
 
@@ -169,3 +187,20 @@ class ReviewNotifier(Protocol):
     ) -> None: ...
 
     async def push_system_message(self, job_id: str, message_text: str, db_session=None) -> None: ...
+
+
+class MessagePersistence(Protocol):
+    """Persist websocket/review messages without leaking legacy imports."""
+
+    async def push_and_persist(
+        self,
+        *,
+        job_id: str,
+        ws_message: dict[str, Any],
+        db_session=None,
+        ws_manager=None,
+    ) -> None: ...
+
+    def should_persist(self, ws_message: dict[str, Any]) -> bool: ...
+
+    async def persist_message(self, *, job_id: str, ws_message: dict[str, Any], db_session) -> None: ...

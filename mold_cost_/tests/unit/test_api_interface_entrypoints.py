@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -38,3 +39,50 @@ def test_jobs_router_is_implemented_in_src_package():
     assert "from api_gateway.routers.jobs import router_legacy" not in source
     assert jobs_module.router.prefix == "/jobs"
     assert jobs_module.router_legacy.prefix == "/api/jobs"
+
+
+def test_api_lifespan_initializes_review_handlers_via_src_adapter(monkeypatch):
+    from mold_cost.interfaces.api import app as api_app_module
+
+    calls: list[str] = []
+
+    class _FakeClient:
+        async def connect(self):
+            calls.append("connect")
+
+        async def close(self):
+            calls.append("close")
+
+    class _FakeTask:
+        def cancel(self):
+            calls.append("cancel")
+
+        def __await__(self):
+            async def _done():
+                calls.append("await")
+                return None
+
+            return _done().__await__()
+
+    monkeypatch.setattr(api_app_module, "rabbitmq_client", _FakeClient())
+    monkeypatch.setattr(api_app_module, "redis_client", _FakeClient())
+    monkeypatch.setattr(api_app_module, "initialize_review_action_handlers", lambda: calls.append("init_handlers"))
+    monkeypatch.setattr(api_app_module.manager, "start_redis_subscriber", lambda: asyncio.sleep(0))
+
+    def _fake_create_task(coro):
+        coro.close()
+        return _FakeTask()
+
+    monkeypatch.setattr(api_app_module.asyncio, "create_task", _fake_create_task)
+
+    async def _run():
+        async with api_app_module.lifespan(api_app_module.app):
+            return None
+
+    asyncio.run(_run())
+
+    assert "init_handlers" in calls
+
+    source = Path(api_app_module.__file__).read_text(encoding="utf-8")
+    assert "from agents.action_handlers import ActionHandlerFactory" not in source
+    assert "from ...infrastructure.review.action_handler_runtime import initialize_review_action_handlers" in source

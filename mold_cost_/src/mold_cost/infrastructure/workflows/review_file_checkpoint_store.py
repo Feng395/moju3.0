@@ -1,4 +1,4 @@
-"""File-backed durable checkpoint store for job workflow tests and local runtime."""
+"""File-backed durable checkpoint store for review workflow state."""
 
 from __future__ import annotations
 
@@ -8,12 +8,12 @@ from pathlib import Path
 from .file_checkpoint_store import FileCheckpointStore
 
 
-class JobFileCheckpointStore:
-    """Persist the latest job checkpoint to a local JSON file."""
+class ReviewFileCheckpointStore:
+    """Persist the latest review waiting state to a local JSON file."""
 
     def __init__(self, root_dir: Path | None = None):
-        configured_root = os.getenv("MOLD_COST_JOB_CHECKPOINT_ROOT")
-        base_dir = Path(__file__).resolve().parents[4] / ".runtime" / "job_checkpoints"
+        configured_root = os.getenv("MOLD_COST_REVIEW_CHECKPOINT_ROOT")
+        base_dir = Path(__file__).resolve().parents[4] / ".runtime" / "review_checkpoints"
         self._store = FileCheckpointStore(Path(root_dir or configured_root or base_dir))
 
     def save(self, *, job_id: str, state: dict, checkpoint: dict) -> Path:

@@ -175,29 +175,17 @@ class InteractionAgentReviewChangeApplier(ReviewChangeApplier):
 
     def _get_intent_recognizer_factory(self) -> ReviewIntentRecognizerFactory:
         if self._intent_recognizer_factory is None:
-            from ....infrastructure.review.legacy_review_handler_adapter import (
-                LegacyReviewIntentRecognizerFactory,
-            )
-
-            self._intent_recognizer_factory = LegacyReviewIntentRecognizerFactory()
+            raise RuntimeError("Review intent recognizer factory is not configured")
         return self._intent_recognizer_factory
 
     def _get_action_handler_registry(self) -> ReviewActionHandlerRegistry:
         if self._action_handler_registry is None:
-            from ....infrastructure.review.legacy_review_handler_adapter import (
-                LegacyReviewActionHandlerRegistry,
-            )
-
-            self._action_handler_registry = LegacyReviewActionHandlerRegistry()
+            raise RuntimeError("Review action handler registry is not configured")
         return self._action_handler_registry
 
     def _get_confirmation_executor(self) -> ReviewConfirmationExecutor:
         if self._confirmation_executor is None:
-            from ....infrastructure.review.legacy_review_handler_adapter import (
-                LegacyReviewConfirmationExecutor,
-            )
-
-            self._confirmation_executor = LegacyReviewConfirmationExecutor()
+            raise RuntimeError("Review confirmation executor is not configured")
         return self._confirmation_executor
 
     @staticmethod

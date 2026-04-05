@@ -8,7 +8,7 @@ from typing import Dict, List
 
 from fastapi import WebSocket
 
-from agents.message_persistence_manager import get_persistence_manager
+from mold_cost.infrastructure.messaging.message_persistence_adapter import get_message_persistence_adapter
 from mold_cost.infrastructure.messaging.redis_client import redis_client
 from shared.database import get_db
 from shared.logging_config import get_logger
@@ -149,7 +149,7 @@ class ConnectionManager:
             if ws_message.get("type") != "progress":
                 return
 
-            persistence_manager = get_persistence_manager()
+            persistence_manager = get_message_persistence_adapter()
             if not persistence_manager.should_persist(ws_message):
                 return
 

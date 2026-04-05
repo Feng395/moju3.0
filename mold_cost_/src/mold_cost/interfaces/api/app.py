@@ -17,6 +17,7 @@ from ...core.logging import get_logger
 from ...core.settings import settings
 from ...infrastructure.messaging.rabbitmq_client import rabbitmq_client
 from ...infrastructure.messaging.redis_client import redis_client
+from ...infrastructure.review.action_handler_runtime import initialize_review_action_handlers
 from .routers import files, jobs
 from .websocket_runtime import manager
 
@@ -56,9 +57,7 @@ async def lifespan(app: FastAPI):
         logger.error("Redis connection failed: %s", exc, exc_info=True)
 
     try:
-        from agents.action_handlers import ActionHandlerFactory
-
-        ActionHandlerFactory.initialize_handlers()
+        initialize_review_action_handlers()
         logger.info("Action handler factory initialized")
     except Exception as exc:
         logger.error("Action handler factory initialization failed: %s", exc, exc_info=True)

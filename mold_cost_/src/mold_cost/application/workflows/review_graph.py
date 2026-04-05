@@ -24,6 +24,8 @@ from ...domain.review.services.review_notifier import InteractionAgentReviewNoti
 from ...domain.review.services.review_session_service import RedisReviewSessionService
 from ...domain.review.services.review_state_adapter import RedisReviewStateStore
 from ...infrastructure.db.repositories.review_repository_adapter import LegacyReviewRepositoryAdapter
+from ...infrastructure.review.legacy_review_handler_adapter import build_default_review_change_applier
+from ...infrastructure.workflows.review_file_checkpoint_store import ReviewFileCheckpointStore
 from .review_state import ReviewState
 
 logger = get_logger(__name__)
@@ -43,6 +45,7 @@ class ReviewGraph:
         chat_executor: ReviewChatExecutionAdapter | None = None,
         change_applier: ReviewChangeApplier | None = None,
         notifier: ReviewNotifier | None = None,
+        durable_store=None,
     ):
         self._compiled_graph = None
         self._checkpointer = None
@@ -54,6 +57,7 @@ class ReviewGraph:
         self._chat_executor = chat_executor
         self._change_applier = change_applier
         self._notifier = notifier
+        self._durable_store = durable_store if durable_store is not None else ReviewFileCheckpointStore()
 
     def invoke(self, state: ReviewState) -> ReviewState:
         return state
@@ -147,6 +151,8 @@ class ReviewGraph:
 
     async def get_review_state(self, job_id: str):
         state = await self._get_state_store().load(job_id)
+        if state is None:
+            state = self._load_durable_state(job_id)
         return None if state is None else self.serialize_state(state)
 
     async def check_lock(self, job_id: str) -> bool:
@@ -305,6 +311,10 @@ class ReviewGraph:
             await session_service.renew(job_id, timeout=1800)
         await state_store.renew(job_id, timeout=3600)
         state = await state_store.load(job_id)
+        if state is None:
+            state = self._load_durable_state(job_id)
+            if state is not None:
+                await state_store.save(state)
         if state is not None:
             return state, None
         if allow_reload and db_session is not None:
@@ -416,7 +426,7 @@ class ReviewGraph:
 
     def _get_change_applier(self) -> ReviewChangeApplier:
         if self._change_applier is None:
-            self._change_applier = InteractionAgentReviewChangeApplier(
+            self._change_applier = build_default_review_change_applier(
                 state_store=self._get_state_store(),
                 review_repository=self._get_review_repository(),
             )
@@ -772,6 +782,50 @@ class ReviewGraph:
         else:
             state.status = "pending_completion"
         await self._get_state_store().save(state)
+        self._persist_durable_checkpoint(state)
+
+    def _build_durable_checkpoint(self, state: ReviewState) -> dict[str, Any]:
+        checkpoint_id = state.checkpoint_id or state.current_node or "review_state"
+        return {
+            "thread_id": state.job_id,
+            "checkpoint_id": checkpoint_id,
+            "config": self.checkpoint_config(state.job_id, checkpoint_id=checkpoint_id),
+            "status": state.status,
+            "waiting_for": state.waiting_for,
+            "resume_from": state.resume_from,
+        }
+
+    def _persist_durable_checkpoint(self, state: ReviewState) -> None:
+        checkpoint = self._build_durable_checkpoint(state)
+        target = self._durable_store.save(
+            job_id=state.job_id,
+            state=self.serialize_state(state),
+            checkpoint=checkpoint,
+        )
+        state.extra["durable_checkpoint"] = {
+            "backend": "review_file_checkpoint_store",
+            "path": str(target),
+            "thread_id": state.job_id,
+        }
+
+    def _load_durable_state(self, job_id: str) -> ReviewState | None:
+        snapshot = self._durable_store.load(job_id)
+        if snapshot is None:
+            return None
+        payload = snapshot.get("state")
+        if not isinstance(payload, dict):
+            return None
+        state = ReviewState.from_payload(job_id=job_id, payload=payload)
+        if not isinstance(state.extra, dict):
+            state.extra = {}
+        state.extra.setdefault(
+            "durable_checkpoint",
+            {
+                "backend": "review_file_checkpoint_store",
+                "thread_id": job_id,
+            },
+        )
+        return state
 
     def _runtime_db_session(self, job_id: str | None):
         if job_id is None:
