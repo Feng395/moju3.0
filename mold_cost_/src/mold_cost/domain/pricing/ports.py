@@ -33,3 +33,15 @@ class PricingSnapshotSearchRepository(Protocol):
         job_id: str,
         subgraph_ids: Sequence[str],
     ) -> list[dict[str, Any]]: ...
+
+    async def fetch_processing_cost_details(
+        self,
+        job_id: str,
+        subgraph_ids: Sequence[str],
+    ) -> list[dict[str, Any]]: ...
+
+    async def fetch_subgraph_cost_summary(
+        self,
+        job_id: str,
+        subgraph_ids: Sequence[str],
+    ) -> list[dict[str, Any]]: ...

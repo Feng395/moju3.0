@@ -94,19 +94,19 @@
   },
   "next_extract_candidates": [
     {
-      "module": "mold_cost.domain.pricing.search.search",
-      "legacy_module": "scripts.search.search",
-      "reason": "Aggregate search entry remains a legacy bridge and still fans out across multiple search helpers."
+      "module": "mold_cost.domain.pricing.calculators.price_material",
+      "legacy_module": "scripts.calculate.price_material",
+      "reason": "Material calculator remains a legacy bridge and is a natural next step after the search queries are migrated."
     },
     {
-      "module": "mold_cost.domain.pricing.search.total_search",
-      "legacy_module": "scripts.search.total_search",
-      "reason": "Total cost summary search still sits on a legacy bridge and is a good low-risk follow-up after the snapshot queries."
+      "module": "mold_cost.domain.pricing.calculators.price_wire_total",
+      "legacy_module": "scripts.calculate.price_wire_total",
+      "reason": "Wire total calculator still bridges to legacy logic and remains a high-value candidate after wire_total_search is migrated."
     },
     {
-      "module": "mold_cost.domain.pricing.search.wire_total_search",
-      "legacy_module": "scripts.search.wire_total_search",
-      "reason": "Wire total aggregation still bridges to legacy calculation helpers and remains actionable for the next pricing wave."
+      "module": "mold_cost.domain.pricing.calculators.price_total",
+      "legacy_module": "scripts.calculate.price_total",
+      "reason": "Final total calculator still owns the end-of-chain aggregation and remains one of the most important legacy calculator bridges."
     }
   ],
   "bridge_assertions": {

@@ -138,6 +138,100 @@ SEARCH_CASES = (
             {"sub_category": "boring_fee", "price": 8, "unit": "hole"},
         ],
     },
+    {
+        "module_name": "search",
+        "legacy_module": "scripts.search.search",
+        "service_method": "fetch_subgraph_cost_summary",
+        "rows": [
+            {
+                "subgraph_id": "sg-1",
+                "material_cost": 10.0,
+                "heat_treatment_cost": 3.0,
+                "large_grinding_cost": 1.0,
+                "small_grinding_cost": 2.0,
+                "slow_wire_cost": 4.0,
+                "slow_wire_side_cost": 5.0,
+                "mid_wire_cost": 6.0,
+                "fast_wire_cost": 7.0,
+                "edm_cost": 8.0,
+                "nc_roughing_cost": 9.0,
+                "nc_milling_cost": 11.0,
+                "drilling_cost": 12.0,
+            }
+        ],
+    },
+    {
+        "module_name": "total_search",
+        "legacy_module": "scripts.search.total_search",
+        "service_method": "fetch_processing_cost_details",
+        "rows": [
+            {
+                "subgraph_id": "sg-1",
+                "weight": 5.664,
+                "basic_processing_cost": 1.0,
+                "special_base_cost": 2.0,
+                "standard_base_cost": 3.0,
+                "material_additional_cost": 4.0,
+                "material_cost": 66.83,
+                "heat_treatment_cost": 21.52,
+                "thread_ends_cost": 5.0,
+                "hanging_table_cost": 6.0,
+                "chamfer_cost": 7.0,
+                "bevel_cost": 8.0,
+                "oil_tank_cost": 9.0,
+                "high_cost": 10.0,
+                "grinding_cost": 11.0,
+                "plate_cost": 12.0,
+                "long_strip_cost": 13.0,
+                "component_cost": 14.0,
+                "tooth_hole_cost": 15.0,
+                "tooth_hole_time_cost": 16.0,
+                "nc_roughing_cost": 17.0,
+                "nc_milling_cost": 18.0,
+                "nc_drilling_cost": 19.0,
+                "nc_base_roughing_cost": 20.0,
+                "nc_base_milling_cost": 21.0,
+                "nc_base_drilling_cost": 22.0,
+                "calculation_steps": [{"category": "wire", "steps": [{"step": "base"}]}],
+            }
+        ],
+    },
+    {
+        "module_name": "wire_total_search",
+        "legacy_module": "scripts.search.wire_total_search",
+        "service_method": "fetch_processing_cost_details",
+        "rows": [
+            {
+                "subgraph_id": "sg-1",
+                "weight": 5.664,
+                "basic_processing_cost": 1.0,
+                "special_base_cost": 2.0,
+                "standard_base_cost": 3.0,
+                "material_additional_cost": 4.0,
+                "material_cost": 66.83,
+                "heat_treatment_cost": 21.52,
+                "thread_ends_cost": 5.0,
+                "hanging_table_cost": 6.0,
+                "chamfer_cost": 7.0,
+                "bevel_cost": 8.0,
+                "oil_tank_cost": 9.0,
+                "high_cost": 10.0,
+                "grinding_cost": 11.0,
+                "plate_cost": 12.0,
+                "long_strip_cost": 13.0,
+                "component_cost": 14.0,
+                "tooth_hole_cost": 15.0,
+                "tooth_hole_time_cost": 16.0,
+                "nc_roughing_cost": 17.0,
+                "nc_milling_cost": 18.0,
+                "nc_drilling_cost": 19.0,
+                "nc_base_roughing_cost": 20.0,
+                "nc_base_milling_cost": 21.0,
+                "nc_base_drilling_cost": 22.0,
+                "calculation_steps": [{"category": "wire", "steps": [{"step": "base"}]}],
+            }
+        ],
+    },
 )
 
 
@@ -156,6 +250,26 @@ def test_migrated_pricing_search_matches_legacy_behavior(monkeypatch, case):
             domain_module.pricing_snapshot_search_service,
             "fetch_base_itemcode_parts",
             fake_domain_fetch_base_itemcode_parts,
+        )
+    elif case["service_method"] == "fetch_processing_cost_details":
+        async def fake_domain_fetch_processing_cost_details(*, job_id, subgraph_ids):
+            domain_calls.append({"job_id": job_id, "subgraph_ids": tuple(subgraph_ids)})
+            return [dict(row) for row in case["rows"]]
+
+        monkeypatch.setattr(
+            domain_module.pricing_snapshot_search_service,
+            "fetch_processing_cost_details",
+            fake_domain_fetch_processing_cost_details,
+        )
+    elif case["service_method"] == "fetch_subgraph_cost_summary":
+        async def fake_domain_fetch_subgraph_cost_summary(*, job_id, subgraph_ids):
+            domain_calls.append({"job_id": job_id, "subgraph_ids": tuple(subgraph_ids)})
+            return [dict(row) for row in case["rows"]]
+
+        monkeypatch.setattr(
+            domain_module.pricing_snapshot_search_service,
+            "fetch_subgraph_cost_summary",
+            fake_domain_fetch_subgraph_cost_summary,
         )
     else:
         async def fake_domain_fetch_snapshots(*, job_id, categories, columns):
@@ -180,6 +294,8 @@ def test_migrated_pricing_search_matches_legacy_behavior(monkeypatch, case):
 
     if case["service_method"] == "fetch_base_itemcode_parts":
         assert domain_calls == [{"job_id": "job-search", "subgraph_ids": ("sub-1",)}]
+    elif case["service_method"] in {"fetch_processing_cost_details", "fetch_subgraph_cost_summary"}:
+        assert domain_calls == [{"job_id": "job-search", "subgraph_ids": ("sub-1",)}]
     else:
         assert domain_calls == [
             {
@@ -198,11 +314,14 @@ def test_migrated_pricing_search_modules_do_not_expose_legacy_module():
         "heat_search",
         "material_search",
         "nc_search",
+        "search",
         "tooth_hole_search",
+        "total_search",
         "water_mill_search",
         "wire_base_search",
         "wire_special_search",
         "wire_standard_search",
+        "wire_total_search",
     )
 
     for module_name in migrated_modules:
@@ -297,5 +416,36 @@ def _expected_domain_result(case: dict, *, job_id: str) -> dict:
             "data_type": "wire_standard",
             "job_id": job_id,
             "base_prices": rows,
+        }
+    if module_name == "search":
+        return {
+            "data_type": "subgraphs_cost",
+            "job_id": job_id,
+            "cost_summary": rows,
+        }
+    if module_name == "total_search":
+        return {
+            "data_type": "total",
+            "job_id": job_id,
+            "cost_details": rows,
+        }
+    if module_name == "wire_total_search":
+        return {
+            "data_type": "total",
+            "job_id": job_id,
+            "cost_details": [
+                {
+                    "subgraph_id": row["subgraph_id"],
+                    "weight": row["weight"],
+                    "basic_processing_cost": row["basic_processing_cost"],
+                    "special_base_cost": row["special_base_cost"],
+                    "standard_base_cost": row["standard_base_cost"],
+                    "material_additional_cost": row["material_additional_cost"],
+                    "material_cost": row["material_cost"],
+                    "heat_treatment_cost": row["heat_treatment_cost"],
+                    "calculation_steps": row["calculation_steps"],
+                }
+                for row in rows
+            ],
         }
     raise AssertionError(f"Unsupported module_name: {module_name}")

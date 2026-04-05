@@ -41,5 +41,27 @@ class PricingSnapshotSearchService:
             subgraph_ids=subgraph_ids,
         )
 
+    async def fetch_processing_cost_details(
+        self,
+        *,
+        job_id: str,
+        subgraph_ids: Sequence[str],
+    ) -> list[dict[str, Any]]:
+        return await self._repository.fetch_processing_cost_details(
+            job_id=job_id,
+            subgraph_ids=subgraph_ids,
+        )
+
+    async def fetch_subgraph_cost_summary(
+        self,
+        *,
+        job_id: str,
+        subgraph_ids: Sequence[str],
+    ) -> list[dict[str, Any]]:
+        return await self._repository.fetch_subgraph_cost_summary(
+            job_id=job_id,
+            subgraph_ids=subgraph_ids,
+        )
+
 
 pricing_snapshot_search_service = PricingSnapshotSearchService()

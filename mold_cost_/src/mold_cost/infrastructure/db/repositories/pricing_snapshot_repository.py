@@ -72,6 +72,76 @@ class AsyncpgPricingSnapshotSearchRepository:
         rows = await db.fetch_all(sql, job_id, list(normalized_subgraph_ids))
         return [dict(row) for row in rows]
 
+    async def fetch_processing_cost_details(
+        self,
+        job_id: str,
+        subgraph_ids: Sequence[str],
+    ) -> list[dict[str, Any]]:
+        normalized_subgraph_ids = self._normalize_ids(subgraph_ids, "subgraph_ids")
+        sql = """
+            SELECT
+                subgraph_id,
+                weight,
+                basic_processing_cost,
+                special_base_cost,
+                standard_base_cost,
+                material_additional_cost,
+                material_cost,
+                heat_treatment_cost,
+                thread_ends_cost,
+                hanging_table_cost,
+                chamfer_cost,
+                bevel_cost,
+                oil_tank_cost,
+                high_cost,
+                grinding_cost,
+                plate_cost,
+                long_strip_cost,
+                component_cost,
+                tooth_hole_cost,
+                tooth_hole_time_cost,
+                nc_roughing_cost,
+                nc_milling_cost,
+                nc_drilling_cost,
+                nc_base_roughing_cost,
+                nc_base_milling_cost,
+                nc_base_drilling_cost,
+                calculation_steps
+            FROM processing_cost_calculation_details
+            WHERE job_id = $1::uuid
+              AND subgraph_id = ANY($2::text[])
+        """
+        rows = await db.fetch_all(sql, job_id, list(normalized_subgraph_ids))
+        return [self._normalize_processing_cost_row(dict(row)) for row in rows]
+
+    async def fetch_subgraph_cost_summary(
+        self,
+        job_id: str,
+        subgraph_ids: Sequence[str],
+    ) -> list[dict[str, Any]]:
+        normalized_subgraph_ids = self._normalize_ids(subgraph_ids, "subgraph_ids")
+        sql = """
+            SELECT
+                subgraph_id,
+                material_cost,
+                heat_treatment_cost,
+                large_grinding_cost,
+                small_grinding_cost,
+                slow_wire_cost,
+                slow_wire_side_cost,
+                mid_wire_cost,
+                fast_wire_cost,
+                edm_cost,
+                nc_roughing_cost,
+                nc_milling_cost,
+                drilling_cost
+            FROM subgraphs
+            WHERE job_id = $1::uuid
+              AND subgraph_id = ANY($2::text[])
+        """
+        rows = await db.fetch_all(sql, job_id, list(normalized_subgraph_ids))
+        return [self._normalize_decimal_row(dict(row)) for row in rows]
+
     @staticmethod
     def _normalize_columns(columns: Sequence[str]) -> tuple[str, ...]:
         normalized_columns = tuple(dict.fromkeys(columns))
@@ -95,3 +165,30 @@ class AsyncpgPricingSnapshotSearchRepository:
         if not normalized_values:
             raise ValueError(f"{field_name} must not be empty")
         return normalized_values
+
+    @classmethod
+    def _normalize_processing_cost_row(cls, row: dict[str, Any]) -> dict[str, Any]:
+        normalized = cls._normalize_decimal_row(row)
+        calculation_steps = normalized.get("calculation_steps")
+        if calculation_steps is None:
+            normalized["calculation_steps"] = []
+        elif isinstance(calculation_steps, str):
+            import json
+
+            try:
+                normalized["calculation_steps"] = json.loads(calculation_steps)
+            except json.JSONDecodeError:
+                normalized["calculation_steps"] = []
+        return normalized
+
+    @staticmethod
+    def _normalize_decimal_row(row: dict[str, Any]) -> dict[str, Any]:
+        normalized: dict[str, Any] = {}
+        for key, value in row.items():
+            if value is None:
+                normalized[key] = [] if key == "calculation_steps" else 0.0
+            elif hasattr(value, "as_tuple"):
+                normalized[key] = float(value)
+            else:
+                normalized[key] = value
+        return normalized
