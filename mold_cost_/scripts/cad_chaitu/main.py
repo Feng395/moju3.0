@@ -16,6 +16,7 @@ from concurrent.futures import ThreadPoolExecutor
 from loguru import logger
 import sys
 import ezdxf
+from mold_cost.infrastructure.cad.cad_source_runtime import resolve_dwg_source
 from mold_cost.infrastructure.cad.cad_split_persistence_runtime import persist_split_results
 
 # 导入板料线集成器
@@ -130,23 +131,6 @@ from mold_cost.infrastructure.cad.cad_xt_export_runtime import export_xt_files
 db_manager = None
 storage_manager = None
 _minio_client = None
-
-
-def _is_probable_minio_object_path(path: Optional[str]) -> bool:
-    """Heuristically detect object storage paths like dwg/2026/04/file.dwg."""
-    if not path or not isinstance(path, str):
-        return False
-
-    normalized = path.strip().replace("\\", "/")
-    if not normalized or normalized.startswith(("http://", "https://")):
-        return False
-
-    if os.path.isabs(path):
-        return False
-
-    first_segment = normalized.split("/", 1)[0].lower()
-    return first_segment in {"dwg", "prt", "dxf", "xt", "uploads", "files"}
-
 
 def _export_xt_from_prt(prt_local: str, export_files: list, temp_dir: str,
                          xt_minio_base: str, minio_client) -> dict:
@@ -391,38 +375,20 @@ async def chaitu_process(dwg_url: Optional[str], job_id: str, minio_client=None)
     
     temp_dir = None
     try:
-        # 确定 DWG 文件来源
-        dwg_source = dwg_url
-        use_minio = False
-        
-        # 如果没有提供 dwg_url，则从数据库查询
-        if not dwg_source:
-            logger.info(f"未提供 dwg_url，从数据库查询 job_id={job_id} 的 dwg_file_path")
-            dwg_file_path = db_manager.get_dwg_file_path(job_id)
-            
-            if not dwg_file_path:
-                return {"status": "error", "message": f"未找到 job_id={job_id} 对应的 dwg_file_path"}
-            
-            dwg_source = dwg_file_path
-            use_minio = True
-            logger.info(f"从数据库查询到 dwg_file_path: {dwg_source}")
+        source_resolution = resolve_dwg_source(
+            dwg_url=dwg_url,
+            job_id=job_id,
+            db_manager=db_manager,
+            extract_model_code_from_source=extract_model_code_from_source,
+        )
+        if not source_resolution:
+            return {"status": "error", "message": f"未找到 job_id={job_id} 对应的 dwg_file_path"}
 
-        # When the caller passes a MinIO object path directly, don't misclassify it as a local file path.
-        if not use_minio and _is_probable_minio_object_path(dwg_source):
-            use_minio = True
-            logger.info(f"识别为 MinIO 对象路径，启用 MinIO 下载: {dwg_source}")
-        
-        # 从路径或 URL 提取源文件名（不含扩展名）
-        if dwg_source.startswith(('http://', 'https://')):
-            url_filename = dwg_source.split('/')[-1]
-        else:
-            url_filename = Path(dwg_source).name
-        
-        source_filename = os.path.splitext(url_filename)[0]
-        
-        # 提取模型代码（用于日志）
-        model_code = extract_model_code_from_source(dwg_source) or source_filename
-        
+        dwg_source = source_resolution["dwg_source"]
+        use_minio = source_resolution["use_minio"]
+        source_filename = source_resolution["source_filename"]
+        model_code = source_resolution["model_code"]
+
         logger.info(f"收到拆图请求: dwg_source={dwg_source}, job_id={job_id}, use_minio={use_minio}")
         logger.info(f"源文件名: {source_filename}, 模型代码: {model_code}")
 
@@ -706,7 +672,6 @@ async def chaitu_process(dwg_url: Optional[str], job_id: str, minio_client=None)
                     db_manager=db_manager,
                     minio_client=_minio_client,
                     export_xt_from_prt=_export_xt_from_prt,
-                    is_probable_minio_object_path=_is_probable_minio_object_path,
                 )
             except Exception as _nxe:
                 logger.warning(f"步骤6 .x_t 导出异常（不影响主流程）: {_nxe}")

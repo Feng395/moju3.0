@@ -7,26 +7,12 @@ from datetime import datetime
 from typing import Any, Callable
 
 from ...core.logging import get_logger
+from .cad_source_runtime import resolve_prt_source
 
 logger = get_logger(__name__)
 
 XtExporter = Callable[..., dict[str, str]]
 NxImporter = Callable[[], Any]
-MinioPathDetector = Callable[[str | None], bool]
-
-
-def _default_is_probable_minio_object_path(path: str | None) -> bool:
-    if not path or not isinstance(path, str):
-        return False
-
-    normalized = path.strip().replace("\\", "/")
-    if not normalized or normalized.startswith(("http://", "https://")):
-        return False
-    if os.path.isabs(path):
-        return False
-
-    first_segment = normalized.split("/", 1)[0].lower()
-    return first_segment in {"dwg", "prt", "dxf", "xt", "uploads", "files"}
 
 
 def _default_nx_importer():
@@ -45,7 +31,6 @@ async def export_xt_files(
     minio_client,
     export_xt_from_prt: XtExporter,
     nx_importer: NxImporter | None = None,
-    is_probable_minio_object_path: MinioPathDetector | None = None,
 ) -> dict[str, str]:
     """在 NX 环境可用时，从 PRT 导出子图 .x_t 并上传。"""
 
@@ -61,12 +46,13 @@ async def export_xt_files(
         logger.warning("步骤6 NX 环境检测异常（不影响主流程）: %s", exc)
         return {}
 
-    prt_source = db_manager.get_prt_file_path(job_id)
-    if not prt_source:
+    prt_resolution = resolve_prt_source(job_id=job_id, db_manager=db_manager)
+    if not prt_resolution:
         logger.info("步骤6: 未提供 PRT 文件，跳过 .x_t 导出")
         return {}
 
-    should_use_minio = (is_probable_minio_object_path or _default_is_probable_minio_object_path)(prt_source)
+    prt_source = prt_resolution["prt_source"]
+    should_use_minio = prt_resolution["use_minio"]
     prt_local = os.path.join(temp_dir, "source.prt")
     prt_ok = await storage_manager.get_file(prt_source, prt_local, use_minio=should_use_minio)
     if not prt_ok:
