@@ -40,9 +40,7 @@
   - 初始化 `processing_cost_calculation_details`
   - 回写 `subgraphs.wire_process_note / wire_process`
 - 新增 `src/mold_cost/infrastructure/cad/slider_red_face_lookup_runtime.py`
-- 新增 `src/mold_cost/infrastructure/cad/slider_red_face_update_runtime.py`
 - `LegacyFeatureRecognitionGateway.save_features()` 与 `upload_feature_database()` 现在默认走 `src` 侧红面查表 runtime
-- `LegacyFeatureRecognitionGateway.batch_recognize()` 现在默认注入 `src` 侧红面写回 runtime
 - `scripts/feature_recognition/slider_red_face_updater.py` 已退化为兼容壳
 
 ### 2. Review 确认执行器从 `ConfirmHandler` 摘除
