@@ -251,10 +251,9 @@ def test_feature_gateway_batch_recognize_uses_src_runtime(monkeypatch):
         "scripts.minio_client",
         types.SimpleNamespace(minio_client=fake_minio_client),
     )
-    monkeypatch.setitem(
-        sys.modules,
-        "scripts.feature_recognition.slider_red_face_updater",
-        types.SimpleNamespace(update_slider_red_face_data="slider-updater"),
+    monkeypatch.setattr(
+        "mold_cost.infrastructure.cad.legacy_feature_recognition_gateway.update_slider_red_face_data",
+        "slider-updater",
     )
 
     gateway = LegacyFeatureRecognitionGateway()

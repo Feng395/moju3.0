@@ -111,7 +111,7 @@ def batch_feature_recognition(
                             }
                         )
                         success_count += 1
-                        # 中文说明：滑块红面补偿仍沿用旧逻辑，但触发条件与入口已经收口到 src。
+                        # 中文说明：滑块红面补偿实现已迁到 src runtime，批处理这里只保留触发编排。
                         _maybe_update_slider_red_face(
                             subgraph_id=sg_id,
                             job_id=job_id,

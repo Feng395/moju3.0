@@ -13,6 +13,7 @@ from .feature_analysis_runtime import analyze_dxf_features
 from .feature_batch_runtime import batch_feature_recognition
 from .feature_persistence_runtime import get_subgraphs_from_db, save_features_to_db
 from .slider_red_face_lookup_runtime import apply_red_face_lookup, invalidate_cache
+from .slider_red_face_update_runtime import update_slider_red_face_data
 
 
 class LegacyFeatureRecognitionGateway:
@@ -24,7 +25,6 @@ class LegacyFeatureRecognitionGateway:
         subgraph_id: str | None = None,
         progress_callback=None,
     ) -> dict[str, Any]:
-        from scripts.feature_recognition.slider_red_face_updater import update_slider_red_face_data
         from scripts.minio_client import minio_client as legacy_minio_client
 
         # 中文说明：批处理编排已迁到 src runtime，这里只注入 legacy 侧仍在使用的 DB/MinIO 辅助。

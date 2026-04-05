@@ -11,7 +11,7 @@
 - pricing 主链已完成从旧 agent 与 `scripts.search/*`、`scripts.calculate/*` 的迁移。
 - API、worker、兼容 agent 的主调用路径已基本转向 `src/mold_cost`。
 - review 的 data loader、notifier、默认装配、确认执行链、src-first intent recognizer 与七类已迁入 handlers 已继续向 `src` 收口。
-- feature 单文件分析、批处理编排与 DB 读写 helper 已经迁入 `src/mold_cost`。
+- feature 单文件分析、批处理编排、DB 读写 helper 与滑块红色面后处理已经迁入 `src/mold_cost`。
 
 仍未完成的核心工作集中在：
 - review 修改链中的少量复杂 handlers 与复杂意图识别 fallback 仍经由 legacy adapter 驱动。
@@ -24,8 +24,10 @@
 ### 1. Feature 批处理与 DB helper 迁入 `src`
 - 新增 `src/mold_cost/infrastructure/cad/feature_batch_runtime.py`
 - 新增 `src/mold_cost/infrastructure/cad/feature_persistence_runtime.py`
+- 新增 `src/mold_cost/infrastructure/cad/slider_red_face_update_runtime.py`
 - `LegacyFeatureRecognitionGateway.batch_recognize()` 现在走 `src` 侧 batch runtime
 - `LegacyFeatureRecognitionGateway.get_subgraphs()` / `save_features()` 现在走 `src` 侧 persistence runtime
+- `LegacyFeatureRecognitionGateway.batch_recognize()` 现在直接注入 `src` 侧滑块红色面更新 runtime
 - 新 runtime 已负责：
   - 查询待处理子图
   - 批量下载 DXF
@@ -38,9 +40,10 @@
   - 初始化 `processing_cost_calculation_details`
   - 回写 `subgraphs.wire_process_note / wire_process`
 - 新增 `src/mold_cost/infrastructure/cad/slider_red_face_lookup_runtime.py`
+- 新增 `src/mold_cost/infrastructure/cad/slider_red_face_update_runtime.py`
 - `LegacyFeatureRecognitionGateway.save_features()` 与 `upload_feature_database()` 现在默认走 `src` 侧红面查表 runtime
-- 旧脚本目前仅保留：
-  - `slider_red_face_updater`
+- `LegacyFeatureRecognitionGateway.batch_recognize()` 现在默认注入 `src` 侧红面写回 runtime
+- `scripts/feature_recognition/slider_red_face_updater.py` 已退化为兼容壳
 
 ### 2. Review 确认执行器从 `ConfirmHandler` 摘除
 - 新增 `src/mold_cost/infrastructure/review/pending_action_store.py`
@@ -121,6 +124,7 @@
 - `feature_analysis_runtime.py` 已接管 DXF 单文件分析 orchestration
 - `feature_persistence_runtime.py` 已接管 feature DB 查询与落库 helper
 - `slider_red_face_lookup_runtime.py` 已接管滑块红色面查表与缓存失效逻辑
+- `slider_red_face_update_runtime.py` 已接管 `.x_t` 下载、NX 红色面提取与 `features.metadata` 写回
 - `scripts/feature_recognition/__init__.py` 已改为惰性导出，避免重型导入副作用
 
 ## 当前剩余高优先级
@@ -139,11 +143,9 @@
 - 下一步应升级为可跨实例恢复的 backend
 
 ### R6 CAD / Feature 算法本体迁移
-- feature 剩余：
-  - `slider_red_face_updater`
 - CAD 剩余：
   - `scripts.cad_chaitu.main.chaitu_process`
-  - 相关 storage / converter / analyzer 主流程编排
+  - `analysis_system` / `analyzer` / `MaterialLineIntegrator` 等实现本体
 
 ### R7 Golden 样本扩展
 - 现有基线可用，但样本数量仍偏少
@@ -154,4 +156,4 @@
 
 ## 当前回归基线
 - `pytest tests/unit tests/integration tests/golden -q`
-- 结果：`182 passed`
+- 结果：`185 passed`
