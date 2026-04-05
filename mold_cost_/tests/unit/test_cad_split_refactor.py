@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import importlib
+import sys
 
 from refactor_bootstrap import ensure_src_path
 
@@ -137,3 +139,13 @@ def test_legacy_block_analyzer_wrapper_points_to_src_runtime():
         content = file.read()
 
     assert "from mold_cost.infrastructure.cad.block_analyzer import OptimizedCADBlockAnalyzer" in content
+
+
+def test_legacy_cad_package_init_is_lazy():
+    sys.modules.pop("scripts.cad_chaitu", None)
+    sys.modules.pop("scripts.cad_chaitu.main", None)
+
+    package = importlib.import_module("scripts.cad_chaitu")
+
+    assert "scripts.cad_chaitu.main" not in sys.modules
+    assert hasattr(package, "__getattr__")

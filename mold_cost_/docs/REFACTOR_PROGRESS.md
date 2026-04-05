@@ -78,6 +78,7 @@
 - `src/mold_cost/infrastructure/cad/block_analyzer.py` 已承接 `OptimizedCADBlockAnalyzer` 分析器主体，`scripts/cad_chaitu/block_analyzer.py` 已退化为兼容壳
 - `src/mold_cost/infrastructure/cad/number_extractor.py` 已承接图纸编号提取本体，`scripts/cad_chaitu/number_extractor.py` 已退化为兼容壳
 - `src/mold_cost/infrastructure/cad/text_processor.py` 与 `cutting_detector.py` 已承接深层 analyzer helper，本地 `scripts/cad_chaitu/text_processor.py`、`cutting_detector.py` 已退化为兼容壳
+- `scripts/cad_chaitu/__init__.py` 已改为惰性导出，不再在包导入阶段自动初始化 `main` / `init_managers`
 - `src/mold_cost/infrastructure/db/cad_pool.py` 已改为惰性桥接，避免模块导入阶段直接触发 `scripts.cad_chaitu.database`
 - 已补 `tests/unit/test_cad_split_refactor.py`、`test_cad_analysis_runtime.py`、`test_cad_source_runtime.py`、`test_cad_prepare_runtime.py`、`test_cad_region_runtime.py`、`test_cad_material_line_runtime.py`、`test_cad_process_runtime.py`、`test_cad_upload_runtime.py`、`test_cad_split_persistence_runtime.py`、`test_cad_xt_export_runtime.py` 锁定 CAD split runtime/gateway、子图识别/导出编排、来源解析、输入准备、子图编号编排、板料线后处理、主流程编排、上传与持久化边界
 
@@ -163,8 +164,9 @@
 - 需要补不同零件类型、工艺组合和价格分支
 
 ### R8 兼容入口持续清理
+- `scripts/cad_chaitu/__init__.py` 已去掉包级初始化副作用
 - 仍有少量兼容入口与诊断脚本可继续压缩
 
 ## 当前回归基线
 - `pytest tests/unit tests/integration tests/golden -q`
-- 结果：`210 passed, 1 skipped`
+- 结果：`211 passed, 1 skipped`

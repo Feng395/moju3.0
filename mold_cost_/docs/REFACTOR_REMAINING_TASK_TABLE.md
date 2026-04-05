@@ -19,7 +19,7 @@
 | R5 | P1 | workflow durable backend 共享化 | 收尾中 | 已共享文件型 store，并新增可按配置启用的 SQLite 共享 backend；默认兼容模式仍保留文件型 |
 | R6 | P1 | CAD / feature 算法本体迁移 | 收尾中 | feature 分析、batch 编排、持久化、红面查表与红面写回入口已迁出，CAD split runtime、主流程编排、子图识别/导出编排、输入源解析、输入准备、子图编号编排、板料线后处理、板料线算法本体、`CADAnalysisSystem` 本体、`OptimizedCADBlockAnalyzer` 本体、图纸编号提取本体、deep analyzer helper、`.x_t` 导出准备、PRT 组件匹配与 Parasolid 导出、上传与结果持久化边界已立，算法本体层面已基本收口，剩余转入少量兼容入口清理 |
 | R7 | P2 | golden 样本扩展 | 收尾中 | 基线已稳定，但覆盖面仍偏窄 |
-| R8 | P2 | 兼容入口与诊断脚本清理 | 收尾中 | 仍有少量兼容入口可继续压缩 |
+| R8 | P2 | 兼容入口与诊断脚本清理 | 收尾中 | `scripts/cad_chaitu/__init__.py` 已惰性化，仍有少量兼容入口可继续压缩 |
 
 ## 详细对照
 
@@ -30,7 +30,7 @@
 | R5 | job/review 使用统一共享 durable backend | `FileCheckpointStore` 已被 job/review 共用，且 `JobFileCheckpointStore` / `ReviewFileCheckpointStore` 已支持切到共享 SQLite backend，并通过 namespace 共用同一 checkpoint 数据库 | 默认兼容模式仍走文件型，生产默认值与部署方案尚待收口 | 评估是否切换 SQLite 为默认 backend，或继续接入外部共享存储 | 重启/跨进程后可从同一 backend 恢复相同 thread，且 job/review 命名空间互不污染 |
 | R6 | CAD/feature 主链不再依赖 `scripts/*` | `feature_analysis_runtime.py`、`feature_batch_runtime.py`、`feature_persistence_runtime.py`、`slider_red_face_lookup_runtime.py`、`slider_red_face_update_runtime.py`、`cad_split_runtime.py`、`cad_process_runtime.py`、`cad_analysis_runtime.py`、`cad_source_runtime.py`、`cad_prepare_runtime.py`、`cad_region_runtime.py`、`cad_material_line_runtime.py`、`cad_upload_runtime.py`、`cad_split_persistence_runtime.py`、`cad_xt_export_runtime.py`、`material_line_integrator.py`、`cad_system.py`、`block_analyzer.py`、`number_extractor.py`、`text_processor.py`、`cutting_detector.py` 已落地，且 `.x_t` 的 PRT 组件匹配与 Parasolid 导出实现已迁入 `src` | 少量 CAD compatibility shell 与 legacy storage/db glue 仍待继续压缩 | 将 CAD 算法本体收尾结果并入兼容入口清理清单，后续主要转向 R8 | `domain.cad` 与 `domain.features` 主链默认不再依赖 legacy 算法脚本本体 |
 | R7 | 增强 workflow/pricing golden 覆盖 | 已有稳定 baseline | 样本数量与分支覆盖不足 | 新增 2 到 3 组不同零件与工艺样本 | `tests/golden` 覆盖多零件、多工艺、多价格分支 |
-| R8 | 压缩兼容入口与诊断脚本 | 已清理一部分 worker / router / agent 包装 | 仍有可进一步删除的兼容壳 | 建立保留清单，逐步删除无效入口 | legacy 目录仅保留明确仍需的兼容入口 |
+| R8 | 压缩兼容入口与诊断脚本 | 已清理一部分 worker / router / agent 包装，且 `scripts/cad_chaitu/__init__.py` 已去掉导入即初始化副作用 | 仍有可进一步删除的兼容壳 | 建立保留清单，逐步删除无效入口 | legacy 目录仅保留明确仍需的兼容入口 |
 
 ## 建议执行顺序
 1. R3：继续拆 review recognizer / action handler 链
@@ -41,4 +41,4 @@
 
 ## 当前回归基线
 - `pytest tests/unit tests/integration tests/golden -q`
-- 结果：`210 passed, 1 skipped`
+- 结果：`211 passed, 1 skipped`
