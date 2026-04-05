@@ -300,6 +300,52 @@ async def test_src_review_intent_recognizer_handles_simple_execution_intents_wit
 
 
 @pytest.mark.asyncio
+async def test_src_review_intent_recognizer_extracts_template_keyword_for_price_calculation():
+    module = importlib.import_module("mold_cost.infrastructure.review.intent_recognizer_runtime")
+
+    class _ExplodingFallbackRecognizer:
+        async def recognize(self, *args, **kwargs):
+            raise AssertionError("fallback should not be used for template price-calculation rule")
+
+        async def close(self):
+            return None
+
+    recognizer = module.SrcReviewIntentRecognizer(fallback_recognizer=_ExplodingFallbackRecognizer())
+    result = await recognizer.recognize(
+        "单独把模板计算一下",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_TMP-01"}]}},
+        job_id="job-13b",
+        db_session="db",
+    )
+
+    assert result.intent_type == "PRICE_CALCULATION"
+    assert result.parameters == {"keyword": "模板"}
+
+
+@pytest.mark.asyncio
+async def test_src_review_intent_recognizer_extracts_template_keyword_for_feature_recognition():
+    module = importlib.import_module("mold_cost.infrastructure.review.intent_recognizer_runtime")
+
+    class _ExplodingFallbackRecognizer:
+        async def recognize(self, *args, **kwargs):
+            raise AssertionError("fallback should not be used for template feature-recognition rule")
+
+        async def close(self):
+            return None
+
+    recognizer = module.SrcReviewIntentRecognizer(fallback_recognizer=_ExplodingFallbackRecognizer())
+    result = await recognizer.recognize(
+        "重新识别模板",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_TMP-01"}]}},
+        job_id="job-13c",
+        db_session="db",
+    )
+
+    assert result.intent_type == "FEATURE_RECOGNITION"
+    assert result.parameters == {"keyword": "模板"}
+
+
+@pytest.mark.asyncio
 async def test_src_review_intent_recognizer_handles_contextual_query_without_legacy():
     module = importlib.import_module("mold_cost.infrastructure.review.intent_recognizer_runtime")
 

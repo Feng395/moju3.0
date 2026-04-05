@@ -41,4 +41,4 @@
 
 ## 当前回归基线
 - `pytest tests/unit tests/integration tests/golden -q`
-- 结果：`191 passed`
+- 结果：`192 passed`

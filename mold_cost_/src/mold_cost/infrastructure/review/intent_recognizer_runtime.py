@@ -32,7 +32,8 @@ class SrcReviewIntentRecognizer:
     _WEIGHT_PRICE_KEYWORDS = ("按重量计算", "重量计算", "模架按重量", "按重量算价格", "重量价格", "weight price", "weight calculation")
     _WEIGHT_PRICE_QUERY_KEYWORDS = tuple(INTENT_KEYWORDS[IntentType.WEIGHT_PRICE_QUERY])
     _GENERAL_CHAT_KEYWORDS = ("你好", "您好", "hello", "hi", "帮助", "帮我", "怎么用", "能做什么", "你是谁")
-    _CONCEPT_KEYWORDS = ("模架", "冲头", "刀口入块")
+    _FEATURE_PRICE_CONCEPT_KEYWORDS = ("模板", "模架", "冲头", "刀口入块")
+    _WEIGHT_PRICE_CONCEPT_KEYWORDS = ("模架", "冲头", "刀口入块")
     _CONTEXT_REFERENCE_KEYWORDS = ("刚才", "刚刚", "上次", "之前", "刚才那个", "按刚才", "按上次", "延续", "继续")
     _CONTEXT_TARGET_KEYWORDS = ("这个零件", "那个零件", "该零件", "这个", "那个", "它", "这条", "那条")
     _CONTEXT_QUERY_KEYWORDS = ("判断逻辑", "逻辑", "规则", "依据", "怎么判", "怎么判断", "为什么", "按哪套")
@@ -86,6 +87,7 @@ class SrcReviewIntentRecognizer:
                 context=context,
                 intent_type=IntentType.WEIGHT_PRICE_CALCULATION.value,
                 confidence=0.9,
+                concept_keywords=self._WEIGHT_PRICE_CONCEPT_KEYWORDS,
             )
 
         contextual_intent = self._recognize_contextual_reference_intent(message=normalized, context=context)
@@ -101,6 +103,7 @@ class SrcReviewIntentRecognizer:
                 context=context,
                 intent_type=IntentType.FEATURE_RECOGNITION.value,
                 confidence=0.85,
+                concept_keywords=self._FEATURE_PRICE_CONCEPT_KEYWORDS,
             )
 
         if any(keyword in normalized for keyword in self._PRICE_KEYWORDS) or any(
@@ -111,6 +114,7 @@ class SrcReviewIntentRecognizer:
                 context=context,
                 intent_type=IntentType.PRICE_CALCULATION.value,
                 confidence=0.8,
+                concept_keywords=self._FEATURE_PRICE_CONCEPT_KEYWORDS,
             )
 
         if self._looks_like_data_modification(normalized):
@@ -140,8 +144,13 @@ class SrcReviewIntentRecognizer:
         context: dict[str, Any],
         intent_type: str,
         confidence: float,
+        concept_keywords: tuple[str, ...] = (),
     ) -> IntentResult:
-        parameters = self._extract_execution_parameters(message=message, context=context)
+        parameters = self._extract_execution_parameters(
+            message=message,
+            context=context,
+            concept_keywords=concept_keywords,
+        )
         return IntentResult(
             intent_type=intent_type,
             confidence=confidence,
@@ -150,12 +159,18 @@ class SrcReviewIntentRecognizer:
             reasoning="recognized by src execution-intent rule",
         )
 
-    def _extract_execution_parameters(self, *, message: str, context: dict[str, Any]) -> dict[str, Any]:
+    def _extract_execution_parameters(
+        self,
+        *,
+        message: str,
+        context: dict[str, Any],
+        concept_keywords: tuple[str, ...] = (),
+    ) -> dict[str, Any]:
         explicit_ids = self._extract_subgraph_ids(message=message, context=context)
         if explicit_ids:
             return {"subgraph_ids": explicit_ids}
 
-        for keyword in self._CONCEPT_KEYWORDS:
+        for keyword in concept_keywords:
             if keyword in message:
                 return {"keyword": keyword}
         return {"subgraph_ids": []}
