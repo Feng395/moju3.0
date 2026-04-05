@@ -94,9 +94,9 @@
   },
   "next_extract_candidates": [
     {
-      "module": "mold_cost.domain.pricing.calculators.price_wire_special",
-      "legacy_module": "scripts.calculate.price_wire_special",
-      "reason": "Wire special is still bridged and remains part of the pricing main path."
+      "module": "mold_cost.domain.pricing.calculators.judgment",
+      "legacy_module": "scripts.calculate.judgment",
+      "reason": "Judgment is still a bridge module and remains the lightest legacy calculator-style tail item."
     },
     {
       "module": "mold_cost.domain.pricing.calculators.price_wire_standard",
