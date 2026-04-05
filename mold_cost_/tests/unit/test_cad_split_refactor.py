@@ -113,3 +113,19 @@ def test_legacy_number_extractor_wrapper_points_to_src_runtime():
         "from mold_cost.infrastructure.cad.number_extractor import ProfessionalDrawingNumberExtractor"
         in content
     )
+
+
+def test_legacy_text_processor_wrapper_points_to_src_runtime():
+    wrapper_path = "d:\\workspace\\project\\python\\mold3.0\\mold_cost_\\scripts\\cad_chaitu\\text_processor.py"
+    with open(wrapper_path, "r", encoding="utf-8") as file:
+        content = file.read()
+
+    assert "from mold_cost.infrastructure.cad.text_processor import IntelligentTextProcessor" in content
+
+
+def test_legacy_cutting_detector_wrapper_points_to_src_runtime():
+    wrapper_path = "d:\\workspace\\project\\python\\mold3.0\\mold_cost_\\scripts\\cad_chaitu\\cutting_detector.py"
+    with open(wrapper_path, "r", encoding="utf-8") as file:
+        content = file.read()
+
+    assert "from mold_cost.infrastructure.cad.cutting_detector import RelaxedCuttingDetector" in content
