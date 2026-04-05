@@ -827,7 +827,7 @@ LangGraph 节点只做状态推进，不重写你现有 CAD/计价算法。
 - `domain.review.services.review_change_applier` 已通过 infrastructure adapter 去掉对 `agents.action_handlers`、`agents.confirm_handler` 的直连；review 侧剩余 legacy helper 进一步收敛到 `review_data_loader`、`review_notifier` 与共享 `OpResult` 契约
 - `domain.cad` 与 `domain.features` 已形成更稳定的服务契约，API / workflow / worker 已开始统一面向服务结果；算法本体仍主要位于 `scripts/*`
 - pricing / process matcher 主链和 monitor 脚本上的显式 `scripts/* -> api_gateway.*` 反向依赖已基本清理；`pricing_service.calculate` 与 `pricing_service.update_job_total_cost` 都已下沉到 `src/mold_cost`，剩余 legacy 耦合进一步收敛到 review loader/notifier helper、`agents/__init__.py` 的 pricing agent 工厂选择以及 MCP / agent 兼容外壳
-- 当前回归基线更新为：`pytest tests/unit tests/integration tests/golden -q` => `118 passed`
+- 当前回归基线更新为：`pytest tests/unit tests/integration tests/golden -q` => `123 passed`
 
 ## 下一轮建议
 
@@ -851,7 +851,7 @@ LangGraph 节点只做状态推进，不重写你现有 CAD/计价算法。
 
 阶段结果：
 - `pricing_service` 已不再依赖 `PricingAgent` 作为运行时桥接。
-- `PricingAgentLocal` 已从“兼容编排壳”缩减为“薄包装器”。
+- `PricingAgent` 与 `PricingAgentLocal` 都已缩减为面向 `pricing_service` 的兼容薄包装器。
 - MCP pricing 路由仍是剩余最大的兼容层，但 `update_job_total_cost_only` 这条路径已经完全改走 `src/mold_cost`。
 
 当前回归基线：
