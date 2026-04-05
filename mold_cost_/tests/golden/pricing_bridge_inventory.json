@@ -96,17 +96,17 @@
     {
       "module": "mold_cost.domain.pricing.calculators.price_water_mill_plate",
       "legacy_module": "scripts.calculate.price_water_mill_plate",
-      "reason": "Water mill plate cost is still a bridge module and remains part of the remaining water-mill tail cleanup."
+      "reason": "Water mill plate still carries the remaining DB-backed extraction surface and is a useful tail cleanup target."
     },
     {
-      "module": "mold_cost.domain.pricing.calculators.price_water_mill_thread_ends",
-      "legacy_module": "scripts.calculate.price_water_mill_thread_ends",
-      "reason": "Water mill thread ends cost is still a bridge module and remains part of the calculator tail cleanup."
+      "module": "mold_cost.domain.pricing.calculators.price_water_mill_hanging_table",
+      "legacy_module": "scripts.calculate.price_water_mill_hanging_table",
+      "reason": "Water mill hanging table still uses the legacy DB-backed extraction shape and stays adjacent to the remaining tail work."
     },
     {
       "module": "mold_cost.domain.pricing.calculators.price_water_mill_oil_tank",
       "legacy_module": "scripts.calculate.price_water_mill_oil_tank",
-      "reason": "Water mill oil tank is now the nearest adjacent extracted sibling and remains a useful comparison point for the remaining tail modules."
+      "reason": "Water mill oil tank remains part of the DB-backed water mill tail and is adjacent to the remaining extraction work."
     }
   ],
   "bridge_assertions": {
