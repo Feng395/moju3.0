@@ -12,13 +12,19 @@ from shared.timezone_utils import now_shanghai
 from ....application.workflows.review_state import ReviewState
 from ....core.logging import get_logger
 from ....infrastructure.db.repositories.review_repository_adapter import LegacyReviewRepositoryAdapter
-from ...review.ports import ReviewChangeApplier, ReviewStateStore
+from ...review.ports import (
+    ReviewActionHandlerRegistry,
+    ReviewChangeApplier,
+    ReviewConfirmationExecutor,
+    ReviewIntentRecognizerFactory,
+    ReviewStateStore,
+)
 
 logger = get_logger(__name__)
 
 
 class InteractionAgentReviewChangeApplier(ReviewChangeApplier):
-    """Run review changes through existing handlers without routing back into InteractionAgent."""
+    """Run review changes through isolated legacy adapters."""
 
     def __init__(
         self,
@@ -26,11 +32,16 @@ class InteractionAgentReviewChangeApplier(ReviewChangeApplier):
         *,
         state_store: ReviewStateStore | None = None,
         review_repository: Any | None = None,
+        intent_recognizer_factory: ReviewIntentRecognizerFactory | None = None,
+        action_handler_registry: ReviewActionHandlerRegistry | None = None,
+        confirmation_executor: ReviewConfirmationExecutor | None = None,
     ):
-        # 中文注释：保留 agent_factory 兼容旧装配，但默认实现已不再依赖它。
         self._agent_factory = agent_factory
         self._state_store = state_store
         self._review_repo = review_repository
+        self._intent_recognizer_factory = intent_recognizer_factory
+        self._action_handler_registry = action_handler_registry
+        self._confirmation_executor = confirmation_executor
 
     @property
     def review_repo(self):
@@ -46,23 +57,17 @@ class InteractionAgentReviewChangeApplier(ReviewChangeApplier):
         user_id: str,
         db_session,
     ) -> tuple[ReviewState, OpResult]:
-        from agents.action_handlers.base_handler import ActionHandlerFactory
-        from agents.intent_recognizer import IntentRecognizer
-
-        self._ensure_handlers_initialized()
-        recognizer = IntentRecognizer(
-            use_llm=self._env_flag("USE_LLM", default=False),
-            use_chat_history=self._env_flag("USE_CHAT_HISTORY", default=True),
-        )
+        registry = self._get_action_handler_registry()
+        registry.ensure_initialized()
+        recognizer = self._get_intent_recognizer_factory().create()
         try:
-            # 中文注释：直接在 review 领域服务里完成意图识别和 handler 分发。
             intent_result = await recognizer.recognize(
                 modification_text,
                 state.raw_data,
                 job_id=state.job_id,
                 db_session=db_session,
             )
-            handler = ActionHandlerFactory.get_handler(intent_result.intent_type)
+            handler = registry.get_handler(intent_result.intent_type)
             if handler is None:
                 return state, OpResult(
                     status="error",
@@ -87,7 +92,6 @@ class InteractionAgentReviewChangeApplier(ReviewChangeApplier):
             return state, OpResult(status="error", message=action_result.message)
 
         if action_result.requires_confirmation:
-            # 中文注释：需要确认时，把 handler 产出的临时数据写回 review state。
             modified_data = (action_result.data or {}).get("modified_data")
             modified_display_view = (action_result.data or {}).get("display_view")
             if modified_data is not None:
@@ -128,8 +132,6 @@ class InteractionAgentReviewChangeApplier(ReviewChangeApplier):
         user_id: str,
         db_session,
     ) -> tuple[ReviewState, OpResult]:
-        from agents.confirm_handler import ConfirmHandler
-
         current_data = await self.review_repo.get_all_review_data(db_session, state.job_id)
         current_version = self._get_state_store().calculate_data_version(current_data)
         conflicts = self._collect_version_conflicts(state.data_version, current_version)
@@ -140,7 +142,7 @@ class InteractionAgentReviewChangeApplier(ReviewChangeApplier):
                 data={"conflicts": conflicts},
             )
 
-        result = await ConfirmHandler().handle_confirmation(
+        result = await self._get_confirmation_executor().handle_confirmation(
             job_id=state.job_id,
             user_id=user_id,
             db_session=db_session,
@@ -148,7 +150,6 @@ class InteractionAgentReviewChangeApplier(ReviewChangeApplier):
         if result.get("status") == "error":
             return state, OpResult(status="error", message=result.get("message", "确认修改失败"))
 
-        # 中文注释：确认后不释放 review session，只把 state 恢复到可继续修改的 reviewing 态。
         state.last_confirmed_at = now_shanghai().isoformat()
         state.confirm_count += 1
         state.modifications = []
@@ -172,14 +173,32 @@ class InteractionAgentReviewChangeApplier(ReviewChangeApplier):
             self._state_store = RedisReviewStateStore()
         return self._state_store
 
-    @staticmethod
-    def _env_flag(name: str, *, default: bool) -> bool:
-        import os
+    def _get_intent_recognizer_factory(self) -> ReviewIntentRecognizerFactory:
+        if self._intent_recognizer_factory is None:
+            from ....infrastructure.review.legacy_review_handler_adapter import (
+                LegacyReviewIntentRecognizerFactory,
+            )
 
-        value = os.getenv(name)
-        if value is None:
-            return default
-        return value.lower() == "true"
+            self._intent_recognizer_factory = LegacyReviewIntentRecognizerFactory()
+        return self._intent_recognizer_factory
+
+    def _get_action_handler_registry(self) -> ReviewActionHandlerRegistry:
+        if self._action_handler_registry is None:
+            from ....infrastructure.review.legacy_review_handler_adapter import (
+                LegacyReviewActionHandlerRegistry,
+            )
+
+            self._action_handler_registry = LegacyReviewActionHandlerRegistry()
+        return self._action_handler_registry
+
+    def _get_confirmation_executor(self) -> ReviewConfirmationExecutor:
+        if self._confirmation_executor is None:
+            from ....infrastructure.review.legacy_review_handler_adapter import (
+                LegacyReviewConfirmationExecutor,
+            )
+
+            self._confirmation_executor = LegacyReviewConfirmationExecutor()
+        return self._confirmation_executor
 
     @staticmethod
     def _collect_version_conflicts(
@@ -199,10 +218,3 @@ class InteractionAgentReviewChangeApplier(ReviewChangeApplier):
                     }
                 )
         return conflicts
-
-    @staticmethod
-    def _ensure_handlers_initialized() -> None:
-        from agents.action_handlers.base_handler import ActionHandlerFactory
-
-        if ActionHandlerFactory.get_handler("DATA_MODIFICATION") is None:
-            ActionHandlerFactory.initialize_handlers()

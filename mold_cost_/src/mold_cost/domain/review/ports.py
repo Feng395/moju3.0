@@ -93,6 +93,46 @@ class ReviewChatExecutionAdapter(Protocol):
     ) -> AsyncIterator[str]: ...
 
 
+class ReviewIntentRecognizer(Protocol):
+    """Recognize review-side user intent."""
+
+    async def recognize(
+        self,
+        message: str,
+        context: dict[str, Any],
+        job_id: str | None = None,
+        db_session=None,
+    ) -> Any: ...
+
+    async def close(self) -> None: ...
+
+
+class ReviewIntentRecognizerFactory(Protocol):
+    """Build recognizers without leaking legacy imports into domain code."""
+
+    def create(self) -> ReviewIntentRecognizer: ...
+
+
+class ReviewActionHandlerRegistry(Protocol):
+    """Resolve action handlers by intent type."""
+
+    def ensure_initialized(self) -> None: ...
+
+    def get_handler(self, intent_type: str) -> Any: ...
+
+
+class ReviewConfirmationExecutor(Protocol):
+    """Execute confirmation side effects for pending review actions."""
+
+    async def handle_confirmation(
+        self,
+        *,
+        job_id: str,
+        user_id: str,
+        db_session,
+    ) -> dict[str, Any]: ...
+
+
 class ReviewChangeApplier(Protocol):
     """Apply review changes and confirmations."""
 

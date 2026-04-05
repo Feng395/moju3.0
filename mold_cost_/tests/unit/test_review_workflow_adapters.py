@@ -60,12 +60,11 @@ async def test_review_data_loader_uses_infra_adapter_by_default(monkeypatch):
 @pytest.mark.asyncio
 async def test_review_change_applier_confirm_uses_infra_adapter_by_default(monkeypatch):
     module = importlib.import_module("mold_cost.domain.review.services.review_change_applier")
-    confirm_module = importlib.import_module("agents.confirm_handler")
 
     fake_repo = _FakeReviewRepository()
     fake_state_store = _FakeStateStore()
 
-    class _FakeConfirmHandler:
+    class _FakeConfirmationExecutor:
         async def handle_confirmation(self, *, job_id: str, user_id: str, db_session):
             return {
                 "status": "ok",
@@ -74,9 +73,11 @@ async def test_review_change_applier_confirm_uses_infra_adapter_by_default(monke
             }
 
     monkeypatch.setattr(module, "LegacyReviewRepositoryAdapter", lambda: fake_repo)
-    monkeypatch.setattr(confirm_module, "ConfirmHandler", _FakeConfirmHandler)
 
-    applier = module.InteractionAgentReviewChangeApplier(state_store=fake_state_store)
+    applier = module.InteractionAgentReviewChangeApplier(
+        state_store=fake_state_store,
+        confirmation_executor=_FakeConfirmationExecutor(),
+    )
     state = ReviewState(
         job_id="job-2",
         raw_data={
@@ -105,6 +106,106 @@ async def test_review_change_applier_confirm_uses_infra_adapter_by_default(monke
     assert result.status == "ok"
     assert updated_state.confirm_count == 1
     assert updated_state.modifications == []
+    assert fake_state_store.saved_states
+
+
+@pytest.mark.asyncio
+async def test_review_change_applier_modification_uses_adapter_collaborators(monkeypatch):
+    module = importlib.import_module("mold_cost.domain.review.services.review_change_applier")
+
+    fake_repo = _FakeReviewRepository()
+    fake_state_store = _FakeStateStore()
+    modified_payload = {
+        "features": [{"feature_id": "f-1"}],
+        "job_price_snapshots": [{"snapshot_id": 1}],
+        "subgraphs": [{"subgraph_id": "sg-1", "material": "S136"}],
+        "processing_cost_calculation_details": [{"detail_id": "d-1"}],
+    }
+
+    class _FakeIntentResult:
+        intent_type = "DATA_MODIFICATION"
+
+    class _FakeRecognizer:
+        async def recognize(self, message, context, job_id=None, db_session=None):
+            assert message == "修改材质"
+            assert job_id == "job-3"
+            assert db_session == "db"
+            return _FakeIntentResult()
+
+        async def close(self):
+            return None
+
+    class _FakeRecognizerFactory:
+        def create(self):
+            return _FakeRecognizer()
+
+    class _FakeActionResult:
+        status = "ok"
+        message = "pending confirm"
+        requires_confirmation = True
+        data = {
+            "modified_data": modified_payload,
+            "display_view": [{"label": "updated"}],
+            "parsed_changes": [{"field": "material"}],
+            "modification_id": "m-2",
+        }
+
+    class _FakeHandler:
+        async def handle(self, intent_result, job_id, context, db_session):
+            assert intent_result.intent_type == "DATA_MODIFICATION"
+            assert job_id == "job-3"
+            assert context["user_id"] == "u-1"
+            assert db_session == "db"
+            return _FakeActionResult()
+
+    class _FakeRegistry:
+        def ensure_initialized(self):
+            return None
+
+        def get_handler(self, intent_type: str):
+            assert intent_type == "DATA_MODIFICATION"
+            return _FakeHandler()
+
+    monkeypatch.setattr(module, "LegacyReviewRepositoryAdapter", lambda: fake_repo)
+
+    applier = module.InteractionAgentReviewChangeApplier(
+        state_store=fake_state_store,
+        review_repository=fake_repo,
+        intent_recognizer_factory=_FakeRecognizerFactory(),
+        action_handler_registry=_FakeRegistry(),
+    )
+    state = ReviewState(
+        job_id="job-3",
+        raw_data={
+            "features": [{"feature_id": "f-1"}],
+            "job_price_snapshots": [{"snapshot_id": 1}],
+            "subgraphs": [{"subgraph_id": "sg-1"}],
+            "processing_cost_calculation_details": [{"detail_id": "d-1"}],
+        },
+        data_version={
+            "features:f-1": "hash-1",
+            "job_price_snapshots:1": "hash-2",
+            "subgraphs:sg-1": "hash-3",
+            "processing_cost_calculation_details:d-1": "hash-4",
+        },
+        modifications=[],
+        status="reviewing",
+    )
+
+    updated_state, result = await applier.handle_modification(
+        state=state,
+        modification_text="修改材质",
+        user_id="u-1",
+        db_session="db",
+    )
+
+    assert fake_repo.load_calls == [("db", "job-3")]
+    assert result.status == "ok"
+    assert result.data["requires_confirmation"] is True
+    assert updated_state.raw_data == modified_payload
+    assert updated_state.display_view == [{"label": "updated"}]
+    assert updated_state.status == "awaiting_confirmation"
+    assert updated_state.modifications[0]["id"] == "m-2"
     assert fake_state_store.saved_states
 
 
