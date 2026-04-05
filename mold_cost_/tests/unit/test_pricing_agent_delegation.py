@@ -52,3 +52,21 @@ def test_pricing_agent_process_delegates_to_pricing_service(monkeypatch):
     assert captured["subgraph_ids"] == ["sg-2"]
     assert captured["_progress_publisher"] == "publisher-mcp"
 
+def test_get_pricing_agent_returns_cached_local_wrapper(monkeypatch):
+    import agents
+
+    monkeypatch.setattr(agents, "_pricing_agent", None)
+    monkeypatch.setattr(agents, "get_progress_publisher", lambda: "publisher-factory")
+    monkeypatch.setattr(
+        agents,
+        "check_mcp_health",
+        lambda: (_ for _ in ()).throw(AssertionError("pricing factory should not probe MCP")),
+    )
+
+    agent_one = agents.get_pricing_agent()
+    agent_two = agents.get_pricing_agent()
+
+    assert agent_one is agent_two
+    assert agent_one.__class__.__name__ == "PricingAgentLocal"
+    assert agent_one.progress_publisher == "publisher-factory"
+

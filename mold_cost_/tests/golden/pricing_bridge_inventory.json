@@ -99,7 +99,7 @@
       "module": "agents",
       "source_path": "agents/__init__.py",
       "pattern": "def get_pricing_agent",
-      "reason": "The agent factory still owns the runtime mode switch between the MCP agent and the local compatibility wrapper."
+      "reason": "The pricing agent factory is now a compatibility singleton around pricing_service, but it remains a residual entrypoint for legacy callers."
     },
     {
       "module": "agents.pricing_agent_local",
@@ -133,4 +133,3 @@
     }
   ]
 }
-
