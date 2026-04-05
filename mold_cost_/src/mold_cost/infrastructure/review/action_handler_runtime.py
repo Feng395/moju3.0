@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from ...core.logging import get_logger
+from .data_modification_review_handler import DataModificationReviewActionHandler
 from .review_action_handlers import (
     FeatureRecognitionReviewActionHandler,
     GeneralChatReviewActionHandler,
@@ -35,6 +36,7 @@ class SrcReviewActionHandlerRegistry:
         if not hasattr(cls, "_cached_src_handlers"):
             # 中文注释：这三类 intent 只负责准备待确认动作，已经可以完全脱离旧 handler 工厂。
             cls._cached_src_handlers = {
+                "DATA_MODIFICATION": DataModificationReviewActionHandler(),
                 "FEATURE_RECOGNITION": FeatureRecognitionReviewActionHandler(),
                 "GENERAL_CHAT": GeneralChatReviewActionHandler(),
                 "PRICE_CALCULATION": PriceCalculationReviewActionHandler(),
@@ -51,15 +53,11 @@ class SrcReviewActionHandlerRegistry:
     @classmethod
     def _legacy_handler_fallbacks(cls) -> dict[str, Any]:
         if not hasattr(cls, "_cached_legacy_handlers"):
-            from agents.action_handlers.data_modification_handler import DataModificationHandler
-
             # 中文注释：剩余复杂交互类 handler 先保留旧实现，但实例化与映射关系改由 src 控制。
-            cls._cached_legacy_handlers = {
-                "DATA_MODIFICATION": DataModificationHandler(),
-            }
+            cls._cached_legacy_handlers = {}
             logger.info(
                 "Initialized fallback review handlers: intents=%s",
-                ", ".join(sorted(cls._cached_legacy_handlers.keys())),
+                ", ".join(sorted(cls._cached_legacy_handlers.keys())) or "<none>",
             )
         return cls._cached_legacy_handlers
 

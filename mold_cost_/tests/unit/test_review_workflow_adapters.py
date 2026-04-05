@@ -352,6 +352,7 @@ def test_src_review_action_handler_registry_keeps_simple_handlers_in_src():
     registry = module.SrcReviewActionHandlerRegistry()
     registry.ensure_initialized()
 
+    data_handler = registry.get_handler("DATA_MODIFICATION")
     feature_handler = registry.get_handler("FEATURE_RECOGNITION")
     chat_handler = registry.get_handler("GENERAL_CHAT")
     price_handler = registry.get_handler("PRICE_CALCULATION")
@@ -359,6 +360,7 @@ def test_src_review_action_handler_registry_keeps_simple_handlers_in_src():
     weight_handler = registry.get_handler("WEIGHT_PRICE_CALCULATION")
     weight_query_handler = registry.get_handler("WEIGHT_PRICE_QUERY")
 
+    assert data_handler.__class__.__name__ == "DataModificationReviewActionHandler"
     assert feature_handler.__class__.__name__ == "FeatureRecognitionReviewActionHandler"
     assert chat_handler.__class__.__name__ == "GeneralChatReviewActionHandler"
     assert price_handler.__class__.__name__ == "PriceCalculationReviewActionHandler"
@@ -371,9 +373,8 @@ def test_src_review_action_handler_registry_falls_back_to_legacy_for_complex_int
     module = importlib.import_module("mold_cost.infrastructure.review.action_handler_runtime")
 
     registry = module.SrcReviewActionHandlerRegistry()
-    data_handler = registry.get_handler("DATA_MODIFICATION")
 
-    assert data_handler.__class__.__name__ == "DataModificationHandler"
+    assert registry.get_handler("UNKNOWN") is None
     assert "ActionHandlerFactory" not in open(module.__file__, "r", encoding="utf-8").read()
 
 
@@ -482,6 +483,138 @@ async def test_src_review_general_chat_handler_uses_src_chat_executor():
     assert result.status == "ok"
     assert result.requires_confirmation is False
     assert result.message == "可以继续审核、识别特征和重新计价。"
+
+
+@pytest.mark.asyncio
+async def test_src_data_modification_handler_filters_to_recent_subgraph_and_saves_pending_action():
+    module = importlib.import_module("mold_cost.infrastructure.review.data_modification_review_handler")
+
+    class _FakeNlpParser:
+        async def parse(self, message: str, context: dict):
+            assert message == "材质改为 toolox33"
+            assert context["db_session"] == "db"
+            return [
+                {"table": "subgraphs", "id": "sg-up", "field": "material", "value": "toolox33"},
+                {"table": "subgraphs", "id": "sg-die", "field": "material", "value": "toolox33"},
+            ]
+
+    class _FakeChatHistoryRepository:
+        def __init__(self):
+            self.calls: list[tuple[object, str, int]] = []
+
+        async def get_recent_session_history(self, db_session, session_id: str, limit: int = 10):
+            self.calls.append((db_session, session_id, limit))
+            return [
+                {"role": "assistant", "content": "上一轮我们在看 DIE-03 的材质。"},
+                {"role": "user", "content": "它改一下"},
+            ]
+
+    class _FakeValidator:
+        @staticmethod
+        def validate_changes(changes, raw_data):
+            assert len(changes) == 1
+            assert changes[0]["id"] == "sg-die"
+            assert raw_data["subgraphs"][0]["job_id"] == "job-19"
+            return SimpleNamespace(is_valid=True, error_message="", warnings=[])
+
+    class _FakeDisplayViewBuilder:
+        @staticmethod
+        def build_display_view(raw_data):
+            return [{"rows": len(raw_data["subgraphs"])}]
+
+    class _FakePendingActionStore:
+        def __init__(self):
+            self.saved: list[tuple[str, dict, int]] = []
+
+        async def save(self, job_id: str, payload: dict, *, ex: int = 3600):
+            self.saved.append((job_id, payload, ex))
+
+    pending_store = _FakePendingActionStore()
+    history_repository = _FakeChatHistoryRepository()
+    handler = module.DataModificationReviewActionHandler(
+        pending_action_store=pending_store,
+        nlp_parser=_FakeNlpParser(),
+        chat_history_repository=history_repository,
+        validator=_FakeValidator(),
+        display_view_builder=_FakeDisplayViewBuilder(),
+        use_chat_history=True,
+    )
+
+    context = {
+        "user_id": "u-19",
+        "raw_data": {
+            "subgraphs": [
+                {"job_id": "job-19", "subgraph_id": "sg-up", "material": "P20"},
+                {"job_id": "job-19", "subgraph_id": "sg-die", "material": "NAK80"},
+            ]
+        },
+        "display_view": [
+            {"part_code": "UP-01", "_source": {"subgraph_id": "sg-up"}},
+            {"part_code": "DIE-03", "_source": {"subgraph_id": "sg-die"}},
+        ],
+    }
+
+    result = await handler.handle(
+        intent_result=SimpleNamespace(raw_message="材质改为 toolox33", parameters={}),
+        job_id="job-19",
+        context=context,
+        db_session="db",
+    )
+
+    assert history_repository.calls == [("db", "job-19", 10)]
+    assert result.status == "ok"
+    assert result.requires_confirmation is True
+    assert result.data["parsed_changes"] == [
+        {"table": "subgraphs", "id": "sg-die", "field": "material", "value": "toolox33"}
+    ]
+    assert result.data["modified_data"]["subgraphs"][1]["material"] == "T00L0X33"
+    assert pending_store.saved[0][1]["changes"] == result.data["parsed_changes"]
+
+
+@pytest.mark.asyncio
+async def test_src_data_modification_handler_keeps_explicit_batch_changes_without_history_filter():
+    module = importlib.import_module("mold_cost.infrastructure.review.data_modification_review_handler")
+
+    class _FakeNlpParser:
+        async def parse(self, message: str, context: dict):
+            return [{"table": "subgraphs", "id": "sg-1", "field": "material", "value": "S136"}]
+
+    class _FakeValidator:
+        @staticmethod
+        def validate_changes(changes, raw_data):
+            return SimpleNamespace(is_valid=True, error_message="", warnings=[])
+
+    class _FakeDisplayViewBuilder:
+        @staticmethod
+        def build_display_view(raw_data):
+            return raw_data["subgraphs"]
+
+    class _FakePendingActionStore:
+        async def save(self, job_id: str, payload: dict, *, ex: int = 3600):
+            return None
+
+    class _ExplodingChatHistoryRepository:
+        async def get_recent_session_history(self, db_session, session_id: str, limit: int = 10):
+            raise AssertionError("history should not be used when only one target is modified")
+
+    handler = module.DataModificationReviewActionHandler(
+        pending_action_store=_FakePendingActionStore(),
+        nlp_parser=_FakeNlpParser(),
+        chat_history_repository=_ExplodingChatHistoryRepository(),
+        validator=_FakeValidator(),
+        display_view_builder=_FakeDisplayViewBuilder(),
+        use_chat_history=True,
+    )
+
+    result = await handler.handle(
+        intent_result=SimpleNamespace(raw_message="sg-1 材质改为 S136", parameters={}),
+        job_id="job-20",
+        context={"raw_data": {"subgraphs": [{"job_id": "job-20", "subgraph_id": "sg-1", "material": "P20"}]}},
+        db_session="db",
+    )
+
+    assert result.status == "ok"
+    assert result.data["modified_data"]["subgraphs"][0]["material"] == "S136"
 
 
 @pytest.mark.asyncio
