@@ -300,32 +300,51 @@ async def test_src_review_intent_recognizer_handles_simple_execution_intents_wit
 
 
 @pytest.mark.asyncio
-async def test_src_review_intent_recognizer_falls_back_for_complex_intents():
+async def test_src_review_intent_recognizer_handles_contextual_query_without_legacy():
     module = importlib.import_module("mold_cost.infrastructure.review.intent_recognizer_runtime")
 
-    class _FallbackRecognizer:
-        def __init__(self):
-            self.calls: list[tuple[str, str, object]] = []
-
-        async def recognize(self, message, context, job_id=None, db_session=None):
-            self.calls.append((message, job_id, db_session))
-            return SimpleNamespace(intent_type="QUERY_DETAILS", confidence=0.66, parameters={"subgraph_id": "sg-1"})
+    class _ExplodingFallbackRecognizer:
+        async def recognize(self, *args, **kwargs):
+            raise AssertionError("fallback should not be used for contextual query rule")
 
         async def close(self):
             return None
 
-    fallback = _FallbackRecognizer()
-    recognizer = module.SrcReviewIntentRecognizer(fallback_recognizer=fallback)
+    recognizer = module.SrcReviewIntentRecognizer(fallback_recognizer=_ExplodingFallbackRecognizer())
 
     result = await recognizer.recognize(
         "继续按刚才那套判断逻辑处理这个零件",
-        {"raw_data": {"subgraphs": [{"subgraph_id": "sg-1"}]}},
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_DIE-03"}]}},
         job_id="job-14",
         db_session="db",
     )
 
     assert result.intent_type == "QUERY_DETAILS"
-    assert fallback.calls == [("继续按刚才那套判断逻辑处理这个零件", "job-14", "db")]
+    assert result.parameters == {}
+
+
+@pytest.mark.asyncio
+async def test_src_review_intent_recognizer_handles_contextual_data_modification_without_legacy():
+    module = importlib.import_module("mold_cost.infrastructure.review.intent_recognizer_runtime")
+
+    class _ExplodingFallbackRecognizer:
+        async def recognize(self, *args, **kwargs):
+            raise AssertionError("fallback should not be used for contextual data modification rule")
+
+        async def close(self):
+            return None
+
+    recognizer = module.SrcReviewIntentRecognizer(fallback_recognizer=_ExplodingFallbackRecognizer())
+
+    result = await recognizer.recognize(
+        "还是按刚才那个把这个零件的材质改一下",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_DIE-03"}]}},
+        job_id="job-14ctx",
+        db_session="db",
+    )
+
+    assert result.intent_type == "DATA_MODIFICATION"
+    assert result.parameters == {}
 
 
 @pytest.mark.asyncio
@@ -436,6 +455,70 @@ async def test_src_review_intent_recognizer_treats_single_letter_code_as_history
 
     assert result.intent_type == "QUERY_DETAILS"
     assert result.parameters == {"query_type": "wire"}
+
+
+@pytest.mark.asyncio
+async def test_src_review_intent_recognizer_handles_wire_base_and_auto_material_without_legacy():
+    module = importlib.import_module("mold_cost.infrastructure.review.intent_recognizer_runtime")
+
+    class _ExplodingFallbackRecognizer:
+        async def recognize(self, *args, **kwargs):
+            raise AssertionError("fallback should not be used for stable query-type rules")
+
+        async def close(self):
+            return None
+
+    recognizer = module.SrcReviewIntentRecognizer(fallback_recognizer=_ExplodingFallbackRecognizer())
+
+    wire_base_result = await recognizer.recognize(
+        "DIE-03 的线割基础费怎么算的？",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_DIE-03"}]}},
+        job_id="job-14e",
+        db_session="db",
+    )
+    auto_material_result = await recognizer.recognize(
+        "DIE-03 是自找料吗？",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_DIE-03"}]}},
+        job_id="job-14f",
+        db_session="db",
+    )
+
+    assert wire_base_result.intent_type == "QUERY_DETAILS"
+    assert wire_base_result.parameters == {"subgraph_id": "DIE-03", "query_type": "wire_base"}
+    assert auto_material_result.intent_type == "QUERY_DETAILS"
+    assert auto_material_result.parameters == {"subgraph_id": "DIE-03", "query_type": "add_auto_material"}
+
+
+@pytest.mark.asyncio
+async def test_src_review_intent_recognizer_handles_nc_base_and_standard_without_legacy():
+    module = importlib.import_module("mold_cost.infrastructure.review.intent_recognizer_runtime")
+
+    class _ExplodingFallbackRecognizer:
+        async def recognize(self, *args, **kwargs):
+            raise AssertionError("fallback should not be used for stable nc/standard rules")
+
+        async def close(self):
+            return None
+
+    recognizer = module.SrcReviewIntentRecognizer(fallback_recognizer=_ExplodingFallbackRecognizer())
+
+    nc_base_result = await recognizer.recognize(
+        "DIE-03 的NC基本时间是多少？",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_DIE-03"}]}},
+        job_id="job-14g",
+        db_session="db",
+    )
+    standard_result = await recognizer.recognize(
+        "DIE-03 的标准基本费怎么算的？",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_DIE-03"}]}},
+        job_id="job-14h",
+        db_session="db",
+    )
+
+    assert nc_base_result.intent_type == "QUERY_DETAILS"
+    assert nc_base_result.parameters == {"subgraph_id": "DIE-03", "query_type": "nc_base"}
+    assert standard_result.intent_type == "QUERY_DETAILS"
+    assert standard_result.parameters == {"subgraph_id": "DIE-03", "query_type": "standard"}
 
 
 def test_src_review_action_handler_registry_keeps_simple_handlers_in_src():

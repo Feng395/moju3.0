@@ -25,6 +25,7 @@ class SrcReviewIntentRecognizer:
 
     _VERIFICATION_KEYWORDS = ("对吗", "正确吗", "是否正确", "有问题吗", "是不是", "对不对")
     _DATA_MODIFICATION_KEYWORDS = ("改为", "修改为", "设置为", "改成", "换成", "变成", "调整为")
+    _DATA_MODIFICATION_ACTION_KEYWORDS = ("修改", "更改", "调整", "改一下", "改", "换", "设成", "设为")
     _FEATURE_KEYWORDS = ("特征识别", "识别特征", "重新识别", "跑特征", "重跑特征", "识别一下", "再识别", "识别")
     _PRICE_KEYWORDS = ("重新计算", "重算", "更新价格", "计价", "算一下", "calculate", "price")
     _QUERY_KEYWORDS = tuple(INTENT_KEYWORDS[IntentType.QUERY_DETAILS])
@@ -32,6 +33,9 @@ class SrcReviewIntentRecognizer:
     _WEIGHT_PRICE_QUERY_KEYWORDS = tuple(INTENT_KEYWORDS[IntentType.WEIGHT_PRICE_QUERY])
     _GENERAL_CHAT_KEYWORDS = ("你好", "您好", "hello", "hi", "帮助", "帮我", "怎么用", "能做什么", "你是谁")
     _CONCEPT_KEYWORDS = ("模架", "冲头", "刀口入块")
+    _CONTEXT_REFERENCE_KEYWORDS = ("刚才", "刚刚", "上次", "之前", "刚才那个", "按刚才", "按上次", "延续", "继续")
+    _CONTEXT_TARGET_KEYWORDS = ("这个零件", "那个零件", "该零件", "这个", "那个", "它", "这条", "那条")
+    _CONTEXT_QUERY_KEYWORDS = ("判断逻辑", "逻辑", "规则", "依据", "怎么判", "怎么判断", "为什么", "按哪套")
     _SINGLE_CODE_PATTERN = r"(?<![A-Z0-9])([LWMGKZ])(?![A-Z0-9])"
 
     def __init__(self, *, fallback_recognizer=None):
@@ -83,6 +87,10 @@ class SrcReviewIntentRecognizer:
                 intent_type=IntentType.WEIGHT_PRICE_CALCULATION.value,
                 confidence=0.9,
             )
+
+        contextual_intent = self._recognize_contextual_reference_intent(message=normalized, context=context)
+        if contextual_intent is not None:
+            return contextual_intent
 
         if self._looks_like_query_details(normalized, lowered):
             return self._build_query_intent(message=normalized, context=context, confidence=0.82)
@@ -214,10 +222,20 @@ class SrcReviewIntentRecognizer:
     def _extract_query_type(self, message: str) -> str | None:
         if any(keyword in message for keyword in ("线割总价", "线割总费用")):
             return "wire_total"
+        if any(keyword in message for keyword in ("线割基础", "基础线割", "线割基础费", "基础加工费")):
+            return "wire_base"
+        if any(keyword in message for keyword in ("线割特殊", "特殊线割", "特殊工艺费", "特殊加工费")):
+            return "wire_special"
         if "线割标准" in message:
             return "wire_standard"
+        if any(keyword in message for keyword in ("标准基本费", "标准费")):
+            return "standard"
+        if any(keyword in message for keyword in ("自找料", "自动找料")):
+            return "add_auto_material"
         if "牙孔" in message:
             return "tooth_hole_time"
+        if any(keyword in message for keyword in ("NC基本", "NC基础", "NC基准")):
+            return "nc_base"
         if any(keyword in message for keyword in ("NC开粗",)):
             return "nc_roughing"
         if any(keyword in message for keyword in ("NC精铣",)):
@@ -256,6 +274,69 @@ class SrcReviewIntentRecognizer:
                 keyword in message for keyword in ("价格", "特征", "重量", "修改", "材质", "多少", "为什么")
             )
         return False
+
+    def _recognize_contextual_reference_intent(
+        self,
+        *,
+        message: str,
+        context: dict[str, Any],
+    ) -> IntentResult | None:
+        if not self._looks_like_contextual_reference(message):
+            return None
+
+        if self._looks_like_contextual_data_modification(message):
+            return IntentResult(
+                intent_type=IntentType.DATA_MODIFICATION.value,
+                confidence=0.72,
+                parameters={},
+                raw_message=message,
+                reasoning="recognized by src contextual data-modification rule",
+            )
+
+        if any(keyword in message for keyword in self._FEATURE_KEYWORDS):
+            return self._build_execution_intent(
+                message=message,
+                context=context,
+                intent_type=IntentType.FEATURE_RECOGNITION.value,
+                confidence=0.74,
+            )
+
+        if any(keyword in message for keyword in self._PRICE_KEYWORDS):
+            return self._build_execution_intent(
+                message=message,
+                context=context,
+                intent_type=IntentType.PRICE_CALCULATION.value,
+                confidence=0.74,
+            )
+
+        if any(keyword in message for keyword in self._WEIGHT_PRICE_KEYWORDS):
+            return self._build_execution_intent(
+                message=message,
+                context=context,
+                intent_type=IntentType.WEIGHT_PRICE_CALCULATION.value,
+                confidence=0.74,
+            )
+
+        if self._looks_like_contextual_query(message):
+            return self._build_query_intent(message=message, context=context, confidence=0.7)
+        return None
+
+    def _looks_like_contextual_reference(self, message: str) -> bool:
+        return any(keyword in message for keyword in self._CONTEXT_REFERENCE_KEYWORDS) or any(
+            keyword in message for keyword in self._CONTEXT_TARGET_KEYWORDS
+        )
+
+    def _looks_like_contextual_data_modification(self, message: str) -> bool:
+        if any(keyword in message for keyword in self._DATA_MODIFICATION_KEYWORDS):
+            return True
+        return any(keyword in message for keyword in self._DATA_MODIFICATION_ACTION_KEYWORDS) and any(
+            token in message for token in ("材质", "长度", "宽度", "厚度", "数量", "热处理", "工艺", "备注")
+        )
+
+    def _looks_like_contextual_query(self, message: str) -> bool:
+        if any(keyword in message for keyword in self._CONTEXT_QUERY_KEYWORDS):
+            return True
+        return "处理" in message and any(keyword in message for keyword in self._CONTEXT_TARGET_KEYWORDS)
 
 
 class LegacyIntentRecognizerFactory:
