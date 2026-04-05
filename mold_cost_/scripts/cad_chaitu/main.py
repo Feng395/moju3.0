@@ -17,6 +17,11 @@ from loguru import logger
 import sys
 import ezdxf
 from mold_cost.infrastructure.cad.cad_prepare_runtime import prepare_dxf_input
+from mold_cost.infrastructure.cad.cad_region_runtime import (
+    build_batch_export_list,
+    collect_export_files,
+    resolve_region_infos,
+)
 from mold_cost.infrastructure.cad.cad_source_runtime import resolve_dwg_source
 from mold_cost.infrastructure.cad.cad_split_persistence_runtime import persist_split_results
 
@@ -452,83 +457,29 @@ async def chaitu_process(dwg_url: Optional[str], job_id: str, minio_client=None)
             
             # 步骤2: 在各个子图范围内识别编号和品名
             logger.info("步骤2: 识别各子图的编号、品名和编号...")
-            region_info_list = []
-            failed_recognition_count = 0
-            
-            # 用于跟踪已使用的 sub_code，处理重复
-            used_sub_codes = {}  # {base_code: count}
-            
-            for index, (region_id, region) in enumerate(all_regions, 1):
-                try:
-                    sub_code, part_name, part_code = analysis_system.analyzer.resolve_region_info(region_id, region)
-                    
-                    # 确保 part_name 有值
-                    if not part_name:
-                        part_name = "未识别"
-                    
-                    # 确保 part_code 有值
-                    if not part_code:
-                        part_code = region_id
-                    
-                    # 使用 part_code 作为 sub_code 的基础
-                    # 如果 sub_code 为空或是 region_id，使用 part_code
-                    if not sub_code or sub_code == region_id:
-                        base_code = part_code
-                    else:
-                        base_code = sub_code
-                    
-                    # 处理重复的 sub_code，添加后缀 A, B, C...
-                    if base_code in used_sub_codes:
-                        # 已经使用过，添加后缀
-                        count = used_sub_codes[base_code]
-                        suffix = chr(ord('A') + count)  # A, B, C, ...
-                        final_sub_code = f"{base_code}{suffix}"
-                        used_sub_codes[base_code] += 1
-                        logger.info(f"   检测到重复编号 {base_code}，添加后缀: {final_sub_code}")
-                    else:
-                        # 第一次使用
-                        final_sub_code = base_code
-                        used_sub_codes[base_code] = 1
-                    
-                    region_info_list.append({
-                        'region_id': region_id,
-                        'region': region,
-                        'sub_code': final_sub_code,
-                        'part_name': part_name,
-                        'part_code': part_code,
-                        'index': index
-                    })
-                    
-                except Exception as e:
-                    failed_recognition_count += 1
-                    logger.error(f"[{index}/{len(all_regions)}] ❌ 识别编号、品名和编号失败: {e}")
-                    import traceback
-                    logger.error(traceback.format_exc())
-                    continue
+            region_resolution = resolve_region_infos(
+                all_regions=all_regions,
+                resolver=analysis_system.analyzer.resolve_region_info,
+            )
+            region_info_list = region_resolution["region_info_list"]
+            failed_recognition_count = region_resolution["failed_recognition_count"]
             
             logger.info(f"✅ 编号、品名和编号识别完成，成功识别 {len(region_info_list)} 个子图，失败 {failed_recognition_count} 个")
             
             if not region_info_list:
                 return {"status": "error", "message": "所有子图的编号和品名识别失败"}
 
-            region_info_map = {info['sub_code']: info for info in region_info_list}
+            region_info_map = region_resolution["region_info_map"]
             
             # 步骤3: 智能选择导出策略
             logger.info("步骤3: 开始导出所有子图...")
             export_start = datetime.now()
             
             # 准备批量导出列表
-            batch_export_list = []
-            for info in region_info_list:
-                sub_code = info['sub_code']
-                region = info['region']
-                temp_output_dxf = os.path.join(temp_dir, f"output_{sub_code}.dxf")
-                
-                batch_export_list.append({
-                    'sub_code': sub_code,
-                    'region': region,
-                    'output_path': temp_output_dxf
-                })
+            batch_export_list = build_batch_export_list(
+                region_info_list=region_info_list,
+                temp_dir=temp_dir,
+            )
             
             # 使用并发方案导出（每个子图独立读取文件）
             max_workers = int(os.getenv('EXPORT_WORKERS', '5'))
@@ -542,27 +493,13 @@ async def chaitu_process(dwg_url: Optional[str], job_id: str, minio_client=None)
             )
             
             # 处理导出结果
-            export_files = []
-            failed_export_count = 0
-            for i, result in enumerate(export_results):
-                info = region_info_list[i]
-                sub_code = result['sub_code']
-                index = info['index']
-                part_name = info['part_name']
-                part_code = info.get('part_code')  # 获取 part_code
-                
-                if result['success']:
-                    export_files.append({
-                        'sub_code': sub_code,
-                        'part_name': part_name,
-                        'part_code': part_code,
-                        'local_path': result['output_path'],
-                        'minio_path': f"{minio_base_path}/{sub_code}.dxf",
-                        'index': index
-                    })
-                else:
-                    failed_export_count += 1
-                    logger.warning(f"⚠️ 导出失败 [{failed_export_count}]: {sub_code} - {result.get('error', '未知错误')}")
+            export_summary = collect_export_files(
+                region_info_list=region_info_list,
+                export_results=export_results,
+                minio_base_path=minio_base_path,
+            )
+            export_files = export_summary["export_files"]
+            failed_export_count = export_summary["failed_export_count"]
             
             export_time = (datetime.now() - export_start).total_seconds()
             logger.info(f"✅ 子图导出完成，成功导出 {len(export_files)} 个文件，失败 {failed_export_count} 个 (耗时: {export_time:.2f}s)")
