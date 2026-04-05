@@ -11,29 +11,35 @@
 - pricing 主链已完成从旧 agent 与 `scripts.search/*`、`scripts.calculate/*` 的迁移。
 - API、worker、兼容 agent 的主调用路径已基本转向 `src/mold_cost`。
 - review 的 data loader、notifier、默认装配、确认执行链、src-first intent recognizer 与七类已迁入 handlers 已继续向 `src` 收口。
-- feature 单文件分析与批处理编排入口已经迁入 `src/mold_cost`。
+- feature 单文件分析、批处理编排与 DB 读写 helper 已经迁入 `src/mold_cost`。
 
 仍未完成的核心工作集中在：
 - review 修改链中的少量复杂 handlers 与复杂意图识别 fallback 仍经由 legacy adapter 驱动。
 - durable backend 目前还是共享文件型实现，尚未升级为跨实例共享 backend。
-- CAD split 主流程与 feature 的 DB 读写辅助仍停留在 `scripts/*`。
+- CAD split 主流程与 feature/CAD 的少量辅助能力仍停留在 `scripts/*`。
 - golden 样本覆盖仍偏薄。
 
 ## 本轮新增进展
 
-### 1. Feature 批处理编排迁入 `src`
+### 1. Feature 批处理与 DB helper 迁入 `src`
 - 新增 `src/mold_cost/infrastructure/cad/feature_batch_runtime.py`
+- 新增 `src/mold_cost/infrastructure/cad/feature_persistence_runtime.py`
 - `LegacyFeatureRecognitionGateway.batch_recognize()` 现在走 `src` 侧 batch runtime
+- `LegacyFeatureRecognitionGateway.get_subgraphs()` / `save_features()` 现在走 `src` 侧 persistence runtime
 - 新 runtime 已负责：
   - 查询待处理子图
   - 批量下载 DXF
   - 调用 `feature_analysis_runtime.analyze_dxf_features()`
   - 合并 `part_code` 后保存结果
   - 按条件触发滑块红面后处理
+- `feature_persistence_runtime.py` 已负责：
+  - 查询 `subgraphs` 并兼容 `xt_file_url` 列探测
+  - upsert `features`
+  - 初始化 `processing_cost_calculation_details`
+  - 回写 `subgraphs.wire_process_note / wire_process`
 - 旧脚本目前仅保留：
-  - `get_subgraphs_from_db`
-  - `save_features_to_db`
   - `slider_red_face_updater`
+  - `slider_red_face_lookup`
 
 ### 2. Review 确认执行器从 `ConfirmHandler` 摘除
 - 新增 `src/mold_cost/infrastructure/review/pending_action_store.py`
@@ -101,8 +107,9 @@
 - `agents/pricing_agent.py` 与 `agents/pricing_agent_local.py` 已缩成兼容包装
 - `mcp_services/cad_price_search_mcp/server.py` 已改为 registry-based dispatch
 
-### 7. Feature 分析入口迁移
+### 7. Feature 分析与持久化入口迁移
 - `feature_analysis_runtime.py` 已接管 DXF 单文件分析 orchestration
+- `feature_persistence_runtime.py` 已接管 feature DB 查询与落库 helper
 - `scripts/feature_recognition/__init__.py` 已改为惰性导出，避免重型导入副作用
 
 ## 当前剩余高优先级
@@ -122,8 +129,8 @@
 
 ### R6 CAD / Feature 算法本体迁移
 - feature 剩余：
-  - `get_subgraphs_from_db`
-  - `save_features_to_db`
+  - `slider_red_face_updater`
+  - `slider_red_face_lookup`
 - CAD 剩余：
   - `scripts.cad_chaitu.main.chaitu_process`
   - 相关 DB / storage / converter 运行时桥接
@@ -137,4 +144,4 @@
 
 ## 当前回归基线
 - `pytest tests/unit tests/integration tests/golden -q`
-- 结果：`159 passed`
+- 结果：`162 passed`

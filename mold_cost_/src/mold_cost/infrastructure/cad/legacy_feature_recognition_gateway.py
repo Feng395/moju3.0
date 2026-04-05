@@ -5,12 +5,12 @@ from __future__ import annotations
 import json
 import os
 import tempfile
-from functools import lru_cache
 from typing import Any
 
 from ...core.settings import settings
 from .feature_analysis_runtime import analyze_dxf_features
 from .feature_batch_runtime import batch_feature_recognition
+from .feature_persistence_runtime import get_subgraphs_from_db, save_features_to_db
 
 
 class LegacyFeatureRecognitionGateway:
@@ -48,10 +48,20 @@ class LegacyFeatureRecognitionGateway:
         return analyze_dxf_features(dxf_path)
 
     def get_subgraphs(self, job_id: str, subgraph_id: str | None = None) -> list[dict[str, Any]]:
-        return self._load_legacy_module().get_subgraphs_from_db(job_id, subgraph_id)
+        return get_subgraphs_from_db(job_id, subgraph_id)
 
     def save_features(self, subgraph_id: str, job_id: str, features: dict[str, Any]) -> bool:
-        return self._load_legacy_module().save_features_to_db(subgraph_id, job_id, features)
+        from scripts.feature_recognition.slider_red_face_lookup import apply_red_face_lookup
+        from scripts.minio_client import minio_client as legacy_minio_client
+
+        # 中文说明：落库逻辑已迁到 src runtime，仅保留 legacy 红色面查表能力作为注入依赖。
+        return save_features_to_db(
+            subgraph_id,
+            job_id,
+            features,
+            minio_client=legacy_minio_client,
+            red_face_lookup=apply_red_face_lookup,
+        )
 
     def upload_feature_database(self, database: dict[str, Any], minio_path: str) -> None:
         from mold_cost.infrastructure.storage.minio_client import minio_client
@@ -81,11 +91,3 @@ class LegacyFeatureRecognitionGateway:
                 os.unlink(temp_file.name)
             except OSError:
                 pass
-
-    @staticmethod
-    @lru_cache(maxsize=1)
-    def _load_legacy_module():
-        # 中文说明：仅在需要 DB 辅助方法时才加载 legacy 模块，减少导入副作用。
-        from scripts.feature_recognition import feature_recognition as legacy_module
-
-        return legacy_module

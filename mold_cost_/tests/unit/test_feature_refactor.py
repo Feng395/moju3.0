@@ -229,7 +229,6 @@ def test_feature_gateway_batch_recognize_uses_src_runtime(monkeypatch):
     )
 
     calls = []
-    legacy_batch_calls = []
     fake_minio_client = object()
 
     def _fake_batch_feature_recognition(job_id, subgraph_id=None, progress_callback=None, **kwargs):
@@ -242,10 +241,6 @@ def test_feature_gateway_batch_recognize_uses_src_runtime(monkeypatch):
             }
         )
         return {"success": True, "data": {"total": 0, "success_count": 0, "failed_count": 0, "results": []}}
-
-    def _fake_legacy_batch(*_args, **_kwargs):
-        legacy_batch_calls.append(True)
-        return {"success": False}
 
     monkeypatch.setattr(
         "mold_cost.infrastructure.cad.legacy_feature_recognition_gateway.batch_feature_recognition",
@@ -263,17 +258,10 @@ def test_feature_gateway_batch_recognize_uses_src_runtime(monkeypatch):
     )
 
     gateway = LegacyFeatureRecognitionGateway()
-    monkeypatch.setattr(
-        gateway,
-        "_load_legacy_module",
-        lambda: types.SimpleNamespace(batch_feature_recognition_process=_fake_legacy_batch),
-    )
-
     callback = lambda *args: None
     result = gateway.batch_recognize("job-batch", "sub-batch", callback)
 
     assert result["success"] is True
-    assert legacy_batch_calls == []
     assert len(calls) == 1
     captured = calls[0]
     assert captured["job_id"] == "job-batch"
