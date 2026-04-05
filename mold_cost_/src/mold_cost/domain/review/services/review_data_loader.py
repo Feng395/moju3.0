@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from ....core.logging import get_logger
+from ....infrastructure.db.repositories.review_repository_adapter import LegacyReviewRepositoryAdapter
 from ...review.ports import ReviewDataLoader
 
 logger = get_logger(__name__)
@@ -13,15 +14,13 @@ logger = get_logger(__name__)
 class LegacyReviewDataLoader(ReviewDataLoader):
     """Reuse existing repository, view builder and completeness validator."""
 
-    def __init__(self):
-        self._review_repo = None
+    def __init__(self, review_repository: Any | None = None):
+        self._review_repo = review_repository
 
     @property
     def review_repo(self):
         if self._review_repo is None:
-            from api_gateway.repositories.review_repository import ReviewRepository
-
-            self._review_repo = ReviewRepository()
+            self._review_repo = LegacyReviewRepositoryAdapter()
         return self._review_repo
 
     async def load(self, job_id: str, db_session) -> dict[str, list[dict[str, Any]]]:

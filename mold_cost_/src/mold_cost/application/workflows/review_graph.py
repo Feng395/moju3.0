@@ -23,6 +23,7 @@ from ...domain.review.services.review_data_loader import LegacyReviewDataLoader
 from ...domain.review.services.review_notifier import InteractionAgentReviewNotifier
 from ...domain.review.services.review_session_service import RedisReviewSessionService
 from ...domain.review.services.review_state_adapter import RedisReviewStateStore
+from ...infrastructure.db.repositories.review_repository_adapter import LegacyReviewRepositoryAdapter
 from .review_state import ReviewState
 
 logger = get_logger(__name__)
@@ -46,6 +47,7 @@ class ReviewGraph:
         self._compiled_graph = None
         self._checkpointer = None
         self._runtime_contexts: dict[str, dict[str, Any]] = {}
+        self._review_repository = None
         self._session_service = session_service
         self._state_store = state_store
         self._data_loader = data_loader
@@ -403,7 +405,7 @@ class ReviewGraph:
 
     def _get_data_loader(self) -> ReviewDataLoader:
         if self._data_loader is None:
-            self._data_loader = LegacyReviewDataLoader()
+            self._data_loader = LegacyReviewDataLoader(review_repository=self._get_review_repository())
         return self._data_loader
 
     def _get_chat_executor(self) -> ReviewChatExecutionAdapter:
@@ -416,6 +418,7 @@ class ReviewGraph:
         if self._change_applier is None:
             self._change_applier = InteractionAgentReviewChangeApplier(
                 state_store=self._get_state_store(),
+                review_repository=self._get_review_repository(),
             )
         return self._change_applier
 
@@ -423,6 +426,11 @@ class ReviewGraph:
         if self._notifier is None:
             self._notifier = InteractionAgentReviewNotifier()
         return self._notifier
+
+    def _get_review_repository(self):
+        if self._review_repository is None:
+            self._review_repository = LegacyReviewRepositoryAdapter()
+        return self._review_repository
 
     async def _start_review_direct(self, *, job_id: str, db_session) -> OpResult:
         state = await self.load_review_data(job_id=job_id, db_session=db_session)

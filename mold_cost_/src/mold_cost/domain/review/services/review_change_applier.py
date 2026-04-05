@@ -11,6 +11,7 @@ from shared.timezone_utils import now_shanghai
 
 from ....application.workflows.review_state import ReviewState
 from ....core.logging import get_logger
+from ....infrastructure.db.repositories.review_repository_adapter import LegacyReviewRepositoryAdapter
 from ...review.ports import ReviewChangeApplier, ReviewStateStore
 
 logger = get_logger(__name__)
@@ -24,18 +25,17 @@ class InteractionAgentReviewChangeApplier(ReviewChangeApplier):
         agent_factory: Callable[[], Any] | None = None,
         *,
         state_store: ReviewStateStore | None = None,
+        review_repository: Any | None = None,
     ):
         # 中文注释：保留 agent_factory 兼容旧装配，但默认实现已不再依赖它。
         self._agent_factory = agent_factory
         self._state_store = state_store
-        self._review_repo = None
+        self._review_repo = review_repository
 
     @property
     def review_repo(self):
         if self._review_repo is None:
-            from api_gateway.repositories.review_repository import ReviewRepository
-
-            self._review_repo = ReviewRepository()
+            self._review_repo = LegacyReviewRepositoryAdapter()
         return self._review_repo
 
     async def handle_modification(

@@ -38,18 +38,22 @@ class MinIOClient:
         else:
             self.presigned_client = self.client
         self.bucket_files = settings.MINIO_BUCKET_FILES
-        self._ensure_buckets()
+        self._buckets_ready = False
 
     def _ensure_buckets(self):
+        if self._buckets_ready:
+            return
         try:
             if not self.client.bucket_exists(self.bucket_files):
                 self.client.make_bucket(self.bucket_files)
+            self._buckets_ready = True
         except S3Error as exc:
             logger.error("failed to ensure MinIO bucket: %s", exc)
             raise
 
     async def upload_file(self, file: UploadFile, prefix: str = "files") -> dict[str, str | int]:
         try:
+            self._ensure_buckets()
             file_id = str(uuid.uuid4())
             now = datetime.now()
             suffix = Path(file.filename).suffix.lower()
@@ -78,6 +82,7 @@ class MinIOClient:
             raise
 
     def get_file(self, object_name: str, bucket: Optional[str] = None) -> bytes:
+        self._ensure_buckets()
         bucket_name = bucket or self.bucket_files
         response = self.client.get_object(bucket_name, object_name)
         try:
@@ -87,9 +92,11 @@ class MinIOClient:
             response.release_conn()
 
     def get_file_stream(self, object_name: str, bucket: Optional[str] = None):
+        self._ensure_buckets()
         return self.client.get_object(bucket or self.bucket_files, object_name)
 
     def delete_file(self, object_name: str, bucket: Optional[str] = None):
+        self._ensure_buckets()
         self.client.remove_object(bucket or self.bucket_files, object_name)
 
     def generate_presigned_url(
@@ -98,6 +105,7 @@ class MinIOClient:
         expires: timedelta = timedelta(hours=24),
         bucket: Optional[str] = None,
     ) -> str:
+        self._ensure_buckets()
         return self.presigned_client.presigned_get_object(
             bucket_name=bucket or self.bucket_files,
             object_name=object_name,
@@ -106,6 +114,7 @@ class MinIOClient:
 
     def download_file(self, object_name: str, local_path: str, bucket: Optional[str] = None) -> bool:
         try:
+            self._ensure_buckets()
             self.client.fget_object(bucket or self.bucket_files, object_name, local_path)
             return True
         except S3Error as exc:
@@ -120,6 +129,7 @@ class MinIOClient:
         bucket: Optional[str] = None,
     ) -> bool:
         try:
+            self._ensure_buckets()
             self.client.fput_object(
                 bucket or self.bucket_files,
                 object_name,
@@ -139,6 +149,7 @@ class MinIOClient:
         bucket: Optional[str] = None,
     ) -> bool:
         try:
+            self._ensure_buckets()
             self.client.put_object(
                 bucket or self.bucket_files,
                 object_name,
@@ -153,6 +164,7 @@ class MinIOClient:
 
     def file_exists(self, object_name: str, bucket: Optional[str] = None) -> bool:
         try:
+            self._ensure_buckets()
             self.client.stat_object(bucket or self.bucket_files, object_name)
             return True
         except S3Error:
@@ -160,6 +172,7 @@ class MinIOClient:
 
     def get_file_info(self, object_name: str, bucket: Optional[str] = None) -> Optional[dict]:
         try:
+            self._ensure_buckets()
             stat = self.client.stat_object(bucket or self.bucket_files, object_name)
             return {
                 "size": stat.size,
@@ -175,6 +188,7 @@ class MinIOClient:
 
     def list_files(self, prefix: str = "", recursive: bool = False, bucket: Optional[str] = None) -> list[dict]:
         try:
+            self._ensure_buckets()
             objects = self.client.list_objects(bucket or self.bucket_files, prefix=prefix, recursive=recursive)
             return [
                 {
