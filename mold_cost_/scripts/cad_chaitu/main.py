@@ -128,106 +128,13 @@ except ImportError:
     from storage import FileStorageManager
     from utils import extract_model_code_from_source
 
-from mold_cost.infrastructure.cad.cad_xt_export_runtime import export_xt_files
+from mold_cost.infrastructure.cad.cad_xt_export_runtime import export_xt_files, export_xt_from_prt_with_nxopen
 
 
 # 全局实例
 db_manager = None
 storage_manager = None
 _minio_client = None
-
-def _export_xt_from_prt(prt_local: str, export_files: list, temp_dir: str,
-                         xt_minio_base: str, minio_client) -> dict:
-    """
-    用 NXOpen ParasolidExporter 从总装 PRT 中按 part_code 导出各子组件的 .x_t 文件，
-    上传到 MinIO，返回 {sub_code: minio_xt_path} 映射。
-
-    匹配规则：
-      遍历总装的 ComponentAssembly，对每个 Component 取 Prototype（子 Part），
-      用 Part.Leaf（文件名不含路径和扩展名）与 part_code 做大小写不敏感匹配。
-      匹配成功后用 ParasolidExporter 以 ExistingPart 模式导出该 Part。
-    """
-    import NXOpen
-    import NXOpen.UF
-
-    xt_url_map = {}
-    session = NXOpen.Session.GetSession()
-
-    try:
-        opened = session.Parts.Open(prt_local)
-        asm_part = opened[0] if isinstance(opened, tuple) else opened
-        session.Parts.SetDisplay(asm_part, False, False)
-        session.Parts.SetWork(asm_part)
-    except Exception as e:
-        logger.warning(f"步骤6: 打开 PRT 失败: {e}")
-        return xt_url_map
-
-    try:
-        # 构建 leaf_name -> Component 映射（大小写不敏感）
-        comp_map = {}  # {leaf_lower: component}
-        try:
-            components = asm_part.ComponentAssembly.GetComponents()
-            for comp in components:
-                try:
-                    proto = comp.Prototype
-                    if proto is None:
-                        continue
-                    leaf = Path(proto.FullPath).stem.lower()
-                    comp_map[leaf] = (comp, proto)
-                except Exception:
-                    pass
-        except Exception as e:
-            logger.warning(f"步骤6: 遍历组件失败: {e}")
-
-        logger.info(f"步骤6: 总装包含 {len(comp_map)} 个子组件")
-
-        for file_info in export_files:
-            sub_code = file_info['sub_code']
-            part_code = (file_info.get('part_code') or sub_code).lower()
-            xt_local = os.path.join(temp_dir, f"{file_info.get('part_code') or sub_code}.x_t")
-            xt_minio = f"{xt_minio_base}/{file_info.get('part_code') or sub_code}.x_t"
-
-            # 查找匹配的子组件
-            matched = comp_map.get(part_code)
-            if matched is None:
-                # 尝试前缀匹配（part_code 可能是 leaf 的前缀）
-                for leaf, val in comp_map.items():
-                    if leaf.startswith(part_code) or part_code.startswith(leaf):
-                        matched = val
-                        break
-
-            if matched is None:
-                logger.debug(f"[{sub_code}] 未找到匹配组件 '{part_code}'，跳过")
-                continue
-
-            _comp, proto_part = matched
-
-            try:
-                # 用 ParasolidExporter 导出该子 Part
-                exporter = session.DexManager.CreateParasolidExporter()
-                exporter.ExportFrom = NXOpen.ParasolidExporter.ExportFromOption.ExistingPart
-                exporter.InputFile = proto_part.FullPath
-                exporter.OutputFile = xt_local
-                exporter.FlattenAssembly = True
-                exporter.Commit()
-                exporter.Destroy()
-
-                if os.path.exists(xt_local) and minio_client and minio_client.upload_file(xt_local, xt_minio):
-                    xt_url_map[sub_code] = xt_minio
-                    logger.info(f"[{sub_code}] .x_t 上传成功: {xt_minio}")
-                else:
-                    logger.warning(f"[{sub_code}] .x_t 文件不存在或上传失败")
-            except Exception as xe:
-                logger.warning(f"[{sub_code}] .x_t 导出失败: {xe}")
-
-    finally:
-        try:
-            asm_part.Close(NXOpen.BasePart.CloseWholeTree.TrueValue, None)
-        except Exception:
-            pass
-
-    return xt_url_map
-
 
 def init_managers(minio_client=None):
     """初始化管理器"""
@@ -494,7 +401,7 @@ async def chaitu_process(dwg_url: Optional[str], job_id: str, minio_client=None)
                     storage_manager=storage_manager,
                     db_manager=db_manager,
                     minio_client=_minio_client,
-                    export_xt_from_prt=_export_xt_from_prt,
+                    export_xt_from_prt=export_xt_from_prt_with_nxopen,
                 )
             except Exception as _nxe:
                 logger.warning(f"步骤6 .x_t 导出异常（不影响主流程）: {_nxe}")
