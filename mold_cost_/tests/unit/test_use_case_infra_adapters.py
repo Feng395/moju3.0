@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime
 from pathlib import Path
 
 from refactor_bootstrap import ensure_src_path
@@ -32,6 +33,7 @@ def test_repository_modules_do_not_import_api_gateway():
         repo_root / "src" / "mold_cost" / "infrastructure" / "db" / "repositories" / "job_repository.py",
         repo_root / "src" / "mold_cost" / "infrastructure" / "db" / "repositories" / "snapshot_repository.py",
         repo_root / "src" / "mold_cost" / "infrastructure" / "db" / "repositories" / "audit_repository.py",
+        repo_root / "src" / "mold_cost" / "infrastructure" / "db" / "repositories" / "chat_history_repository.py",
     )
 
     for file_path in repository_files:
@@ -329,3 +331,91 @@ def test_snapshot_and_audit_repositories_execute_src_sql_paths():
     assert any("FROM job_price_snapshots" in sql for sql, _ in calls)
     assert any("FROM job_process_snapshots" in sql for sql, _ in calls)
     assert any("INSERT INTO audit_logs" in sql for sql, _ in calls)
+
+
+def test_chat_history_repository_executes_src_sql_paths():
+    """Verify chat history repository uses local SQL implementations."""
+    from mold_cost.infrastructure.db.repositories.chat_history_repository import ChatHistoryRepository
+
+    calls: list[tuple[str, dict]] = []
+    now = datetime(2026, 4, 6, 10, 0, 0)
+
+    class FakeResult:
+        def __init__(self, sql: str):
+            self.sql = sql
+
+        def fetchone(self):
+            if "RETURNING session_id" in self.sql:
+                return ("session-1", "job-1", "user-1", "会话A", now, "active")
+            if "RETURNING message_id" in self.sql:
+                return (101, "session-1", "user", "你好", now)
+            if "COUNT(*) AS total" in self.sql:
+                return (2,)
+            if "FROM chat_sessions" in self.sql and "WHERE session_id" in self.sql:
+                return ("session-1", "job-1", "user-1", "会话A", now, now, "active", {"source": "upload"})
+            return None
+
+        def fetchall(self):
+            if "FROM chat_messages" in self.sql and "recent_messages" not in self.sql:
+                return [
+                    (1, "user", "第一条", now, {"k": "v"}),
+                    (2, "assistant", "第二条", now, None),
+                ]
+            if "recent_messages" in self.sql:
+                return [
+                    (3, "user", "最近一条", now, {"recent": True}),
+                ]
+            if "COUNT(m.message_id) AS message_count" in self.sql:
+                return [
+                    ("session-1", "job-1", "会话A", now, now, "active", {"source": "upload"}, 3),
+                ]
+            return []
+
+    class FakeDB:
+        async def execute(self, sql, params):
+            sql_text = str(sql)
+            calls.append((sql_text, params))
+            return FakeResult(sql_text)
+
+    repo = ChatHistoryRepository()
+    db = FakeDB()
+
+    session = asyncio.run(
+        repo.create_session(
+            db,
+            session_id="session-1",
+            job_id="job-1",
+            user_id="user-1",
+            session_name="会话A",
+            metadata={"source": "upload"},
+        )
+    )
+    message = asyncio.run(
+        repo.add_message(
+            db,
+            session_id="session-1",
+            role="user",
+            content="你好",
+            metadata={"from": "test"},
+        )
+    )
+    history = asyncio.run(repo.get_session_history(db, "session-1", limit=20, offset=0))
+    recent_history = asyncio.run(repo.get_recent_session_history(db, "session-1", limit=5))
+    count = asyncio.run(repo.get_session_message_count(db, "session-1"))
+    info = asyncio.run(repo.get_session_info(db, "session-1"))
+    sessions = asyncio.run(repo.get_user_sessions(db, "user-1", limit=10))
+    archived = asyncio.run(repo.archive_session(db, "session-1"))
+
+    assert session["session_id"] == "session-1"
+    assert message["message_id"] == 101
+    assert len(history) == 2
+    assert recent_history[0]["message_id"] == 3
+    assert count == 2
+    assert info["status"] == "active"
+    assert sessions[0]["message_count"] == 3
+    assert archived is True
+    assert any("INSERT INTO chat_sessions" in sql for sql, _ in calls)
+    assert any("INSERT INTO chat_messages" in sql for sql, _ in calls)
+    assert any("FROM chat_messages" in sql for sql, _ in calls)
+    assert any("FROM chat_sessions" in sql for sql, _ in calls)
+    assert any("UPDATE chat_sessions" in sql for sql, _ in calls)
