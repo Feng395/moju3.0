@@ -10,6 +10,7 @@
 - `application / domain / infrastructure / interfaces` 四层已经成为真实执行路径，而不是占位目录。
 - pricing 主链已完成从旧 agent 与 `scripts.search/*`、`scripts.calculate/*` 的迁移。
 - API、worker、兼容 agent 的主调用路径已基本转向 `src/mold_cost`，其中 jobs/files 路由也已不再直接依赖 `api_gateway.services.*`。
+- `job / snapshot / audit / review` 这几条主链的默认 repository 访问已进一步向 `src` 收口。
 - review 的 data loader、notifier、默认装配、确认执行链、src-first intent recognizer 与七类已迁入 handlers 已继续向 `src` 收口。
 - feature 单文件分析、批处理编排、DB 读写 helper 与滑块红色面后处理已经迁入 `src/mold_cost`。
 
@@ -112,6 +113,7 @@
 - 建立 `src/mold_cost` 分层结构
 - 统一配置、数据库、MinIO、RabbitMQ、Redis 入口
 - 旧入口保留为兼容壳，避免一次性切换
+- `job_repository.py`、`snapshot_repository.py`、`audit_repository.py` 的默认实现也已迁入 `src/mold_cost/infrastructure/db/repositories`
 
 ### 2. Use Case 与接口层下沉
 - 任务创建、查询、文件访问、继续执行等 use case 已落到 `application/use_cases`
@@ -173,8 +175,9 @@
 ### R8 兼容入口持续清理
 - `scripts/cad_chaitu/__init__.py` 已去掉包级初始化副作用
 - `src` API jobs/files 路由已摘掉对 `api_gateway.services.*` / `api_gateway.auth` 的直接依赖
+- `src` 侧 `job/snapshot/audit` repository 已不再直接代理 `api_gateway.repositories.*`
 - 仍有少量兼容入口与诊断脚本可继续压缩
 
 ## 当前回归基线
 - `pytest tests/unit tests/integration tests/golden -q`
-- 结果：`224 passed, 1 skipped`
+- 结果：`227 passed, 1 skipped`

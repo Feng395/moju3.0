@@ -19,7 +19,7 @@
 | R5 | P1 | workflow durable backend 共享化 | 收尾中 | 已共享文件型 store，并新增可按配置启用的 SQLite 共享 backend；默认兼容模式仍保留文件型 |
 | R6 | P1 | CAD / feature 算法本体迁移 | 收尾中 | feature 分析、batch 编排、持久化、红面查表与红面写回入口已迁出，CAD split runtime、主流程编排、子图识别/导出编排、输入源解析、输入准备、子图编号编排、板料线后处理、板料线算法本体、`CADAnalysisSystem` 本体、`OptimizedCADBlockAnalyzer` 本体、图纸编号提取本体、deep analyzer helper、`.x_t` 导出准备、PRT 组件匹配与 Parasolid 导出、上传与结果持久化边界已立，算法本体层面已基本收口，剩余转入少量兼容入口清理 |
 | R7 | P2 | golden 样本扩展 | 收尾中 | 基线已稳定，但覆盖面仍偏窄 |
-| R8 | P2 | 兼容入口与诊断脚本清理 | 收尾中 | `scripts/cad_chaitu/__init__.py` 已惰性化，src API jobs/files 路由也已摘掉对 `api_gateway.services.*` / `api_gateway.auth` 的直接依赖，仍有少量兼容入口可继续压缩 |
+| R8 | P2 | 兼容入口与诊断脚本清理 | 收尾中 | `scripts/cad_chaitu/__init__.py` 已惰性化，src API jobs/files 路由也已摘掉对 `api_gateway.services.*` / `api_gateway.auth` 的直接依赖，`job/snapshot/audit` repository 默认实现也已迁入 `src`，仍有少量兼容入口可继续压缩 |
 
 ## 详细对照
 
@@ -41,4 +41,4 @@
 
 ## 当前回归基线
 - `pytest tests/unit tests/integration tests/golden -q`
-- 结果：`224 passed, 1 skipped`
+- 结果：`227 passed, 1 skipped`

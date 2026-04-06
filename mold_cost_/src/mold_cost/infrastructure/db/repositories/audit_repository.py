@@ -1,14 +1,21 @@
-"""审计日志数据访问适配层。"""
+"""Src-owned audit repository."""
 
 from __future__ import annotations
 
+import json
+from datetime import datetime
 from typing import Any
 
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from ....core.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class AuditRepository:
-    """将审计仓储从 application/use_cases 中剥离出来的适配器。"""
+    """审计日志数据访问层。"""
 
     async def create_audit_log(
         self,
@@ -19,14 +26,26 @@ class AuditRepository:
         resource_id: str,
         changes: dict[str, Any],
     ) -> None:
-        from api_gateway.repositories.audit_repository import AuditRepository as LegacyAuditRepository
-
-        return await LegacyAuditRepository.create_audit_log(
-            db=db,
-            user_id=user_id,
-            action=action,
-            resource_type=resource_type,
-            resource_id=resource_id,
-            changes=changes,
+        sql = text(
+            """
+            INSERT INTO audit_logs (
+                user_id, action, resource_type, resource_id,
+                changes, created_at
+            ) VALUES (
+                :user_id, :action, :resource_type, :resource_id,
+                :changes, :created_at
+            )
+            """
         )
-
+        await db.execute(
+            sql,
+            {
+                "user_id": user_id,
+                "action": action,
+                "resource_type": resource_type,
+                "resource_id": resource_id,
+                "changes": json.dumps(changes),
+                "created_at": datetime.now(),
+            },
+        )
+        logger.info("Audit log created: %s - %s", action, resource_id)

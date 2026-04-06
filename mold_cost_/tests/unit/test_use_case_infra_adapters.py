@@ -25,6 +25,20 @@ def test_use_case_modules_do_not_import_api_gateway():
         assert "api_gateway.utils" not in source
 
 
+def test_repository_modules_do_not_import_api_gateway():
+    """Ensure migrated repository modules no longer proxy to api_gateway repositories."""
+    repo_root = Path(__file__).resolve().parents[2]
+    repository_files = (
+        repo_root / "src" / "mold_cost" / "infrastructure" / "db" / "repositories" / "job_repository.py",
+        repo_root / "src" / "mold_cost" / "infrastructure" / "db" / "repositories" / "snapshot_repository.py",
+        repo_root / "src" / "mold_cost" / "infrastructure" / "db" / "repositories" / "audit_repository.py",
+    )
+
+    for file_path in repository_files:
+        source = file_path.read_text(encoding="utf-8")
+        assert "api_gateway.repositories" not in source
+
+
 def test_create_job_use_case_uses_infrastructure_adapters(monkeypatch):
     """Verify create-job use case delegates to the new infrastructure adapters."""
     from mold_cost.application.use_cases.create_job import CreateJobFromUploadUseCase
@@ -218,3 +232,100 @@ def test_get_job_file_use_case_uses_infrastructure_repository(monkeypatch):
 
     assert payload == b"payload:dwg/object"
     assert url == "url:prt/object"
+
+
+def test_job_repository_executes_src_sql_paths():
+    """Verify src job repository issues SQL directly without legacy proxying."""
+    from mold_cost.infrastructure.db.repositories.job_repository import JobRepository
+
+    calls: list[tuple[str, dict]] = []
+
+    class FakeMappings:
+        def fetchone(self):
+            return {
+                "job_id": "job-1",
+                "status": "pending",
+            }
+
+    class FakeResult:
+        def fetchone(self):
+            return ("job-1", "user-1")
+
+        def mappings(self):
+            return FakeMappings()
+
+    class FakeDB:
+        async def execute(self, sql, params):
+            calls.append((str(sql), params))
+            return FakeResult()
+
+    repo = JobRepository()
+
+    asyncio.run(
+        repo.create_job(
+            db=FakeDB(),
+            job_id="job-1",
+            user_id="user-1",
+            dwg_info={"file_id": "dwg-id", "object_name": "dwg/obj", "file_size": 10},
+            prt_info=None,
+            dwg_filename="a.dwg",
+            prt_filename=None,
+        )
+    )
+    row = asyncio.run(repo.get_job_by_id(FakeDB(), "job-1"))
+    summary = asyncio.run(repo.get_job_summary(FakeDB(), "job-1"))
+    asyncio.run(repo.update_job_status(FakeDB(), "job-1", "done", current_stage="finish", progress=100))
+
+    assert row == ("job-1", "user-1")
+    assert summary == {"job_id": "job-1", "status": "pending"}
+    assert any("INSERT INTO jobs" in sql for sql, _ in calls)
+    assert any("FROM jobs" in sql for sql, _ in calls)
+    assert any("FROM v_job_cost_summary" in sql for sql, _ in calls)
+    assert any("UPDATE jobs" in sql for sql, _ in calls)
+
+
+def test_snapshot_and_audit_repositories_execute_src_sql_paths():
+    """Verify snapshot/audit repositories use local SQL implementations."""
+    from mold_cost.infrastructure.db.repositories.audit_repository import AuditRepository
+    from mold_cost.infrastructure.db.repositories.snapshot_repository import SnapshotRepository
+
+    calls: list[tuple[str, dict]] = []
+
+    class FakeResult:
+        rowcount = 3
+
+        def fetchall(self):
+            return [("row",)]
+
+    class FakeDB:
+        async def execute(self, sql, params):
+            calls.append((str(sql), params))
+            return FakeResult()
+
+    snapshot_repo = SnapshotRepository()
+    audit_repo = AuditRepository()
+
+    price_count = asyncio.run(snapshot_repo.create_price_snapshots(FakeDB(), "job-1"))
+    process_count = asyncio.run(snapshot_repo.create_process_snapshots(FakeDB(), "job-1"))
+    price_rows = asyncio.run(snapshot_repo.get_price_snapshots(FakeDB(), "job-1"))
+    process_rows = asyncio.run(snapshot_repo.get_process_snapshots(FakeDB(), "job-1"))
+    asyncio.run(
+        audit_repo.create_audit_log(
+            FakeDB(),
+            user_id="user-1",
+            action="create",
+            resource_type="job",
+            resource_id="job-1",
+            changes={"status": "pending"},
+        )
+    )
+
+    assert price_count == 3
+    assert process_count == 3
+    assert price_rows == [("row",)]
+    assert process_rows == [("row",)]
+    assert any("INSERT INTO job_price_snapshots" in sql for sql, _ in calls)
+    assert any("INSERT INTO job_process_snapshots" in sql for sql, _ in calls)
+    assert any("FROM job_price_snapshots" in sql for sql, _ in calls)
+    assert any("FROM job_process_snapshots" in sql for sql, _ in calls)
+    assert any("INSERT INTO audit_logs" in sql for sql, _ in calls)
