@@ -495,10 +495,10 @@ def test_review_graph_default_wiring_uses_shared_review_repository(monkeypatch):
     assert built_change_appliers
 
 
-def test_review_handler_runtime_builder_injects_legacy_collaborators():
-    module = importlib.import_module("mold_cost.infrastructure.review.legacy_review_handler_adapter")
+def test_review_handler_runtime_builder_injects_src_collaborators():
+    module = importlib.import_module("mold_cost.infrastructure.review.review_change_applier_runtime")
 
-    applier = module.build_default_review_change_applier(
+    applier = module.build_src_review_change_applier(
         state_store="state-store",
         review_repository="review-repo",
     )
@@ -511,6 +511,26 @@ def test_review_handler_runtime_builder_injects_legacy_collaborators():
 
     source = importlib.import_module("mold_cost.infrastructure.review.confirmation_executor").__file__
     assert "agents.confirm_handler" not in open(source, "r", encoding="utf-8").read()
+
+
+def test_legacy_review_handler_adapter_remains_compat_shell(monkeypatch):
+    module = importlib.import_module("mold_cost.infrastructure.review.legacy_review_handler_adapter")
+
+    calls: list[tuple[object, object]] = []
+
+    def _fake_build_src_review_change_applier(*, state_store, review_repository):
+        calls.append((state_store, review_repository))
+        return "built-applier"
+
+    monkeypatch.setattr(module, "build_src_review_change_applier", _fake_build_src_review_change_applier)
+
+    result = module.build_default_review_change_applier(
+        state_store="state-store",
+        review_repository="review-repo",
+    )
+
+    assert result == "built-applier"
+    assert calls == [("state-store", "review-repo")]
 
 
 @pytest.mark.asyncio

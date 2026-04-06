@@ -24,7 +24,9 @@ from ...domain.review.services.review_notifier import InteractionAgentReviewNoti
 from ...domain.review.services.review_session_service import RedisReviewSessionService
 from ...domain.review.services.review_state_adapter import RedisReviewStateStore
 from ...infrastructure.db.repositories.review_repository_adapter import LegacyReviewRepositoryAdapter
-from ...infrastructure.review.legacy_review_handler_adapter import build_default_review_change_applier
+from ...infrastructure.review.review_change_applier_runtime import (
+    build_src_review_change_applier as build_default_review_change_applier,
+)
 from ...infrastructure.workflows.review_file_checkpoint_store import ReviewFileCheckpointStore
 from .review_state import ReviewState
 

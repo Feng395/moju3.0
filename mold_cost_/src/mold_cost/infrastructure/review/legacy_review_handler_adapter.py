@@ -1,21 +1,14 @@
-"""Infrastructure adapters that isolate legacy review handler imports."""
+"""Legacy review handler compatibility facade."""
 
 from __future__ import annotations
 
-from .action_handler_runtime import SrcReviewActionHandlerRegistry
-from .confirmation_executor import ReviewConfirmationExecutorAdapter
-from .intent_recognizer_runtime import SrcReviewIntentRecognizerFactory
+from .review_change_applier_runtime import build_src_review_change_applier
 
 
 def build_default_review_change_applier(*, state_store, review_repository):
-    """Build the default review change applier with legacy collaborators."""
-
-    from ...domain.review.services.review_change_applier import InteractionAgentReviewChangeApplier
-
-    return InteractionAgentReviewChangeApplier(
+    """兼容旧导入路径，实际转发到 src 侧 change applier runtime。"""
+    # 中文注释：旧模块名继续保留，避免测试和兼容入口一次性全部改名。
+    return build_src_review_change_applier(
         state_store=state_store,
         review_repository=review_repository,
-        intent_recognizer_factory=SrcReviewIntentRecognizerFactory(),
-        action_handler_registry=SrcReviewActionHandlerRegistry(),
-        confirmation_executor=ReviewConfirmationExecutorAdapter(review_repository=review_repository),
     )
