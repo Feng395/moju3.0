@@ -88,11 +88,14 @@
 - 新增 `src/mold_cost/infrastructure/review/action_handler_runtime.py`
 - 新增 `src/mold_cost/infrastructure/review/intent_recognizer_runtime.py`
 - 新增 `src/mold_cost/infrastructure/review/weight_price_query_handler.py`
+- 新增 `src/mold_cost/infrastructure/review/display_view_builder.py`
+- 新增 `src/mold_cost/infrastructure/review/completeness_validator.py`
 - `src/mold_cost/infrastructure/db/repositories/chat_history_repository.py` 已补齐历史查询适配接口
 - 新增 `src/mold_cost/infrastructure/review/query_details_review_handler.py`
 - 新增 `src/mold_cost/infrastructure/review/data_modification_review_handler.py`
 - `DATA_MODIFICATION`、`FEATURE_RECOGNITION`、`PRICE_CALCULATION`、`QUERY_DETAILS`、`WEIGHT_PRICE_CALCULATION`、`GENERAL_CHAT`、`WEIGHT_PRICE_QUERY` 已切到 `src` 侧 review action handlers
 - review 默认 intent recognizer 已改为 `src-first + legacy fallback`，并补齐上下文指代类 query/modification 识别、`wire_base / add_auto_material / nc_base / standard / wire_total / tooth_hole_time / nc_z / nc_c_b / nc_b_view` 等稳定 `query_type`，以及 `那材料费呢 / 热处理呢 / 那主视图时间呢 / 那线割总价呢` 这类短追问查询；同时 legacy fallback 已改为懒加载实例化
+- review data loader 默认使用的 display view builder 与 completeness validator 也已迁入 `src`，`legacy_review_support_adapter.py` 仅保留兼容类名
 - `legacy_review_handler_adapter.py` 现在只负责默认 change applier 组装
 
 ### 5. Workflow durable store 已抽为共享 backend 基础实现
@@ -146,7 +149,7 @@
 - 默认确认执行器已迁出 `ConfirmHandler`
 - handler registry 已迁出 `ActionHandlerFactory`
 - 默认 recognizer 已切为 `src-first + legacy fallback`
-- 常见 `QUERY_DETAILS / DATA_MODIFICATION / WEIGHT_PRICE_QUERY` 规则识别已迁入 `src`，上下文指代类 query/modification、稳定 `query_type` 与短追问查询识别也已本地化；现在连 `线割总价`、`牙孔费用`、`主视图/侧背/正面的背面`，以及 `那材料费呢 / 热处理呢 / 那主视图时间呢 / 那线割总价呢` 这类追问都不再默认回落 legacy recognizer
+- 常见 `QUERY_DETAILS / DATA_MODIFICATION / WEIGHT_PRICE_QUERY` 规则识别已迁入 `src`，上下文指代类 query/modification、稳定 `query_type` 与短追问查询识别也已本地化；review data loader 默认 helper 也不再依赖 `agents.data_view_builder` / `shared.validators.completeness_validator`；现在连 `线割总价`、`牙孔费用`、`主视图/侧背/正面的背面`，以及 `那材料费呢 / 热处理呢 / 那主视图时间呢 / 那线割总价呢` 这类追问都不再默认回落 legacy recognizer
 - 仍未迁出的部分：
   - `agents.intent_recognizer` 中复杂 query / modification fallback 分支
 - 下一步应继续把复杂 recognizer fallback 分支下沉到 `src` adapter 或新 runtime
@@ -169,4 +172,4 @@
 
 ## 当前回归基线
 - `pytest tests/unit tests/integration tests/golden -q`
-- 结果：`212 passed, 1 skipped`
+- 结果：`214 passed, 1 skipped`

@@ -1,32 +1,14 @@
-"""Infrastructure adapters for legacy review-side data helpers."""
+"""Compatibility names for review-side data helpers now owned by src."""
 
 from __future__ import annotations
 
-from typing import Any
+from .completeness_validator import SrcReviewCompletenessValidator
+from .display_view_builder import SrcReviewDisplayViewBuilder
 
 
-class LegacyReviewDisplayViewBuilder:
-    """Expose the legacy display-view builder behind a src-owned adapter."""
-
-    def build_display_view(self, raw_data: dict[str, list[dict[str, Any]]]) -> list[dict[str, Any]]:
-        from agents.data_view_builder import DataViewBuilder
-
-        return DataViewBuilder.build_display_view(raw_data)
+class LegacyReviewDisplayViewBuilder(SrcReviewDisplayViewBuilder):
+    """兼容类名：默认 display-view 实现已迁入 src。"""
 
 
-class LegacyReviewCompletenessValidator:
-    """Expose completeness validation behind a src-owned adapter."""
-
-    def check_data_completeness(self, raw_data: dict[str, Any]) -> dict[str, Any]:
-        from shared.validators.completeness_validator import CompletenessValidator
-
-        return CompletenessValidator.check_data_completeness(raw_data)
-
-    def generate_completion_prompt(
-        self,
-        missing_fields: list[dict[str, Any]],
-        raw_data: dict[str, Any],
-    ) -> str:
-        from shared.validators.completeness_validator import CompletenessValidator
-
-        return CompletenessValidator.generate_completion_prompt(missing_fields, raw_data)
+class LegacyReviewCompletenessValidator(SrcReviewCompletenessValidator):
+    """兼容类名：默认完整性校验实现已迁入 src。"""

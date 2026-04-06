@@ -79,6 +79,144 @@ async def test_review_data_loader_uses_infra_adapter_by_default(monkeypatch):
     assert loader.build_completion_prompt([{"field": "material"}], raw_data) == "missing=1 size=4"
 
 
+def test_src_review_display_view_builder_builds_expected_projection():
+    module = importlib.import_module("mold_cost.infrastructure.review.display_view_builder")
+
+    builder = module.SrcReviewDisplayViewBuilder()
+    display_view = builder.build_display_view(
+        {
+            "subgraphs": [
+                {
+                    "job_id": "job-1",
+                    "subgraph_id": "sg-1",
+                    "part_code": "DIE-03",
+                    "part_name": "下模板",
+                    "wire_process": "W",
+                    "wire_process_note": "慢丝",
+                    "slow_wire_length": 120,
+                    "created_at": "2026-04-05T10:00:00",
+                }
+            ],
+            "features": [
+                {
+                    "job_id": "job-1",
+                    "subgraph_id": "sg-1",
+                    "feature_id": "ft-1",
+                    "version": 3,
+                    "material": "SKD11",
+                    "length_mm": 10,
+                    "width_mm": 20,
+                    "thickness_mm": 30,
+                    "quantity": 2,
+                    "heat_treatment": "HRC58",
+                }
+            ],
+            "job_price_snapshots": [
+                {"job_id": "job-1", "snapshot_id": "ps-wire", "category": "wire", "sub_category": "w", "price": 12.5},
+                {
+                    "job_id": "job-1",
+                    "snapshot_id": "ps-material",
+                    "category": "material",
+                    "sub_category": "skd11",
+                    "price": 8.8,
+                },
+            ],
+            "processing_cost_calculation_details": [
+                {"job_id": "job-1", "subgraph_id": "sg-1", "detail_id": "pc-1", "weight": 1.25}
+            ],
+        }
+    )
+
+    assert display_view == [
+        {
+            "part_code": "DIE-03",
+            "part_name": "下模板",
+            "subgraph_file_url": None,
+            "process_description": None,
+            "material": "SKD11",
+            "length_mm": 10,
+            "width_mm": 20,
+            "thickness_mm": 30,
+            "quantity": 2,
+            "heat_treatment": "HRC58",
+            "abnormal_situation": None,
+            "drilling_time": None,
+            "nc_roughing_time": None,
+            "nc_milling_time": None,
+            "edm_time": None,
+            "wire_length": 120,
+            "grinding_time": None,
+            "process_code": "W",
+            "process_note": "慢丝",
+            "process_unit_price": 12.5,
+            "material_unit_price": 8.8,
+            "weight": 1.25,
+            "_source": {
+                "job_id": "job-1",
+                "subgraph_id": "sg-1",
+                "feature_id": "ft-1",
+                "feature_version": 3,
+                "created_at": "2026-04-05T10:00:00",
+                "wire_price_snapshot_id": "ps-wire",
+                "material_price_snapshot_id": "ps-material",
+                "processing_cost_detail_id": "pc-1",
+            },
+        }
+    ]
+
+
+def test_src_review_completeness_validator_keeps_legacy_prompt_semantics():
+    module = importlib.import_module("mold_cost.infrastructure.review.completeness_validator")
+
+    validator = module.SrcReviewCompletenessValidator()
+    raw_data = {
+        "features": [
+            {
+                "feature_id": 7,
+                "subgraph_id": "PH2-04",
+                "part_code": "P001",
+                "part_name": "冲头",
+                "length_mm": 309.5,
+                "width_mm": None,
+                "thickness_mm": 47,
+                "quantity": 1,
+                "material": "",
+                "processing_instructions": {"ops": ["磨", "热处理"]},
+                "heat_treatment": "HRC60",
+            }
+        ]
+    }
+
+    completeness = validator.check_data_completeness(raw_data)
+
+    assert completeness["is_complete"] is False
+    assert completeness["missing_fields"] == [
+        {
+            "table": "features",
+            "record_id": "7",
+            "record_name": "PH2-04",
+            "part_code": "P001",
+            "part_name": "冲头",
+            "missing": {"width_mm": "宽度(mm)", "material": "材质"},
+            "current_values": {
+                "length_mm": 309.5,
+                "width_mm": None,
+                "thickness_mm": 47,
+                "quantity": 1,
+                "material": "",
+            },
+        }
+    ]
+
+    prompt = validator.generate_completion_prompt(completeness["missing_fields"], raw_data)
+
+    assert "子图ID: PH2-04" in prompt
+    assert "零件编号: P001" in prompt
+    assert "缺失字段: 宽度(mm), 材质" in prompt
+    assert "加工说明: 磨, 热处理" in prompt
+    assert "热处理: HRC60" in prompt
+
+
 @pytest.mark.asyncio
 async def test_review_change_applier_confirm_uses_infra_adapter_by_default(monkeypatch):
     module = importlib.import_module("mold_cost.domain.review.services.review_change_applier")
