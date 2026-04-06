@@ -19,11 +19,11 @@ from ...domain.review.ports import (
 )
 from ...domain.review.services.review_change_applier import InteractionAgentReviewChangeApplier
 from ...domain.review.services.review_chat_execution_adapter import InteractionAgentReviewChatExecutor
-from ...domain.review.services.review_data_loader import LegacyReviewDataLoader
 from ...domain.review.services.review_notifier import InteractionAgentReviewNotifier
 from ...domain.review.services.review_session_service import RedisReviewSessionService
 from ...domain.review.services.review_state_adapter import RedisReviewStateStore
-from ...infrastructure.db.repositories.review_repository_adapter import LegacyReviewRepositoryAdapter
+from ...infrastructure.db.repositories.review_repository import SrcReviewRepository
+from ...infrastructure.review.review_data_loader_runtime import SrcReviewDataLoader
 from ...infrastructure.review.review_change_applier_runtime import (
     build_src_review_change_applier as build_default_review_change_applier,
 )
@@ -417,7 +417,7 @@ class ReviewGraph:
 
     def _get_data_loader(self) -> ReviewDataLoader:
         if self._data_loader is None:
-            self._data_loader = LegacyReviewDataLoader(review_repository=self._get_review_repository())
+            self._data_loader = SrcReviewDataLoader(review_repository=self._get_review_repository())
         return self._data_loader
 
     def _get_chat_executor(self) -> ReviewChatExecutionAdapter:
@@ -441,7 +441,7 @@ class ReviewGraph:
 
     def _get_review_repository(self):
         if self._review_repository is None:
-            self._review_repository = LegacyReviewRepositoryAdapter()
+            self._review_repository = SrcReviewRepository()
         return self._review_repository
 
     async def _start_review_direct(self, *, job_id: str, db_session) -> OpResult:

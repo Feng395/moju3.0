@@ -483,16 +483,27 @@ def test_review_graph_default_wiring_uses_shared_review_repository(monkeypatch):
         built_change_appliers.append(built)
         return built
 
-    monkeypatch.setattr(module, "LegacyReviewRepositoryAdapter", lambda: fake_repo)
+    monkeypatch.setattr(module, "SrcReviewRepository", lambda: fake_repo)
     monkeypatch.setattr(module, "build_default_review_change_applier", _fake_build_default_review_change_applier)
 
     graph = module.ReviewGraph()
     data_loader = graph._get_data_loader()
     change_applier = graph._get_change_applier()
 
+    assert data_loader.__class__.__name__ == "SrcReviewDataLoader"
     assert data_loader.review_repo is fake_repo
     assert change_applier.review_repo is fake_repo
     assert built_change_appliers
+
+
+def test_src_review_data_loader_runtime_injects_src_collaborators():
+    module = importlib.import_module("mold_cost.infrastructure.review.review_data_loader_runtime")
+
+    loader = module.SrcReviewDataLoader(review_repository="review-repo")
+
+    assert loader.review_repo == "review-repo"
+    assert loader.display_view_builder.__class__.__name__ == "SrcReviewDisplayViewBuilder"
+    assert loader.completeness_validator.__class__.__name__ == "SrcReviewCompletenessValidator"
 
 
 def test_review_handler_runtime_builder_injects_src_collaborators():
