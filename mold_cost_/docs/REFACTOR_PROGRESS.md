@@ -102,6 +102,7 @@
 - review data loader 默认使用的 display view builder 与 completeness validator 也已迁入 `src`，`legacy_review_support_adapter.py` 仅保留兼容类名
 - review 默认仓储访问也已切到 `SrcReviewRepository`，`review_repository_adapter.py` 仅保留兼容类名与延迟实例化包装
 - `review_graph.py` 现在默认直接装配 `review_change_applier_runtime.py`，`legacy_review_handler_adapter.py` 已退化为纯 compat 转发壳
+- `intent_recognizer_runtime.py` 继续补齐“这个零件/那个零件 + 查询句式”这类上下文结构化查询识别，`这个零件的材料费是多少？ / 那个零件怎么算的？` 这类消息默认不再回落 legacy fallback
 
 ### 5. Workflow durable store 已抽为共享 backend 基础实现
 - `job` 与 `review` 共用 `FileCheckpointStore`
@@ -158,7 +159,7 @@
 - handler registry 已迁出 `ActionHandlerFactory`
 - 默认 recognizer 已切为 `src-first + legacy fallback`
 - 默认 change applier 装配已切到 `review_change_applier_runtime.py`
-- 常见 `QUERY_DETAILS / DATA_MODIFICATION / WEIGHT_PRICE_QUERY` 规则识别已迁入 `src`，上下文指代类 query/modification、稳定 `query_type`、短追问查询、显式 ID 名词短语查询与高频修改同义词识别也已本地化；review data loader 默认 helper 不再依赖 `agents.data_view_builder` / `shared.validators.completeness_validator`，默认仓储访问也不再直接依赖 `api_gateway.repositories.review_repository`；现在连 `线割总价`、`牙孔费用`、`主视图/侧背/正面的背面`、`DIE-03 材料费 / 重量 / 线割基础费`、`把 DIE-03 的材质设为 S136 / 更改为 SKD11 / 长度调到 120`，以及 `那材料费呢 / 热处理呢 / 那主视图时间呢 / 那线割总价呢` 这类追问都不再默认回落 legacy recognizer
+- 常见 `QUERY_DETAILS / DATA_MODIFICATION / WEIGHT_PRICE_QUERY` 规则识别已迁入 `src`，上下文指代类 query/modification、上下文结构化查询、稳定 `query_type`、短追问查询、显式 ID 名词短语查询与高频修改同义词识别也已本地化；review data loader 默认 helper 不再依赖 `agents.data_view_builder` / `shared.validators.completeness_validator`，默认仓储访问也不再直接依赖 `api_gateway.repositories.review_repository`；现在连 `线割总价`、`牙孔费用`、`主视图/侧背/正面的背面`、`DIE-03 材料费 / 重量 / 线割基础费`、`把 DIE-03 的材质设为 S136 / 更改为 SKD11 / 长度调到 120`，以及 `那材料费呢 / 热处理呢 / 那主视图时间呢 / 那线割总价呢`、`这个零件的材料费是多少？ / 那个零件怎么算的？` 这类追问或指代查询都不再默认回落 legacy recognizer
 - 仍未迁出的部分：
   - `agents.intent_recognizer` 中复杂 query / modification fallback 分支
 - 下一步应继续把复杂 recognizer fallback 分支下沉到 `src` adapter 或新 runtime，并评估是否还能继续压缩 Redis/legacy compat 外壳
@@ -184,4 +185,4 @@
 
 ## 当前回归基线
 - `pytest tests/unit tests/integration tests/golden -q`
-- 结果：`229 passed, 1 skipped`
+- 结果：`230 passed, 1 skipped`

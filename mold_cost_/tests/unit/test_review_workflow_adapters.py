@@ -627,6 +627,38 @@ async def test_src_review_intent_recognizer_handles_contextual_query_without_leg
 
 
 @pytest.mark.asyncio
+async def test_src_review_intent_recognizer_handles_contextual_structured_queries_without_legacy():
+    module = importlib.import_module("mold_cost.infrastructure.review.intent_recognizer_runtime")
+
+    class _ExplodingFallbackRecognizer:
+        async def recognize(self, *args, **kwargs):
+            raise AssertionError("fallback should not be used for contextual structured query rules")
+
+        async def close(self):
+            return None
+
+    recognizer = module.SrcReviewIntentRecognizer(fallback_recognizer=_ExplodingFallbackRecognizer())
+
+    material_result = await recognizer.recognize(
+        "这个零件的材料费是多少？",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_DIE-03"}]}},
+        job_id="job-14ctx-query-1",
+        db_session="db",
+    )
+    generic_result = await recognizer.recognize(
+        "那个零件怎么算的？",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_DIE-03"}]}},
+        job_id="job-14ctx-query-2",
+        db_session="db",
+    )
+
+    assert material_result.intent_type == "QUERY_DETAILS"
+    assert material_result.parameters == {"query_type": "material"}
+    assert generic_result.intent_type == "QUERY_DETAILS"
+    assert generic_result.parameters == {}
+
+
+@pytest.mark.asyncio
 async def test_src_review_intent_recognizer_handles_contextual_data_modification_without_legacy():
     module = importlib.import_module("mold_cost.infrastructure.review.intent_recognizer_runtime")
 

@@ -453,7 +453,14 @@ class SrcReviewIntentRecognizer:
         return has_action_keyword and has_field_keyword and has_value_marker
 
     def _looks_like_contextual_query(self, message: str) -> bool:
+        if any(keyword in message for keyword in self._MODIFICATION_GUIDANCE_KEYWORDS):
+            return False
         if any(keyword in message for keyword in self._CONTEXT_QUERY_KEYWORDS):
+            return True
+        if any(keyword in message for keyword in self._QUERY_KEYWORDS):
+            return True
+        query_type = self._extract_query_type(message)
+        if query_type and any(keyword in message for keyword in self._STRUCTURED_QUERY_KEYWORDS):
             return True
         return "处理" in message and any(keyword in message for keyword in self._CONTEXT_TARGET_KEYWORDS)
 
