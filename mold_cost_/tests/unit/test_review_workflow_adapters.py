@@ -724,6 +724,29 @@ async def test_src_review_intent_recognizer_handles_query_details_without_legacy
 
 
 @pytest.mark.asyncio
+async def test_src_review_intent_recognizer_keeps_structured_quantity_query_without_legacy():
+    module = importlib.import_module("mold_cost.infrastructure.review.intent_recognizer_runtime")
+
+    class _ExplodingFallbackRecognizer:
+        async def recognize(self, *args, **kwargs):
+            raise AssertionError("fallback should not be used for structured quantity query rule")
+
+        async def close(self):
+            return None
+
+    recognizer = module.SrcReviewIntentRecognizer(fallback_recognizer=_ExplodingFallbackRecognizer())
+    result = await recognizer.recognize(
+        "DIE-03 的材料费是多少？",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_DIE-03"}]}},
+        job_id="job-14a-qty",
+        db_session="db",
+    )
+
+    assert result.intent_type == "QUERY_DETAILS"
+    assert result.parameters == {"subgraph_id": "DIE-03", "query_type": "material"}
+
+
+@pytest.mark.asyncio
 async def test_src_review_intent_recognizer_handles_verification_query_without_legacy():
     module = importlib.import_module("mold_cost.infrastructure.review.intent_recognizer_runtime")
 
@@ -974,6 +997,101 @@ async def test_src_review_intent_recognizer_handles_short_follow_up_queries_with
     assert nc_z_result.parameters == {"query_type": "nc_z"}
     assert wire_total_result.intent_type == "QUERY_DETAILS"
     assert wire_total_result.parameters == {"query_type": "wire_total"}
+
+
+@pytest.mark.asyncio
+async def test_src_review_intent_recognizer_handles_explicit_query_phrases_without_legacy():
+    module = importlib.import_module("mold_cost.infrastructure.review.intent_recognizer_runtime")
+
+    class _ExplodingFallbackRecognizer:
+        async def recognize(self, *args, **kwargs):
+            raise AssertionError("fallback should not be used for explicit query phrase rules")
+
+        async def close(self):
+            return None
+
+    recognizer = module.SrcReviewIntentRecognizer(fallback_recognizer=_ExplodingFallbackRecognizer())
+
+    material_result = await recognizer.recognize(
+        "DIE-03 材料费",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_DIE-03"}]}},
+        job_id="job-14phrase1",
+        db_session="db",
+    )
+    weight_result = await recognizer.recognize(
+        "DIE-03 重量",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_DIE-03"}]}},
+        job_id="job-14phrase2",
+        db_session="db",
+    )
+    wire_base_result = await recognizer.recognize(
+        "DIE-03 线割基础费",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_DIE-03"}]}},
+        job_id="job-14phrase3",
+        db_session="db",
+    )
+
+    assert material_result.intent_type == "QUERY_DETAILS"
+    assert material_result.parameters == {"subgraph_id": "DIE-03", "query_type": "material"}
+    assert weight_result.intent_type == "QUERY_DETAILS"
+    assert weight_result.parameters == {"subgraph_id": "DIE-03", "query_type": "weight"}
+    assert wire_base_result.intent_type == "QUERY_DETAILS"
+    assert wire_base_result.parameters == {"subgraph_id": "DIE-03", "query_type": "wire_base"}
+
+
+@pytest.mark.asyncio
+async def test_src_review_intent_recognizer_prefers_general_chat_for_help_questions_without_legacy():
+    module = importlib.import_module("mold_cost.infrastructure.review.intent_recognizer_runtime")
+
+    class _ExplodingFallbackRecognizer:
+        async def recognize(self, *args, **kwargs):
+            raise AssertionError("fallback should not be used for help/general-chat rules")
+
+        async def close(self):
+            return None
+
+    recognizer = module.SrcReviewIntentRecognizer(fallback_recognizer=_ExplodingFallbackRecognizer())
+
+    capability_result = await recognizer.recognize(
+        "这个系统能做什么？",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_DIE-03"}]}},
+        job_id="job-14help1",
+        db_session="db",
+    )
+    usage_result = await recognizer.recognize(
+        "这个系统怎么用？",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_DIE-03"}]}},
+        job_id="job-14help2",
+        db_session="db",
+    )
+
+    assert capability_result.intent_type == "GENERAL_CHAT"
+    assert capability_result.parameters == {}
+    assert usage_result.intent_type == "GENERAL_CHAT"
+    assert usage_result.parameters == {}
+
+
+@pytest.mark.asyncio
+async def test_src_review_intent_recognizer_does_not_treat_modification_guidance_as_execution():
+    module = importlib.import_module("mold_cost.infrastructure.review.intent_recognizer_runtime")
+
+    class _ExplodingFallbackRecognizer:
+        async def recognize(self, *args, **kwargs):
+            raise AssertionError("fallback should not be used for modification-guidance rule")
+
+        async def close(self):
+            return None
+
+    recognizer = module.SrcReviewIntentRecognizer(fallback_recognizer=_ExplodingFallbackRecognizer())
+    result = await recognizer.recognize(
+        "这个零件的材质怎么修改？",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_DIE-03"}]}},
+        job_id="job-14help3",
+        db_session="db",
+    )
+
+    assert result.intent_type == "GENERAL_CHAT"
+    assert result.parameters == {}
 
 
 def test_src_review_action_handler_registry_keeps_simple_handlers_in_src():

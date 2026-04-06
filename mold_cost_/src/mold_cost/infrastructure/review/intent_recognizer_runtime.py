@@ -28,10 +28,27 @@ class SrcReviewIntentRecognizer:
     _DATA_MODIFICATION_ACTION_KEYWORDS = ("修改", "更改", "调整", "改一下", "改", "换", "设成", "设为")
     _FEATURE_KEYWORDS = ("特征识别", "识别特征", "重新识别", "跑特征", "重跑特征", "识别一下", "再识别", "识别")
     _PRICE_KEYWORDS = ("重新计算", "重算", "更新价格", "计价", "算一下", "calculate", "price")
-    _QUERY_KEYWORDS = tuple(INTENT_KEYWORDS[IntentType.QUERY_DETAILS])
+    _QUERY_KEYWORDS = (
+        "怎么算",
+        "计算详情",
+        "详细步骤",
+        "成本构成",
+        "价格明细",
+        "怎么计算",
+        "如何计算",
+        "计算过程",
+        "why",
+        "detail",
+        "details",
+        "breakdown",
+        "为什么",
+        "详情",
+        "明细",
+    )
     _WEIGHT_PRICE_KEYWORDS = ("按重量计算", "重量计算", "模架按重量", "按重量算价格", "重量价格", "weight price", "weight calculation")
     _WEIGHT_PRICE_QUERY_KEYWORDS = tuple(INTENT_KEYWORDS[IntentType.WEIGHT_PRICE_QUERY])
     _GENERAL_CHAT_KEYWORDS = ("你好", "您好", "hello", "hi", "帮助", "帮我", "怎么用", "能做什么", "你是谁")
+    _MODIFICATION_GUIDANCE_KEYWORDS = ("怎么修改", "如何修改", "怎么改", "如何改")
     _FEATURE_PRICE_CONCEPT_KEYWORDS = ("模板", "模架", "冲头", "刀口入块")
     _WEIGHT_PRICE_CONCEPT_KEYWORDS = ("模架", "冲头", "刀口入块")
     _CONTEXT_REFERENCE_KEYWORDS = ("刚才", "刚刚", "上次", "之前", "刚才那个", "按刚才", "按上次", "延续", "继续")
@@ -116,6 +133,9 @@ class SrcReviewIntentRecognizer:
         if self._looks_like_short_follow_up_query(normalized):
             # 中文注释：这类“那材料费呢”短追问只在 src 侧识别查询类型，具体零件继续交给 handler 走历史推断。
             return self._build_query_intent(message=normalized, context=context, confidence=0.76)
+
+        if self._looks_like_explicit_query_phrase(normalized, context=context):
+            return self._build_query_intent(message=normalized, context=context, confidence=0.78)
 
         if self._looks_like_query_details(normalized, lowered):
             return self._build_query_intent(message=normalized, context=context, confidence=0.82)
@@ -256,6 +276,8 @@ class SrcReviewIntentRecognizer:
         return any(keyword in lowered for keyword in ("weight price details", "weight calculation details"))
 
     def _looks_like_data_modification(self, message: str) -> bool:
+        if any(keyword in message for keyword in self._MODIFICATION_GUIDANCE_KEYWORDS):
+            return False
         if any(keyword in message for keyword in self._DATA_MODIFICATION_KEYWORDS):
             return True
         return "修改" in message and any(token in message for token in ("为", "成", "到"))
@@ -271,6 +293,21 @@ class SrcReviewIntentRecognizer:
         has_follow_up_prefix = any(compact.startswith(prefix) for prefix in self._FOLLOW_UP_QUERY_PREFIXES)
         has_question_suffix = compact.endswith(self._FOLLOW_UP_QUERY_SUFFIXES)
         return len(compact) <= 12 and (has_follow_up_prefix or has_question_suffix)
+
+    def _looks_like_explicit_query_phrase(self, message: str, *, context: dict[str, Any]) -> bool:
+        compact = re.sub(r"\s+", "", message)
+        query_type = self._extract_query_type(compact)
+        if query_type is None or not self._extract_subgraph_ids(message=compact, context=context):
+            return False
+        if self._looks_like_data_modification(compact) or self._looks_like_contextual_data_modification(compact):
+            return False
+        if any(keyword in compact for keyword in self._FEATURE_KEYWORDS):
+            return False
+        if any(keyword in compact for keyword in self._PRICE_KEYWORDS):
+            return False
+        if any(keyword in compact for keyword in self._WEIGHT_PRICE_KEYWORDS):
+            return False
+        return len(compact) <= 24
 
     def _extract_query_type(self, message: str) -> str | None:
         if any(keyword in message for keyword in ("线割总价", "线割总费用")):
@@ -334,6 +371,8 @@ class SrcReviewIntentRecognizer:
     def _looks_like_general_chat(self, message: str) -> bool:
         if any(keyword in message for keyword in self._GENERAL_CHAT_KEYWORDS):
             return True
+        if any(keyword in message for keyword in self._MODIFICATION_GUIDANCE_KEYWORDS):
+            return True
         if len(message) <= 12 and not any(ch.isdigit() for ch in message):
             return message.endswith(("?", "？")) and not any(
                 keyword in message for keyword in ("价格", "特征", "重量", "修改", "材质", "多少", "为什么")
@@ -392,6 +431,8 @@ class SrcReviewIntentRecognizer:
         )
 
     def _looks_like_contextual_data_modification(self, message: str) -> bool:
+        if any(keyword in message for keyword in self._MODIFICATION_GUIDANCE_KEYWORDS):
+            return False
         if any(keyword in message for keyword in self._DATA_MODIFICATION_KEYWORDS):
             return True
         return any(keyword in message for keyword in self._DATA_MODIFICATION_ACTION_KEYWORDS) and any(

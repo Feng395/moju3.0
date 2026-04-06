@@ -95,7 +95,7 @@
 - 新增 `src/mold_cost/infrastructure/review/query_details_review_handler.py`
 - 新增 `src/mold_cost/infrastructure/review/data_modification_review_handler.py`
 - `DATA_MODIFICATION`、`FEATURE_RECOGNITION`、`PRICE_CALCULATION`、`QUERY_DETAILS`、`WEIGHT_PRICE_CALCULATION`、`GENERAL_CHAT`、`WEIGHT_PRICE_QUERY` 已切到 `src` 侧 review action handlers
-- review 默认 intent recognizer 已改为 `src-first + legacy fallback`，并补齐上下文指代类 query/modification 识别、`wire_base / add_auto_material / nc_base / standard / wire_total / tooth_hole_time / nc_z / nc_c_b / nc_b_view` 等稳定 `query_type`，以及 `那材料费呢 / 热处理呢 / 那主视图时间呢 / 那线割总价呢` 这类短追问查询；同时 legacy fallback 已改为懒加载实例化
+- review 默认 intent recognizer 已改为 `src-first + legacy fallback`，并补齐上下文指代类 query/modification 识别、`wire_base / add_auto_material / nc_base / standard / wire_total / tooth_hole_time / nc_z / nc_c_b / nc_b_view` 等稳定 `query_type`，以及 `那材料费呢 / 热处理呢 / 那主视图时间呢 / 那线割总价呢` 这类短追问查询；现在连 `DIE-03 材料费 / DIE-03 重量 / DIE-03 线割基础费` 这类显式 ID 名词短语查询也已本地化，同时本地 `QUERY_DETAILS` 泛问句命中面已收窄，避免把“这个系统能做什么？”误判成查询；legacy fallback 继续保持懒加载实例化
 - review data loader 默认使用的 display view builder 与 completeness validator 也已迁入 `src`，`legacy_review_support_adapter.py` 仅保留兼容类名
 - review 默认仓储访问也已切到 `SrcReviewRepository`，`review_repository_adapter.py` 仅保留兼容类名与延迟实例化包装
 - `legacy_review_handler_adapter.py` 现在只负责默认 change applier 组装
@@ -153,7 +153,7 @@
 - 默认确认执行器已迁出 `ConfirmHandler`
 - handler registry 已迁出 `ActionHandlerFactory`
 - 默认 recognizer 已切为 `src-first + legacy fallback`
-- 常见 `QUERY_DETAILS / DATA_MODIFICATION / WEIGHT_PRICE_QUERY` 规则识别已迁入 `src`，上下文指代类 query/modification、稳定 `query_type` 与短追问查询识别也已本地化；review data loader 默认 helper 不再依赖 `agents.data_view_builder` / `shared.validators.completeness_validator`，默认仓储访问也不再直接依赖 `api_gateway.repositories.review_repository`；现在连 `线割总价`、`牙孔费用`、`主视图/侧背/正面的背面`，以及 `那材料费呢 / 热处理呢 / 那主视图时间呢 / 那线割总价呢` 这类追问都不再默认回落 legacy recognizer
+- 常见 `QUERY_DETAILS / DATA_MODIFICATION / WEIGHT_PRICE_QUERY` 规则识别已迁入 `src`，上下文指代类 query/modification、稳定 `query_type`、短追问查询与显式 ID 名词短语查询识别也已本地化；review data loader 默认 helper 不再依赖 `agents.data_view_builder` / `shared.validators.completeness_validator`，默认仓储访问也不再直接依赖 `api_gateway.repositories.review_repository`；现在连 `线割总价`、`牙孔费用`、`主视图/侧背/正面的背面`、`DIE-03 材料费 / 重量 / 线割基础费`，以及 `那材料费呢 / 热处理呢 / 那主视图时间呢 / 那线割总价呢` 这类追问都不再默认回落 legacy recognizer
 - 仍未迁出的部分：
   - `agents.intent_recognizer` 中复杂 query / modification fallback 分支
 - 下一步应继续把复杂 recognizer fallback 分支下沉到 `src` adapter 或新 runtime
@@ -177,4 +177,4 @@
 
 ## 当前回归基线
 - `pytest tests/unit tests/integration tests/golden -q`
-- 结果：`218 passed, 1 skipped`
+- 结果：`222 passed, 1 skipped`
