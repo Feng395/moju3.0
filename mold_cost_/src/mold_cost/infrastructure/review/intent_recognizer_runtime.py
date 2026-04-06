@@ -37,7 +37,25 @@ class SrcReviewIntentRecognizer:
     _CONTEXT_REFERENCE_KEYWORDS = ("刚才", "刚刚", "上次", "之前", "刚才那个", "按刚才", "按上次", "延续", "继续")
     _CONTEXT_TARGET_KEYWORDS = ("这个零件", "那个零件", "该零件", "这个", "那个", "它", "这条", "那条")
     _CONTEXT_QUERY_KEYWORDS = ("判断逻辑", "逻辑", "规则", "依据", "怎么判", "怎么判断", "为什么", "按哪套")
-    _STRUCTURED_QUERY_KEYWORDS = ("多少", "几", "吗", "？", "?", "怎么算", "怎么来的", "费用", "价格", "时间", "线长", "数据")
+    _STRUCTURED_QUERY_KEYWORDS = (
+        "多少",
+        "几",
+        "吗",
+        "呢",
+        "？",
+        "?",
+        "怎么算",
+        "怎么来的",
+        "费用",
+        "价格",
+        "时间",
+        "总价",
+        "总费用",
+        "线长",
+        "数据",
+    )
+    _FOLLOW_UP_QUERY_PREFIXES = ("那", "这", "它", "这个", "那个", "这边", "那边")
+    _FOLLOW_UP_QUERY_SUFFIXES = ("呢", "吗", "呀", "啊", "？", "?")
     _SINGLE_CODE_PATTERN = r"(?<![A-Z0-9])([LWMGKZ])(?![A-Z0-9])"
 
     def __init__(self, *, fallback_recognizer=None):
@@ -94,6 +112,10 @@ class SrcReviewIntentRecognizer:
         contextual_intent = self._recognize_contextual_reference_intent(message=normalized, context=context)
         if contextual_intent is not None:
             return contextual_intent
+
+        if self._looks_like_short_follow_up_query(normalized):
+            # 中文注释：这类“那材料费呢”短追问只在 src 侧识别查询类型，具体零件继续交给 handler 走历史推断。
+            return self._build_query_intent(message=normalized, context=context, confidence=0.76)
 
         if self._looks_like_query_details(normalized, lowered):
             return self._build_query_intent(message=normalized, context=context, confidence=0.82)
@@ -237,6 +259,18 @@ class SrcReviewIntentRecognizer:
         if any(keyword in message for keyword in self._DATA_MODIFICATION_KEYWORDS):
             return True
         return "修改" in message and any(token in message for token in ("为", "成", "到"))
+
+    def _looks_like_short_follow_up_query(self, message: str) -> bool:
+        compact = re.sub(r"\s+", "", message)
+        query_type = self._extract_query_type(compact)
+        if query_type is None:
+            return False
+        if self._looks_like_data_modification(compact) or self._looks_like_contextual_data_modification(compact):
+            return False
+
+        has_follow_up_prefix = any(compact.startswith(prefix) for prefix in self._FOLLOW_UP_QUERY_PREFIXES)
+        has_question_suffix = compact.endswith(self._FOLLOW_UP_QUERY_SUFFIXES)
+        return len(compact) <= 12 and (has_follow_up_prefix or has_question_suffix)
 
     def _extract_query_type(self, message: str) -> str | None:
         if any(keyword in message for keyword in ("线割总价", "线割总费用")):

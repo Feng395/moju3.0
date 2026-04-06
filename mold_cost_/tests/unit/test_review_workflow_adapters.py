@@ -691,6 +691,54 @@ async def test_src_review_intent_recognizer_handles_wire_total_and_tooth_hole_wi
     assert tooth_hole_result.parameters == {"subgraph_id": "DIE-03", "query_type": "tooth_hole_time"}
 
 
+@pytest.mark.asyncio
+async def test_src_review_intent_recognizer_handles_short_follow_up_queries_without_legacy():
+    module = importlib.import_module("mold_cost.infrastructure.review.intent_recognizer_runtime")
+
+    class _ExplodingFallbackRecognizer:
+        async def recognize(self, *args, **kwargs):
+            raise AssertionError("fallback should not be used for short follow-up query rules")
+
+        async def close(self):
+            return None
+
+    recognizer = module.SrcReviewIntentRecognizer(fallback_recognizer=_ExplodingFallbackRecognizer())
+
+    material_result = await recognizer.recognize(
+        "那材料费呢",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_DIE-03"}]}},
+        job_id="job-14n",
+        db_session="db",
+    )
+    heat_result = await recognizer.recognize(
+        "热处理呢",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_DIE-03"}]}},
+        job_id="job-14o",
+        db_session="db",
+    )
+    nc_z_result = await recognizer.recognize(
+        "那主视图时间呢",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_DIE-03"}]}},
+        job_id="job-14p",
+        db_session="db",
+    )
+    wire_total_result = await recognizer.recognize(
+        "那线割总价呢",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_DIE-03"}]}},
+        job_id="job-14q",
+        db_session="db",
+    )
+
+    assert material_result.intent_type == "QUERY_DETAILS"
+    assert material_result.parameters == {"query_type": "material"}
+    assert heat_result.intent_type == "QUERY_DETAILS"
+    assert heat_result.parameters == {"query_type": "heat"}
+    assert nc_z_result.intent_type == "QUERY_DETAILS"
+    assert nc_z_result.parameters == {"query_type": "nc_z"}
+    assert wire_total_result.intent_type == "QUERY_DETAILS"
+    assert wire_total_result.parameters == {"query_type": "wire_total"}
+
+
 def test_src_review_action_handler_registry_keeps_simple_handlers_in_src():
     module = importlib.import_module("mold_cost.infrastructure.review.action_handler_runtime")
 
