@@ -8,7 +8,7 @@ from typing import Any, Awaitable, Callable
 import httpx
 
 from ...core.settings import settings
-from ..db.repositories.review_repository_adapter import LegacyReviewRepositoryAdapter
+from ..db.repositories.review_repository import SrcReviewRepository
 from .pending_action_store import RedisReviewPendingActionStore
 
 RequestExecutor = Callable[[str, dict[str, Any]], Awaitable[dict[str, Any]]]
@@ -25,7 +25,7 @@ class ReviewConfirmationExecutorAdapter:
         request_executor: RequestExecutor | None = None,
     ):
         self._pending_action_store = pending_action_store or RedisReviewPendingActionStore()
-        self._review_repository = review_repository or LegacyReviewRepositoryAdapter()
+        self._review_repository = review_repository or SrcReviewRepository()
         self._request_executor = request_executor or self._post_json
 
     async def handle_confirmation(

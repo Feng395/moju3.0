@@ -1762,6 +1762,26 @@ async def test_review_confirmation_executor_applies_data_modification_and_clears
     assert fake_repo.update_calls[0][2]["subgraphs"][0]["modified_at"].isoformat() == "2026-04-05T10:00:00"
 
 
+def test_review_confirmation_executor_defaults_to_src_review_repository(monkeypatch):
+    module = importlib.import_module("mold_cost.infrastructure.review.confirmation_executor")
+
+    created_instances: list[object] = []
+
+    class _FakeSrcReviewRepository:
+        def __init__(self):
+            created_instances.append(self)
+
+    monkeypatch.setattr(module, "SrcReviewRepository", _FakeSrcReviewRepository)
+
+    executor = module.ReviewConfirmationExecutorAdapter(
+        pending_action_store=object(),
+        request_executor=lambda *_args, **_kwargs: None,
+    )
+
+    assert executor._review_repository is created_instances[0]
+    assert len(created_instances) == 1
+
+
 @pytest.mark.asyncio
 async def test_review_confirmation_executor_triggers_feature_api_and_clears_pending_action():
     module = importlib.import_module("mold_cost.infrastructure.review.confirmation_executor")
