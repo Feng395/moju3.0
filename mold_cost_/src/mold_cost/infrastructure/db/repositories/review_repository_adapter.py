@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from .review_repository import SrcReviewRepository
+
 
 class LegacyReviewRepositoryAdapter:
-    """Lazily proxy legacy review repository methods through src/mold_cost."""
+    """Compatibility wrapper that now defaults to the src-owned review repository."""
 
     def __init__(self):
         self._review_repo = None
@@ -14,9 +16,7 @@ class LegacyReviewRepositoryAdapter:
     @property
     def review_repo(self):
         if self._review_repo is None:
-            from api_gateway.repositories.review_repository import ReviewRepository
-
-            self._review_repo = ReviewRepository()
+            self._review_repo = SrcReviewRepository()
         return self._review_repo
 
     async def get_all_review_data(self, db_session, job_id: str) -> dict[str, list[dict[str, Any]]]:

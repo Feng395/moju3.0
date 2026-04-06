@@ -217,6 +217,105 @@ def test_src_review_completeness_validator_keeps_legacy_prompt_semantics():
     assert "热处理: HRC60" in prompt
 
 
+def test_review_repository_adapter_defaults_to_src_repository(monkeypatch):
+    module = importlib.import_module("mold_cost.infrastructure.db.repositories.review_repository_adapter")
+
+    created_instances: list[object] = []
+
+    class _FakeSrcReviewRepository:
+        def __init__(self):
+            created_instances.append(self)
+
+    monkeypatch.setattr(module, "SrcReviewRepository", _FakeSrcReviewRepository)
+
+    adapter = module.LegacyReviewRepositoryAdapter()
+
+    assert adapter.review_repo is created_instances[0]
+    assert adapter.review_repo is created_instances[0]
+    assert len(created_instances) == 1
+
+
+@pytest.mark.asyncio
+async def test_src_review_repository_aggregates_all_review_tables():
+    module = importlib.import_module("mold_cost.infrastructure.db.repositories.review_repository")
+
+    repository = module.SrcReviewRepository()
+    calls: list[tuple[str, object, str]] = []
+
+    async def _fake_get_features(db_session, job_id):
+        calls.append(("features", db_session, job_id))
+        return [{"feature_id": 1}]
+
+    async def _fake_get_price_snapshots(db_session, job_id):
+        calls.append(("price", db_session, job_id))
+        return [{"snapshot_id": 2}]
+
+    async def _fake_get_subgraphs(db_session, job_id):
+        calls.append(("subgraphs", db_session, job_id))
+        return [{"subgraph_id": "sg-1"}]
+
+    async def _fake_get_processing_cost_details(db_session, job_id):
+        calls.append(("details", db_session, job_id))
+        return [{"detail_id": 3}]
+
+    repository.get_features = _fake_get_features
+    repository.get_price_snapshots = _fake_get_price_snapshots
+    repository.get_subgraphs = _fake_get_subgraphs
+    repository.get_processing_cost_details = _fake_get_processing_cost_details
+
+    result = await repository.get_all_review_data("db", "job-4")
+
+    assert calls == [
+        ("features", "db", "job-4"),
+        ("price", "db", "job-4"),
+        ("subgraphs", "db", "job-4"),
+        ("details", "db", "job-4"),
+    ]
+    assert result == {
+        "features": [{"feature_id": 1}],
+        "job_price_snapshots": [{"snapshot_id": 2}],
+        "subgraphs": [{"subgraph_id": "sg-1"}],
+        "processing_cost_calculation_details": [{"detail_id": 3}],
+    }
+
+
+@pytest.mark.asyncio
+async def test_src_review_repository_update_all_review_data_keeps_price_snapshot_compatibility():
+    module = importlib.import_module("mold_cost.infrastructure.db.repositories.review_repository")
+
+    repository = module.SrcReviewRepository()
+    calls: list[tuple[str, object, str, list[dict]]] = []
+
+    async def _fake_update_features(db_session, job_id, payload):
+        calls.append(("features", db_session, job_id, payload))
+
+    async def _fake_update_price_snapshots(db_session, job_id, payload):
+        calls.append(("price", db_session, job_id, payload))
+
+    async def _fake_update_subgraphs(db_session, job_id, payload):
+        calls.append(("subgraphs", db_session, job_id, payload))
+
+    repository.update_features = _fake_update_features
+    repository.update_price_snapshots = _fake_update_price_snapshots
+    repository.update_subgraphs = _fake_update_subgraphs
+
+    await repository.update_all_review_data(
+        "db",
+        "job-5",
+        {
+            "features": [{"feature_id": 1}],
+            "price_snapshots": [{"snapshot_id": 2}],
+            "subgraphs": [{"subgraph_id": "sg-1"}],
+        },
+    )
+
+    assert calls == [
+        ("features", "db", "job-5", [{"feature_id": 1}]),
+        ("price", "db", "job-5", [{"snapshot_id": 2}]),
+        ("subgraphs", "db", "job-5", [{"subgraph_id": "sg-1"}]),
+    ]
+
+
 @pytest.mark.asyncio
 async def test_review_change_applier_confirm_uses_infra_adapter_by_default(monkeypatch):
     module = importlib.import_module("mold_cost.domain.review.services.review_change_applier")
