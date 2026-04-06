@@ -13,6 +13,7 @@ ensure_src_path()
 
 def test_refactor_entrypoints_can_import():
     """验证新旧入口在不连接外部服务时可以完成导入。"""
+    from api_gateway.repositories.chat_history_repository import ChatHistoryRepository as LegacyChatHistoryRepository
     from api_gateway.routers import chat_router, features, jobs, review_router
     from api_gateway.services.file_service import FileService
     from api_gateway.services.job_service import JobService
@@ -24,6 +25,9 @@ def test_refactor_entrypoints_can_import():
     from mold_cost.domain.jobs import JobSummary
     from mold_cost.domain.pricing.calculators import price_total
     from mold_cost.domain.pricing.search import total_search
+    from mold_cost.infrastructure.db.repositories.chat_history_repository import (
+        ChatHistoryRepository as SrcChatHistoryRepository,
+    )
     from mold_cost.infrastructure.mcp import tool_gateway
     from mold_cost.interfaces.api import get_legacy_cad_app
     from mold_cost.interfaces.api.routers.jobs import get_jobs_router, get_legacy_jobs_router
@@ -46,6 +50,7 @@ def test_refactor_entrypoints_can_import():
     assert features.router is not None
     assert review_router.router is not None
     assert chat_router.router is not None
+    assert issubclass(LegacyChatHistoryRepository, SrcChatHistoryRepository)
     assert isinstance(JobService(), JobService)
     assert isinstance(FileService(), FileService)
     assert isinstance(GetJobStatusUseCase(), GetJobStatusUseCase)
