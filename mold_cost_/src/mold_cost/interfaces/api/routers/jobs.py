@@ -11,14 +11,49 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from shared.database import get_db
 from shared.unified_logging import get_logger
 
-from api_gateway.auth import get_current_user
-from api_gateway.services.file_service import FileService
-from api_gateway.services.job_service import JobService
+from ....application.use_cases import (
+    ContinueJobUseCase,
+    CreateJobFromUploadUseCase,
+    GetJobDetailUseCase,
+    GetJobFileUseCase,
+    GetJobStatusUseCase,
+    GetPriceSnapshotsUseCase,
+    GetProcessSnapshotsUseCase,
+)
+from ..dependencies.auth import get_current_user
 
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 router_legacy = APIRouter(prefix="/api/jobs", tags=["jobs-legacy"])
+
+
+class JobService:
+    """兼容旧路由 monkeypatch 方式的 src-owned 任务服务外壳。"""
+
+    async def create_job_from_upload(self, *, db, user_id, dwg_file=None, prt_file=None, encryption_key=None):
+        return await CreateJobFromUploadUseCase().execute(
+            db=db,
+            user_id=user_id,
+            dwg_file=dwg_file,
+            prt_file=prt_file,
+            encryption_key=encryption_key,
+        )
+
+    async def get_job_status(self, *, db, job_id: str, user_id: str):
+        return await GetJobStatusUseCase().execute(db=db, job_id=job_id, user_id=user_id)
+
+    async def get_price_snapshots(self, *, db, job_id: str, user_id: str):
+        return await GetPriceSnapshotsUseCase().execute(db=db, job_id=job_id, user_id=user_id)
+
+    async def get_process_snapshots(self, *, db, job_id: str, user_id: str):
+        return await GetProcessSnapshotsUseCase().execute(db=db, job_id=job_id, user_id=user_id)
+
+    async def get_job_detail(self, *, db, job_id: str, user_id: str):
+        return await GetJobDetailUseCase().execute(db=db, job_id=job_id, user_id=user_id)
+
+    async def submit_continue_job(self, job_id: str):
+        return await ContinueJobUseCase().submit(job_id)
 
 
 @router.post("/upload")
@@ -31,8 +66,7 @@ async def upload_files(
 ):
     """上传文件并创建任务。"""
     try:
-        job_service = JobService()
-        return await job_service.create_job_from_upload(
+        return await JobService().create_job_from_upload(
             db=db,
             user_id=current_user["user_id"],
             dwg_file=dwg_file,
@@ -60,8 +94,7 @@ async def get_job_status(
 ):
     """查询任务状态。"""
     try:
-        job_service = JobService()
-        return await job_service.get_job_status(
+        return await JobService().get_job_status(
             db=db,
             job_id=job_id,
             user_id=current_user["user_id"],
@@ -87,8 +120,7 @@ async def get_job_price_snapshots(
 ):
     """查询任务价格快照。"""
     try:
-        job_service = JobService()
-        return await job_service.get_price_snapshots(
+        return await JobService().get_price_snapshots(
             db=db,
             job_id=job_id,
             user_id=current_user["user_id"],
@@ -111,8 +143,7 @@ async def get_job_process_snapshots(
 ):
     """查询任务工艺快照。"""
     try:
-        job_service = JobService()
-        return await job_service.get_process_snapshots(
+        return await JobService().get_process_snapshots(
             db=db,
             job_id=job_id,
             user_id=current_user["user_id"],
@@ -136,8 +167,7 @@ async def download_job_file(
 ):
     """下载任务文件。"""
     try:
-        file_service = FileService()
-        file_content = await file_service.get_job_file(
+        file_content = await GetJobFileUseCase().get_file(
             db=db,
             job_id=job_id,
             file_type=file_type.lower(),
@@ -178,8 +208,7 @@ async def get_job_file_url(
 ):
     """获取任务文件预签名下载链接。"""
     try:
-        file_service = FileService()
-        url = await file_service.get_job_file_url(
+        url = await GetJobFileUseCase().get_presigned_url(
             db=db,
             job_id=job_id,
             file_type=file_type.lower(),
@@ -211,16 +240,11 @@ async def get_job(
 ):
     """读取任务详情。"""
     try:
-        job_service = JobService()
-        return await job_service.get_job_detail(
+        return await JobService().get_job_detail(
             db=db,
             job_id=job_id,
             user_id=current_user["user_id"],
         )
-    except ValueError as exc:
-        if str(exc).startswith("JOB_NOT_FOUND:"):
-            raise HTTPException(status_code=404, detail=f"任务不存在: {job_id}") from exc
-        raise
     except HTTPException:
         raise
     except Exception as exc:
@@ -251,8 +275,7 @@ async def create_job(
 ):
     """标准 REST 风格的创建任务入口。"""
     try:
-        job_service = JobService()
-        return await job_service.create_job_from_upload(
+        return await JobService().create_job_from_upload(
             db=db,
             user_id=current_user["user_id"],
             dwg_file=dwg_file,
@@ -281,9 +304,8 @@ async def continue_job(
     """用户确认后继续执行任务。"""
     try:
         del current_user
-        job_service = JobService()
         logger.info("收到继续执行请求: job_id=%s", job_id)
-        return await job_service.submit_continue_job(job_id)
+        return await JobService().submit_continue_job(job_id)
     except Exception as exc:
         logger.error("提交继续执行任务失败: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail=f"提交任务失败: {exc}") from exc

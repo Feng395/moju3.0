@@ -9,7 +9,7 @@
 - `job_graph` 与 `review_graph` 均已运行在 LangGraph 工作流之上。
 - `application / domain / infrastructure / interfaces` 四层已经成为真实执行路径，而不是占位目录。
 - pricing 主链已完成从旧 agent 与 `scripts.search/*`、`scripts.calculate/*` 的迁移。
-- API、worker、兼容 agent 的主调用路径已基本转向 `src/mold_cost`。
+- API、worker、兼容 agent 的主调用路径已基本转向 `src/mold_cost`，其中 jobs/files 路由也已不再直接依赖 `api_gateway.services.*`。
 - review 的 data loader、notifier、默认装配、确认执行链、src-first intent recognizer 与七类已迁入 handlers 已继续向 `src` 收口。
 - feature 单文件分析、批处理编排、DB 读写 helper 与滑块红色面后处理已经迁入 `src/mold_cost`。
 
@@ -116,6 +116,8 @@
 ### 2. Use Case 与接口层下沉
 - 任务创建、查询、文件访问、继续执行等 use case 已落到 `application/use_cases`
 - `src/mold_cost/interfaces/api` 已接管主 API 入口
+- `src/mold_cost/interfaces/api/routers/jobs.py` 已切到 `src` use case 与本地 compat `JobService` 外壳，不再直接 import `api_gateway.services.job_service` / `file_service`
+- `src/mold_cost/interfaces/api/dependencies/auth.py` 已提供本地 auth dependency 包装，`jobs.py` 与 `files.py` 不再直接 import `api_gateway.auth`
 - `api_gateway/services/*` 大部分已退化为兼容包装
 
 ### 3. Job Workflow 迁移到 LangGraph
@@ -170,8 +172,9 @@
 
 ### R8 兼容入口持续清理
 - `scripts/cad_chaitu/__init__.py` 已去掉包级初始化副作用
+- `src` API jobs/files 路由已摘掉对 `api_gateway.services.*` / `api_gateway.auth` 的直接依赖
 - 仍有少量兼容入口与诊断脚本可继续压缩
 
 ## 当前回归基线
 - `pytest tests/unit tests/integration tests/golden -q`
-- 结果：`217 passed, 1 skipped`
+- 结果：`218 passed, 1 skipped`

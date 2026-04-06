@@ -11,6 +11,40 @@ from ...infrastructure.db.repositories.job_repository import JobRepository
 from ...infrastructure.db.repositories.snapshot_repository import SnapshotRepository
 
 
+class GetJobDetailUseCase:
+    """负责聚合任务详情输出。"""
+
+    def __init__(self):
+        self.job_repo = JobRepository()
+
+    async def execute(self, db: AsyncSession, job_id: str, user_id: str) -> dict[str, Any]:
+        summary = await self.job_repo.get_job_summary(db, job_id)
+        if not summary:
+            raise HTTPException(status_code=404, detail={"error": "JOB_NOT_FOUND", "message": f"任务不存在: {job_id}"})
+
+        # 中文注释：详情接口继续沿用旧返回结构，避免前端在入口切换时出现字段漂移。
+        return {
+            "job_id": str(summary["job_id"]),
+            "dwg_file_name": summary["dwg_file_name"],
+            "prt_file_name": summary["prt_file_name"],
+            "status": summary["status"],
+            "progress": summary["progress"],
+            "current_stage": summary["current_stage"],
+            "total_cost": float(summary["total_cost"]) if summary["total_cost"] else 0.0,
+            "subgraph_count": summary["subgraph_count"],
+            "material_cost": float(summary["material_cost"]) if summary["material_cost"] else 0.0,
+            "heat_treatment_cost": float(summary["heat_treatment_cost"]) if summary["heat_treatment_cost"] else 0.0,
+            "processing_cost_total": float(summary["processing_cost_total"]) if summary["processing_cost_total"] else 0.0,
+            "nc_cost": float(summary["nc_cost"]) if summary["nc_cost"] else 0.0,
+            "grinding_cost": float(summary["grinding_cost"]) if summary["grinding_cost"] else 0.0,
+            "wire_cost": float(summary["wire_cost"]) if summary["wire_cost"] else 0.0,
+            "error_message": summary["error_message"],
+            "created_at": summary["created_at"].isoformat() if summary["created_at"] else None,
+            "updated_at": summary["updated_at"].isoformat() if summary["updated_at"] else None,
+            "metadata": summary["metadata"],
+        }
+
+
 class GetJobStatusUseCase:
     """负责任务状态查询。"""
 

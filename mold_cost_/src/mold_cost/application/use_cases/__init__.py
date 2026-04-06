@@ -3,7 +3,7 @@
 from .continue_job import ContinueJobUseCase
 from .create_job import CreateJobFromUploadUseCase
 from .features import ReprocessFeaturesUseCase
-from .get_job import GetJobStatusUseCase, GetPriceSnapshotsUseCase, GetProcessSnapshotsUseCase
+from .get_job import GetJobDetailUseCase, GetJobStatusUseCase, GetPriceSnapshotsUseCase, GetProcessSnapshotsUseCase
 from .get_job_file import GetJobFileUseCase
 from .review import (
     ConfirmReviewUseCase,
@@ -19,6 +19,7 @@ __all__ = [
     "CreateJobFromUploadUseCase",
     "ReprocessFeaturesUseCase",
     "GetJobFileUseCase",
+    "GetJobDetailUseCase",
     "GetProcessSnapshotsUseCase",
     "GetJobStatusUseCase",
     "GetPriceSnapshotsUseCase",

@@ -13,8 +13,8 @@ from pydantic import BaseModel, Field, field_validator
 from shared.timezone_utils import now_shanghai
 from shared.unified_logging import get_logger
 
-from api_gateway.auth import get_current_user
 from ....core.settings import settings
+from ..dependencies.auth import get_current_user
 
 logger = get_logger(__name__)
 

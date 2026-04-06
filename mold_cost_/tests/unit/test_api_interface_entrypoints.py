@@ -37,8 +37,19 @@ def test_jobs_router_is_implemented_in_src_package():
     source = Path(jobs_module.__file__).read_text(encoding="utf-8")
     assert "from api_gateway.routers.jobs import router" not in source
     assert "from api_gateway.routers.jobs import router_legacy" not in source
+    assert "from api_gateway.services.job_service import JobService" not in source
+    assert "from api_gateway.services.file_service import FileService" not in source
+    assert "from api_gateway.auth import get_current_user" not in source
     assert jobs_module.router.prefix == "/jobs"
     assert jobs_module.router_legacy.prefix == "/api/jobs"
+
+
+def test_files_router_uses_src_auth_dependency():
+    from mold_cost.interfaces.api.routers import files as files_module
+
+    source = Path(files_module.__file__).read_text(encoding="utf-8")
+    assert "from api_gateway.auth import get_current_user" not in source
+    assert "from ..dependencies.auth import get_current_user" in source
 
 
 def test_api_lifespan_initializes_review_handlers_via_src_adapter(monkeypatch):
