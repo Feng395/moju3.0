@@ -25,7 +25,8 @@ class SrcReviewIntentRecognizer:
 
     _VERIFICATION_KEYWORDS = ("对吗", "正确吗", "是否正确", "有问题吗", "是不是", "对不对")
     _DATA_MODIFICATION_KEYWORDS = ("改为", "修改为", "设置为", "改成", "换成", "变成", "调整为")
-    _DATA_MODIFICATION_ACTION_KEYWORDS = ("修改", "更改", "调整", "改一下", "改", "换", "设成", "设为")
+    _DATA_MODIFICATION_ACTION_KEYWORDS = ("修改", "更改", "变更", "调整", "改一下", "改", "换", "设成", "设为")
+    _DATA_MODIFICATION_ASSIGNMENT_KEYWORDS = ("更改为", "变更为", "更新为", "调到", "调整到", "调成")
     _FEATURE_KEYWORDS = ("特征识别", "识别特征", "重新识别", "跑特征", "重跑特征", "识别一下", "再识别", "识别")
     _PRICE_KEYWORDS = ("重新计算", "重算", "更新价格", "计价", "算一下", "calculate", "price")
     _QUERY_KEYWORDS = (
@@ -49,6 +50,8 @@ class SrcReviewIntentRecognizer:
     _WEIGHT_PRICE_QUERY_KEYWORDS = tuple(INTENT_KEYWORDS[IntentType.WEIGHT_PRICE_QUERY])
     _GENERAL_CHAT_KEYWORDS = ("你好", "您好", "hello", "hi", "帮助", "帮我", "怎么用", "能做什么", "你是谁")
     _MODIFICATION_GUIDANCE_KEYWORDS = ("怎么修改", "如何修改", "怎么改", "如何改")
+    _MODIFIABLE_FIELD_KEYWORDS = ("材质", "长度", "宽度", "厚度", "数量", "热处理", "工艺", "备注", "重量")
+    _MODIFICATION_VALUE_MARKERS = ("为", "成", "到")
     _FEATURE_PRICE_CONCEPT_KEYWORDS = ("模板", "模架", "冲头", "刀口入块")
     _WEIGHT_PRICE_CONCEPT_KEYWORDS = ("模架", "冲头", "刀口入块")
     _CONTEXT_REFERENCE_KEYWORDS = ("刚才", "刚刚", "上次", "之前", "刚才那个", "按刚才", "按上次", "延续", "继续")
@@ -280,7 +283,9 @@ class SrcReviewIntentRecognizer:
             return False
         if any(keyword in message for keyword in self._DATA_MODIFICATION_KEYWORDS):
             return True
-        return "修改" in message and any(token in message for token in ("为", "成", "到"))
+        if any(keyword in message for keyword in self._DATA_MODIFICATION_ASSIGNMENT_KEYWORDS):
+            return any(field in message for field in self._MODIFIABLE_FIELD_KEYWORDS)
+        return self._looks_like_assignment_modification(message)
 
     def _looks_like_short_follow_up_query(self, message: str) -> bool:
         compact = re.sub(r"\s+", "", message)
@@ -435,9 +440,17 @@ class SrcReviewIntentRecognizer:
             return False
         if any(keyword in message for keyword in self._DATA_MODIFICATION_KEYWORDS):
             return True
+        if any(keyword in message for keyword in self._DATA_MODIFICATION_ASSIGNMENT_KEYWORDS):
+            return any(field in message for field in self._MODIFIABLE_FIELD_KEYWORDS)
         return any(keyword in message for keyword in self._DATA_MODIFICATION_ACTION_KEYWORDS) and any(
-            token in message for token in ("材质", "长度", "宽度", "厚度", "数量", "热处理", "工艺", "备注")
+            token in message for token in self._MODIFIABLE_FIELD_KEYWORDS
         )
+
+    def _looks_like_assignment_modification(self, message: str) -> bool:
+        has_action_keyword = any(keyword in message for keyword in self._DATA_MODIFICATION_ACTION_KEYWORDS)
+        has_field_keyword = any(token in message for token in self._MODIFIABLE_FIELD_KEYWORDS)
+        has_value_marker = any(marker in message for marker in self._MODIFICATION_VALUE_MARKERS)
+        return has_action_keyword and has_field_keyword and has_value_marker
 
     def _looks_like_contextual_query(self, message: str) -> bool:
         if any(keyword in message for keyword in self._CONTEXT_QUERY_KEYWORDS):

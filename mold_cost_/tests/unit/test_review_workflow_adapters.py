@@ -793,6 +793,80 @@ async def test_src_review_intent_recognizer_handles_data_modification_without_le
 
 
 @pytest.mark.asyncio
+async def test_src_review_intent_recognizer_handles_modification_synonyms_without_legacy():
+    module = importlib.import_module("mold_cost.infrastructure.review.intent_recognizer_runtime")
+
+    class _ExplodingFallbackRecognizer:
+        async def recognize(self, *args, **kwargs):
+            raise AssertionError("fallback should not be used for modification synonym rules")
+
+        async def close(self):
+            return None
+
+    recognizer = module.SrcReviewIntentRecognizer(fallback_recognizer=_ExplodingFallbackRecognizer())
+
+    set_result = await recognizer.recognize(
+        "把 DIE-03 的材质设为 S136",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_DIE-03"}]}},
+        job_id="job-14c-set",
+        db_session="db",
+    )
+    replace_result = await recognizer.recognize(
+        "更改 DIE-03 的材质为 SKD11",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_DIE-03"}]}},
+        job_id="job-14c-replace",
+        db_session="db",
+    )
+    change_result = await recognizer.recognize(
+        "变更 DIE-03 的材质为 CR12MOV",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_DIE-03"}]}},
+        job_id="job-14c-change",
+        db_session="db",
+    )
+
+    assert set_result.intent_type == "DATA_MODIFICATION"
+    assert replace_result.intent_type == "DATA_MODIFICATION"
+    assert change_result.intent_type == "DATA_MODIFICATION"
+
+
+@pytest.mark.asyncio
+async def test_src_review_intent_recognizer_handles_numeric_adjustment_modifications_without_legacy():
+    module = importlib.import_module("mold_cost.infrastructure.review.intent_recognizer_runtime")
+
+    class _ExplodingFallbackRecognizer:
+        async def recognize(self, *args, **kwargs):
+            raise AssertionError("fallback should not be used for numeric adjustment modification rules")
+
+        async def close(self):
+            return None
+
+    recognizer = module.SrcReviewIntentRecognizer(fallback_recognizer=_ExplodingFallbackRecognizer())
+
+    direct_result = await recognizer.recognize(
+        "把 DIE-03 的长度调到 120",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_DIE-03"}]}},
+        job_id="job-14c-direct-adjust",
+        db_session="db",
+    )
+    contextual_result = await recognizer.recognize(
+        "把这个零件长度调到 120",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_DIE-03"}]}},
+        job_id="job-14c-context-adjust",
+        db_session="db",
+    )
+    note_result = await recognizer.recognize(
+        "把那个零件的备注更新为 返工",
+        {"raw_data": {"subgraphs": [{"subgraph_id": "uuid_DIE-03"}]}},
+        job_id="job-14c-note-adjust",
+        db_session="db",
+    )
+
+    assert direct_result.intent_type == "DATA_MODIFICATION"
+    assert contextual_result.intent_type == "DATA_MODIFICATION"
+    assert note_result.intent_type == "DATA_MODIFICATION"
+
+
+@pytest.mark.asyncio
 async def test_src_review_intent_recognizer_treats_single_letter_code_as_history_based_query():
     module = importlib.import_module("mold_cost.infrastructure.review.intent_recognizer_runtime")
 
